@@ -36,8 +36,8 @@ The result is intended to be programmed at XSPI2 NOR address 0x70000000.
 Run this after building stm32h7s78-dk:nxboot-app.
 
 Options:
-  -i, --input PATH        Input app binary (default: <nuttx>/nuttx.bin)
-  -o, --output PATH       Output image (default: <nuttx>/nuttx-nxboot-app.bin)
+  -i, --input PATH        Input app binary (default: nuttx.bin)
+  -o, --output PATH       Output image (default: ../build/stm32h7s78-dk-nxboot-app.bin)
   -v, --version VERSION   Semantic version (default: 0.1.0)
       --header-size SIZE  Header size (default: .config or 0x400)
       --identifier ID     Platform identifier (default: .config or 0x48735378)
@@ -48,10 +48,11 @@ EOF
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 nuttx_root="$(cd "${script_dir}/../../../../.." && pwd)"
-apps_root="$(cd "${nuttx_root}/../apps" && pwd)"
+cd "${nuttx_root}"
 
-input="${nuttx_root}/nuttx.bin"
-output="${nuttx_root}/nuttx-nxboot-app.bin"
+nximage_tool="../apps/boot/nxboot/tools/nximage.py"
+input="nuttx.bin"
+output="../build/stm32h7s78-dk-nxboot-app.bin"
 version="0.1.0"
 header_size=""
 identifier=""
@@ -60,7 +61,7 @@ force=0
 config_value()
 {
   local key="$1"
-  local file="${nuttx_root}/.config"
+  local file=".config"
 
   if [[ -f "${file}" ]]; then
     sed -n "s/^${key}=//p" "${file}" | tail -n 1
@@ -121,13 +122,13 @@ if [[ ! -f "${input}" ]]; then
   exit 1
 fi
 
-if [[ ! -f "${apps_root}/boot/nxboot/tools/nximage.py" ]]; then
-  echo "ERROR: NXboot image tool not found under apps: ${apps_root}" >&2
+if [[ ! -f "${nximage_tool}" ]]; then
+  echo "ERROR: NXboot image tool not found: ${nximage_tool}" >&2
   exit 1
 fi
 
-if [[ -f "${nuttx_root}/.config" ]] &&
-   grep -q '^CONFIG_NXBOOT_BOOTLOADER=y$' "${nuttx_root}/.config" &&
+if [[ -f ".config" ]] &&
+   grep -q '^CONFIG_NXBOOT_BOOTLOADER=y$' ".config" &&
    [[ "${force}" -eq 0 ]]; then
   echo "ERROR: current .config is nxboot-loader, not nxboot-app." >&2
   echo "Run ./tools/configure.sh stm32h7s78-dk:nxboot-app && make first." >&2
@@ -135,8 +136,10 @@ if [[ -f "${nuttx_root}/.config" ]] &&
   exit 1
 fi
 
+mkdir -p "$(dirname "${output}")"
+
 if python3 -c 'import semantic_version' >/dev/null 2>&1; then
-  python3 "${apps_root}/boot/nxboot/tools/nximage.py" \
+  python3 "${nximage_tool}" \
     --version "${version}" \
     --header_size "${header_size}" \
     --identifier "${identifier}" \
