@@ -31,6 +31,7 @@ CHIP_CSRCS += stm32h7rs_irq.c
 CHIP_CSRCS += stm32h7rs_lowputc.c
 CHIP_CSRCS += stm32h7rs_timerisr.c
 CHIP_CSRCS += stm32h7rs_serial.c
+CHIP_CSRCS += stm32h7rs_allocateheap.c
 
 ifeq ($(CONFIG_STM32H7RS_XSPI),y)
 CHIP_CSRCS += stm32h7rs_xspi.c

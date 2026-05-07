@@ -46,6 +46,15 @@ config STM32H7RS_USART
 		Enable STM32H7RS USART support once the low-level serial driver is
 		ported.
 
+config STM32H7RS_UART4_SERIALDRIVER
+	bool "UART4 serial driver"
+	default n
+	depends on STM32H7RS_USART
+	select UART4_SERIALDRIVER
+	---help---
+		Enable the STM32H7RS UART4 NuttX serial lower-half.  The
+		STM32H7S78-DK uses UART4 on PD1/PD0 for its default console.
+
 config STM32H7RS_GPIO
 	bool "GPIO"
 	default n
