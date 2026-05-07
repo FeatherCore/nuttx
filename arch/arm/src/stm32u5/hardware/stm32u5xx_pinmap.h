@@ -461,6 +461,11 @@
 #define GPIO_I2C4_SMBA_2        (GPIO_ALT|GPIO_AF4|GPIO_PORTD|GPIO_PIN11)
 #define GPIO_I2C4_SMBA_3        (GPIO_ALT|GPIO_AF4|GPIO_PORTF|GPIO_PIN13)
 
+/* I2C5 - Inter-integrated circuit interface */
+
+#define GPIO_I2C5_SCL_1         (GPIO_ALT|GPIO_AF2|GPIO_PORTH|GPIO_PIN5)
+#define GPIO_I2C5_SDA_1         (GPIO_ALT|GPIO_AF2|GPIO_PORTH|GPIO_PIN4)
+
 /* LPGPIO1 - Low-power general-purpose I/Os */
 
 #define GPIO_LPGPIO1_P0_1       (GPIO_ALT|GPIO_AF11|GPIO_PORTA|GPIO_PIN1)

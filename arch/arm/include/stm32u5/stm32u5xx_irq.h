@@ -191,10 +191,24 @@
 #define STM32_IRQ_CORDIC        (STM32_IRQ_FIRST + 123) /* 123: CORDIC interrupt */
 #define STM32_IRQ_FMAC          (STM32_IRQ_FIRST + 124) /* 124: FMAC interrupt */
 
-#if defined(CONFIG_STM32U5_STM32U535XX) || defined(CONFIG_STM32U5_STM32U545XX) || \
-    defined(CONFIG_STM32U5_STM32U575XX) || defined(CONFIG_STM32U5_STM32U585XX) || \
-    defined(CONFIG_STM32U5_STM32U59XX) || defined(CONFIG_STM32U5_STM32U59AXX)  || \
+#if defined(CONFIG_STM32U5_STM32U59XX) || defined(CONFIG_STM32U5_STM32U59AXX)  || \
     defined(CONFIG_STM32U5_STM32U5A5XX) || defined(CONFIG_STM32U5_STM32U5A9XX)
+#  define STM32_IRQ_LSECSSD     (STM32_IRQ_FIRST + 125) /* 125: LSE CSS interrupt */
+#  define STM32_IRQ_USART6      (STM32_IRQ_FIRST + 126) /* 126: USART6 global interrupt */
+#  define STM32_IRQ_I2C5_ER     (STM32_IRQ_FIRST + 127) /* 127: I2C5 error interrupt */
+#  define STM32_IRQ_I2C5_EV     (STM32_IRQ_FIRST + 128) /* 128: I2C5 event interrupt */
+#  define STM32_IRQ_I2C6_ER     (STM32_IRQ_FIRST + 129) /* 129: I2C6 error interrupt */
+#  define STM32_IRQ_I2C6_EV     (STM32_IRQ_FIRST + 130) /* 130: I2C6 event interrupt */
+#  define STM32_IRQ_HSPI1       (STM32_IRQ_FIRST + 131) /* 131: HSPI1 global interrupt */
+#  define STM32_IRQ_GPU2D       (STM32_IRQ_FIRST + 132) /* 132: GPU2D global interrupt */
+#  define STM32_IRQ_GPU2D_ER    (STM32_IRQ_FIRST + 133) /* 133: GPU2D error interrupt */
+#  define STM32_IRQ_GFXMMU      (STM32_IRQ_FIRST + 134) /* 134: GFXMMU global interrupt */
+#  define STM32_IRQ_LTDC        (STM32_IRQ_FIRST + 135) /* 135: LTDC global interrupt */
+#  define STM32_IRQ_LTDC_ER     (STM32_IRQ_FIRST + 136) /* 136: LTDC error interrupt */
+#  define STM32_IRQ_DSI         (STM32_IRQ_FIRST + 137) /* 137: DSIHOST global interrupt */
+#  define STM32_IRQ_NEXTINTS    138
+#elif defined(CONFIG_STM32U5_STM32U535XX) || defined(CONFIG_STM32U5_STM32U545XX) || \
+      defined(CONFIG_STM32U5_STM32U575XX) || defined(CONFIG_STM32U5_STM32U585XX)
 #  define STM32_IRQ_NEXTINTS    125
 #else
 #  error "Unsupported STM32U5 chip"

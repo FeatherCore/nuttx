@@ -67,7 +67,7 @@
 #  define STM32_SRAM1_BASE        0x20000000  /* 0x20000000-0x200bffff: 768k SRAM1 */
 #  define STM32_SRAM2_BASE        0x200c0000  /* 0x200c0000-0x200cffff:  64k SRAM2 */
 #  define STM32_SRAM3_BASE        0x200d0000  /* 0x200d0000-0x2019ffff: 832k SRAM3 */
-#  define STM32_SRAM4_BASE        0x28000000  /* 0x28000000-0x20003fff: 16k SRAM4 */
+#  define STM32_SRAM4_BASE        0x28000000  /* 0x28000000-0x28003fff: 16k SRAM4 */
 #  define STM32_SRAM5_BASE        0x201a0000  /* 0x201a0000-0x2027ffff: 832k SRAM5 */
 
 #else
@@ -109,6 +109,8 @@
 #define STM32_CRS_BASE          0x40006000
 #define STM32_I2C4_BASE         0x40008400
 #define STM32_LPTIM2_BASE       0x40009400
+#define STM32_I2C5_BASE         0x40009800
+#define STM32_I2C6_BASE         0x40009c00
 #define STM32_FDCAN1_BASE       0x4000a400
 #define STM32_FDCAN_RAM_BASE    0x4000ac00
 #define STM32_UCPD1_BASE        0x4000dc00
@@ -124,6 +126,8 @@
 #define STM32_TIM17_BASE        0x40014800
 #define STM32_SAI1_BASE         0x40015400
 #define STM32_SAI2_BASE         0x40015800
+#define STM32_LTDC_BASE         0x40016800
+#define STM32_DSI_BASE          0x40016c00
 
 /* AHB1 Base Addresses ******************************************************/
 
@@ -136,6 +140,8 @@
 #define STM32_MDF1_BASE         0x40025000
 #define STM32_RAMCFG_BASE       0x40026000
 #define STM32_DMA2D_BASE        0x4002b000
+#define STM32_GFXMMU_BASE       0x4002c000
+#define STM32_GPU2D_BASE        0x4002f000
 #define STM32_ICACHE_BASE       0x40030400
 #define STM32_DCACHE1_BASE      0x40031400
 #define STM32_GTZC1_TZSC_BASE   0x40032400
@@ -156,6 +162,7 @@
 #define STM32_GPIOG_BASE        0x42021800
 #define STM32_GPIOH_BASE        0x42021c00
 #define STM32_GPIOI_BASE        0x42022000
+#define STM32_GPIOJ_BASE        0x42022400
 #define STM32_ADC1_BASE         0x42028000
 #define STM32_DCMI_BASE         0x4202c000
 #define STM32_PSSI_BASE         0x4202c400
@@ -178,6 +185,12 @@
 #define STM32_FSMC_BASE         0x420d0400
 #define STM32_OCTOSPI1_BASE     0x420d1400
 #define STM32_OCTOSPI2_BASE     0x420d2400
+#define STM32_HSPI1_REG_BASE    0x420d3400
+
+/* External memory windows **************************************************/
+
+#define STM32_OCTOSPI1_BANK     0x90000000
+#define STM32_HSPI1_BANK        0xa0000000
 
 /* APB3 Base Addresses ******************************************************/
 

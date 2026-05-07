@@ -39,7 +39,9 @@
 
 #include "chip.h"
 
-#if defined(CONFIG_STM32U5_STM32U585XX) || defined(CONFIG_STM32U5_STM32U5A5XX)
+#if defined(CONFIG_STM32U5_STM32U585XX) || \
+    defined(CONFIG_STM32U5_STM32U5A5XX) || \
+    defined(CONFIG_STM32U5_STM32U5A9XX)
 #  include "hardware/stm32_gpio.h"
 #else
 #  error "Unsupported STM32U5 chip"
@@ -196,6 +198,8 @@
 #  define GPIO_PORTF                  (5 << GPIO_PORT_SHIFT)     /*   GPIOF */
 #  define GPIO_PORTG                  (6 << GPIO_PORT_SHIFT)     /*   GPIOG */
 #  define GPIO_PORTH                  (7 << GPIO_PORT_SHIFT)     /*   GPIOH */
+#  define GPIO_PORTI                  (8 << GPIO_PORT_SHIFT)     /*   GPIOI */
+#  define GPIO_PORTJ                  (9 << GPIO_PORT_SHIFT)     /*   GPIOJ */
 
 /* This identifies the bit in the port:
  *

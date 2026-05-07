@@ -27,12 +27,31 @@ config ARCH_CHIP_STM32U5A5ZJT
 	---help---
 	STM32 U5 Cortex M33, 4096 Kb FLASH, 2500 Kb SRAM, tqfp144
 
+config ARCH_CHIP_STM32U5A9NJHXQ
+	bool "STM32U5A9NJHXQ"
+	select STM32U5_STM32U5A9XX
+	select STM32U5_IO_CONFIG_J
+	---help---
+	STM32 U5 Cortex M33, 4096 Kb FLASH, 2496 Kb SRAM, ufbga169.
+
 endchoice # STM32 U5 Chip Selection
 
 # Chip families:
 
+config STM32U5_STM32U5A9XX
+	# STM32U59/5A9 devices documented in RM0456
+	bool
+	default n
+	select ARCH_HAVE_FPU
+	select STM32U5_HAVE_LPUART1
+	select STM32U5_HAVE_USART1
+	select STM32U5_HAVE_USART2
+	select STM32U5_HAVE_USART3
+	select STM32U5_HAVE_UART4
+	select STM32U5_HAVE_UART5
+
 config STM32U5_STM32U5A5XX
-	# STM32U575 and STM32U585 devices documented in RM0456
+	# STM32U59/5A5 devices documented in RM0456
 	bool
 	default n
 	select ARCH_HAVE_FPU
@@ -261,6 +280,22 @@ config STM32U5_DMA2D
 	bool "DMA2D"
 	default n
 
+config STM32U5_GFXMMU
+	bool "GFXMMU"
+	default n
+
+config STM32U5_GPU2D
+	bool "GPU2D"
+	default n
+
+config STM32U5_LTDC
+	bool "LTDC"
+	default n
+
+config STM32U5_DSIHOST
+	bool "DSIHOST"
+	default n
+
 config STM32U5_GTZC1
 	bool "GTZC1"
 	default n
@@ -388,10 +423,22 @@ config STM32U5_OTFDEC2
 config STM32U5_SDMMC1
 	bool "SDMMC1"
 	default n
+	select ARCH_HAVE_SDIO
+	select ARCH_HAVE_SDIOWAIT_WRCOMPLETE
+	select ARCH_HAVE_SDIO_PREFLIGHT
+	select SDIO_BLOCKSETUP
 
 config STM32U5_SDMMC2
 	bool "SDMMC2"
 	default n
+	select ARCH_HAVE_SDIO
+	select ARCH_HAVE_SDIOWAIT_WRCOMPLETE
+	select ARCH_HAVE_SDIO_PREFLIGHT
+	select SDIO_BLOCKSETUP
+
+config STM32U5_SDMMC
+	bool
+	default STM32U5_SDMMC1 || STM32U5_SDMMC2
 
 config STM32U5_FSMC
 	bool "FSMC"
@@ -403,6 +450,10 @@ config STM32U5_OCTOSPI1
 
 config STM32U5_OCTOSPI2
 	bool "OCTOSPI2"
+	default n
+
+config STM32U5_HSPI1
+	bool "HSPI1"
 	default n
 
 comment "AHB3 Peripherals"
@@ -3277,13 +3328,30 @@ config STM32U5_SDMMC_XFRDEBUG
 		enabled, then DMA register will be collected as well.  Requires also
 		DEBUG_FS and CONFIG_DEBUG_INFO.
 
-config STM32U5_SDMMC_DMA
-	bool "Support DMA data transfers"
-	default n
+config STM32U5_SDMMC_IDMA
+	bool "Support IDMA data transfers"
+	default y
 	select SDIO_DMA
-	depends on STM32U5_DMA
 	---help---
-		Support DMA data transfers.
+		Support SDMMC internal DMA data transfers. STM32U5 SDMMC1 IDMA
+		cannot access every SRAM region, so boards may also provide a small
+		IDMA-accessible bounce buffer for filesystem transfers.
+
+config STM32U5_SDMMC_IDMA_BUFFER_ADDR
+	hex "IDMA bounce buffer address"
+	default 0x0
+	depends on STM32U5_SDMMC_IDMA
+	---help---
+		Optional board-provided IDMA-accessible bounce buffer address. Use
+		zero to fall back to the driver's internal aligned buffer.
+
+config STM32U5_SDMMC_IDMA_BUFFER_SIZE
+	int "IDMA bounce buffer size"
+	default 512
+	depends on STM32U5_SDMMC_IDMA
+	---help---
+		Size in bytes of the optional IDMA bounce buffer. It must be at
+		least the active MMCSD block size.
 
 menu "SDMMC1 Configuration"
 	depends on STM32U5_SDMMC1

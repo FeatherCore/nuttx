@@ -39,5 +39,9 @@
 
 #define LFS_ASSERT DEBUGASSERT
 
+#ifndef __ASSERT_ON
+#  define __ASSERT_ON 1
+#endif
+
 #define LFS_MALLOC(sz) fs_heap_malloc(sz)
 #define LFS_FREE(p) fs_heap_free(p)
