@@ -1,0 +1,20 @@
+############################################################################
+# boards/arm/stm32h7rs/stm32h7s78-dk/src/Makefile
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+############################################################################
+
+include $(TOPDIR)/Make.defs
+
+CSRCS = stm32h7rs_bringup.c stm32h7rs_autoleds.c
+
+ifeq ($(CONFIG_STM32H7RS_XSPI),y)
+CSRCS += stm32h7rs_extmem.c
+endif
+
+ifeq ($(CONFIG_BOARDCTL_BOOT_IMAGE),y)
+CSRCS += stm32h7rs_boot_image.c
+endif
+
+include $(TOPDIR)/boards/Board.mk
