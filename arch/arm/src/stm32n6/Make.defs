@@ -1,0 +1,20 @@
+############################################################################
+# arch/arm/src/stm32n6/Make.defs
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+############################################################################
+
+include armv8-m/Make.defs
+
+CHIP_CSRCS += stm32n6_start.c
+CHIP_CSRCS += stm32n6_rcc.c
+CHIP_CSRCS += stm32n6_irq.c
+CHIP_CSRCS += stm32n6_lowputc.c
+CHIP_CSRCS += stm32n6_timerisr.c
+CHIP_CSRCS += stm32n6_serial.c
+CHIP_CSRCS += stm32n6_allocateheap.c
+
+ifeq ($(CONFIG_STM32N6_XSPI),y)
+CHIP_CSRCS += stm32n6_xspi.c
+endif

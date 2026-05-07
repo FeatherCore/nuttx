@@ -3131,6 +3131,16 @@ config ARCH_BOARD_STM32U5X9J_DK
 		STM32U5A9 is a Cortex-M33 optimised for low-power operation at up
 		to 160MHz operation with 4MB Flash memory and 2496KB SRAM.
 
+config ARCH_BOARD_STM32N6570_DK
+	bool "STMicro STM32N6570-DK board"
+	depends on ARCH_CHIP_STM32N657X0
+	select ARCH_HAVE_LEDS
+	select ARCH_HAVE_BUTTONS
+	---help---
+		STMicro STM32N6570-DK Discovery kit.  The first NuttX port uses an
+		NXboot-FSBL image loaded by the STM32N6 BootROM, then starts an XIP
+		application from XSPI2 NOR.
+
 config ARCH_BOARD_STM32L476VG_DISCO
 	bool "STMicro STM32L476VG -Discovery board"
 	depends on ARCH_CHIP_STM32L476RG
@@ -3949,6 +3959,7 @@ config ARCH_BOARD
 	default "nucleo-h563zi"                if ARCH_BOARD_NUCLEO_H563ZI
 	default "nucleo-u5a5zj-q"              if ARCH_BOARD_NUCLEO_U5A5ZJ_Q
 	default "stm32u5x9j-dk"                if ARCH_BOARD_STM32U5X9J_DK
+	default "stm32n6570-dk"                if ARCH_BOARD_STM32N6570_DK
 	default "stm32l476vg-disco"            if ARCH_BOARD_STM32L476VG_DISCO
 	default "stm32l476-mdk"                if ARCH_BOARD_STM32L476_MDK
 	default "stm32l4r9ai-disco"            if ARCH_BOARD_STM32L4R9AI_DISCO
@@ -4572,6 +4583,9 @@ source "boards/arm/stm32u5/nucleo-u5a5zj-q/Kconfig"
 endif
 if ARCH_BOARD_STM32U5X9J_DK
 source "boards/arm/stm32u5/stm32u5x9j-dk/Kconfig"
+endif
+if ARCH_BOARD_STM32N6570_DK
+source "boards/arm/stm32n6/stm32n6570-dk/Kconfig"
 endif
 if ARCH_BOARD_NUCLEO_L432KC
 source "boards/arm/stm32l4/nucleo-l432kc/Kconfig"
