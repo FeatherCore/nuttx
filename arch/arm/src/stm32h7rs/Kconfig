@@ -1,0 +1,129 @@
+#
+# For a description of the syntax of this configuration file,
+# see the file kconfig-language.txt in the NuttX tools repository.
+#
+
+if ARCH_CHIP_STM32H7RS
+
+comment "STM32H7RS Configuration Options"
+
+choice
+	prompt "STM32H7RS Chip Selection"
+	default ARCH_CHIP_STM32H7S7L8
+	depends on ARCH_CHIP_STM32H7RS
+
+config ARCH_CHIP_STM32H7S7L8
+	bool "STM32H7S7L8"
+	select ARCH_CORTEXM7
+	select ARMV7M_HAVE_ICACHE
+	select ARMV7M_HAVE_DCACHE
+	select ARMV7M_HAVE_ITCM
+	select ARMV7M_HAVE_DTCM
+	select ARMV7M_HAVE_STACKCHECK
+	select STM32H7RS_STM32H7S7XX
+	select STM32H7RS_FLASH_CONFIG_8
+	---help---
+		STM32H7RS Cortex-M7, 64 KiB internal FLASH, 456 KiB AXI SRAM.
+		This is the device used by STM32H7S78-DK.
+
+endchoice # STM32H7RS Chip Selection
+
+config STM32H7RS_STM32H7S7XX
+	bool
+	default n
+	select ARCH_HAVE_FPU
+
+config STM32H7RS_FLASH_CONFIG_8
+	bool
+	default n
+
+menu "STM32H7RS Peripheral Selection"
+
+config STM32H7RS_USART
+	bool "USART"
+	default n
+	---help---
+		Enable STM32H7RS USART support once the low-level serial driver is
+		ported.
+
+config STM32H7RS_GPIO
+	bool "GPIO"
+	default n
+	---help---
+		Enable STM32H7RS GPIO support once the GPIO register layer is
+		ported.
+
+config STM32H7RS_XSPI
+	bool "XSPI"
+	default n
+	---help---
+		Enable STM32H7RS XSPI support once the memory-mapped external
+		flash/PSRAM path is ported.
+
+endmenu # STM32H7RS Peripheral Selection
+
+config STM32H7RS_APP_FORMAT_NXBOOT
+	bool "NXboot application image format"
+	default n
+	select BOARDCTL_BOOT_IMAGE
+	---help---
+		Build an image intended to be managed by NXboot.  The
+		STM32H7S78-DK board linker scripts place the loader in internal
+		Flash and the application after an NXboot header in memory-mapped
+		XSPI2 NOR.
+
+config STM32H7RS_EXTNOR_OTA_PARTITION
+	bool "Create OTA partitions on external NOR"
+	default n
+	select MTD
+	select MTD_PARTITION
+	depends on STM32H7RS_APP_FORMAT_NXBOOT
+	---help---
+		Register /dev/ota0, /dev/ota1 and /dev/ota2 from the STM32H7S78-DK
+		XSPI2 NOR MTD.  The first implementation keeps the partition table
+		in Kconfig so NXboot slot geometry and board bring-up stay in sync.
+
+config STM32H7RS_PSRAM_HEAP
+	bool "Use XSPI1 PSRAM as an extra heap region"
+	default n
+	depends on STM32H7RS_XSPI && !NXBOOT_BOOTLOADER
+	---help---
+		Reserve the app-side policy switch for adding STM32H7S78-DK
+		XSPI1 PSRAM at 0x90000000 to the NuttX heap.  This is deliberately
+		off by default during NXboot bring-up: the bootloader initializes
+		and validates PSRAM, while applications decide whether to register
+		it as heap memory.
+
+if STM32H7RS_EXTNOR_OTA_PARTITION
+
+config STM32H7RS_OTA_PRIMARY_SLOT_DEVPATH
+	string "Primary image slot devpath"
+	default "/dev/ota0"
+
+config STM32H7RS_OTA_SECONDARY_SLOT_DEVPATH
+	string "Secondary image slot devpath"
+	default "/dev/ota1"
+
+config STM32H7RS_OTA_TERTIARY_SLOT_DEVPATH
+	string "Tertiary image slot devpath"
+	default "/dev/ota2"
+
+config STM32H7RS_OTA_PRIMARY_SLOT_OFFSET
+	hex "Primary image slot offset in external NOR"
+	default 0x0
+
+config STM32H7RS_OTA_SECONDARY_SLOT_OFFSET
+	hex "Secondary image slot offset in external NOR"
+	default 0x02000000
+
+config STM32H7RS_OTA_TERTIARY_SLOT_OFFSET
+	hex "Tertiary image slot offset in external NOR"
+	default 0x04000000
+
+config STM32H7RS_OTA_SLOT_SIZE
+	hex "Image slot size"
+	default 0x02000000
+
+endif # STM32H7RS_EXTNOR_OTA_PARTITION
+
+endif # ARCH_CHIP_STM32H7RS

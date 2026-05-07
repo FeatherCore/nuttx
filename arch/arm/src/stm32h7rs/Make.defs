@@ -1,0 +1,37 @@
+############################################################################
+# arch/arm/src/stm32h7rs/Make.defs
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.  The
+# ASF licenses this file to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance with the
+# License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+# License for the specific language governing permissions and limitations
+# under the License.
+#
+############################################################################
+
+# Common ARM and Cortex-M7 files.  STM32H7RS chip-specific sources are added
+# incrementally as the register, clock, GPIO, IRQ and serial layers are ported.
+
+include armv7-m/Make.defs
+
+CHIP_CSRCS += stm32h7rs_start.c
+CHIP_CSRCS += stm32h7rs_rcc.c
+CHIP_CSRCS += stm32h7rs_irq.c
+CHIP_CSRCS += stm32h7rs_lowputc.c
+CHIP_CSRCS += stm32h7rs_timerisr.c
+CHIP_CSRCS += stm32h7rs_serial.c
+
+ifeq ($(CONFIG_STM32H7RS_XSPI),y)
+CHIP_CSRCS += stm32h7rs_xspi.c
+endif
