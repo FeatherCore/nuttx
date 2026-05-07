@@ -1,0 +1,20 @@
+#
+# For a description of the syntax of this configuration file,
+# see the file kconfig-language.txt in the NuttX tools repository.
+#
+
+if ARCH_BOARD_STM32N6570_DK
+
+comment "STM32N6570-DK Board Options"
+
+config STM32N6570_DK_FSBL_IMAGE
+	bool "Build as BootROM-loaded NXboot-FSBL payload"
+	default n
+	depends on NXBOOT_BOOTLOADER
+
+config STM32N6570_DK_LCD_COLORBAR
+	bool "Show LCD colorbar during bring-up"
+	default n
+	depends on STM32N6_DISPLAY
+
+endif # ARCH_BOARD_STM32N6570_DK
