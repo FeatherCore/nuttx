@@ -57,6 +57,30 @@ if(CONFIG_DEBUG_FEATURES)
   list(APPEND SRCS stm32_dumpgpio.c)
 endif()
 
+if(CONFIG_STM32U5_OCTOSPI1 OR CONFIG_STM32U5_OCTOSPI2 OR CONFIG_STM32U5_HSPI1)
+  list(APPEND SRCS stm32_xspi.c)
+endif()
+
+if(CONFIG_STM32U5_SDMMC1 OR CONFIG_STM32U5_SDMMC2)
+  list(APPEND SRCS stm32_sdmmc.c)
+endif()
+
+if(CONFIG_STM32U5_DSIHOST)
+  list(APPEND SRCS stm32_dsi.c)
+endif()
+
+if(CONFIG_STM32U5_LTDC)
+  list(APPEND SRCS stm32_ltdc.c)
+endif()
+
+if(CONFIG_STM32U5_GFXMMU)
+  list(APPEND SRCS stm32_gfxmmu.c)
+endif()
+
+if(CONFIG_STM32U5_DMA2D)
+  list(APPEND SRCS stm32_dma2d.c)
+endif()
+
 if(CONFIG_USBDEV)
   list(APPEND SRCS stm32_otgdev.c)
 endif()

@@ -1,0 +1,208 @@
+#
+# For a description of the syntax of this configuration file,
+# see the file kconfig-language.txt in the NuttX tools repository.
+#
+
+if ARCH_BOARD_STM32U5X9J_DK
+
+menu "STM32U5x9J-DK Peripheral Bring-up"
+
+config STM32U5X9J_DK_USERLEDS
+	bool "LED3/LED4 user LED driver"
+	default y
+	select USERLED
+	select USERLED_LOWER
+	---help---
+		Register LED3 and LED4 through the generic /dev/userleds lower half.
+
+config STM32U5X9J_DK_BUTTONS
+	bool "USER button driver"
+	default y
+	select ARCH_BUTTONS
+	select ARCH_IRQBUTTONS
+	select INPUT
+	select INPUT_BUTTONS
+	select INPUT_BUTTONS_LOWER
+	---help---
+		Register the USER button on PC13 through /dev/buttons.
+
+config STM32U5X9J_DK_I2C_BUSES
+	bool "Register I2C2/I2C3/I2C4/I2C5"
+	default y
+	select I2C
+	select I2C_DRIVER
+	select STM32U5_I2C2
+	select STM32U5_I2C3
+	select STM32U5_I2C4
+	select STM32U5_I2C5
+	---help---
+		Expose the board BSP I2C buses as /dev/i2c2, /dev/i2c3,
+		/dev/i2c4, and /dev/i2c5.
+
+config STM32U5X9J_DK_I2C_PROBES
+	bool "Board I2C sensor device nodes"
+	default y
+	depends on STM32U5X9J_DK_I2C_BUSES
+	---help---
+		Register pure-NuttX character devices for the board I2C sensors:
+		/dev/temp0 for STTS22H one-shot temperature read and /dev/range0
+		for VL53L5CX identity/health probing.
+
+config STM32U5X9J_DK_OSPI_NOR
+	bool "OSPI1 MX25UM51245G NOR"
+	default y
+	select FS_LITTLEFS
+	select MTD
+	select STM32U5_OCTOSPIM
+	select STM32U5_OCTOSPI1
+	---help---
+		Initialize the 64 MiB MX25UM51245G external NOR and register it as
+		/dev/mtd0. The default bring-up does not erase or format it.
+
+config STM32U5X9J_DK_FLASH_AUTOMOUNT
+	bool "Try mounting existing littlefs on /mnt/flash"
+	default y
+	depends on STM32U5X9J_DK_OSPI_NOR && FS_LITTLEFS
+	---help---
+		Try to mount /dev/mtd0 as littlefs at /mnt/flash. Mount failure is
+		only logged; the board never formats or erases flash automatically.
+
+config STM32U5X9J_DK_OSPI_DIAG
+	bool "OSPI1 NOR diagnostic node"
+	default y
+	depends on STM32U5X9J_DK_OSPI_NOR
+	---help---
+		Register /dev/ospi0 with non-destructive MX25UM51245G diagnostic
+		information: size, geometry, JEDEC ID, XIP base, and first mapped
+		word. This node does not erase or write flash by default.
+
+config STM32U5X9J_DK_OSPI_SCRATCH_TEST
+	bool "Enable manual destructive OSPI scratch test"
+	default n
+	depends on STM32U5X9J_DK_OSPI_DIAG
+	---help---
+		Allow writing "scratch" to /dev/ospi0 to erase, program, read back,
+		and compare one 4 KiB scratch subsector. This is intentionally
+		disabled by default because it destroys flash contents at the
+		configured offset.
+
+config STM32U5X9J_DK_OSPI_SCRATCH_OFFSET
+	hex "Manual OSPI scratch test offset"
+	default 0x03ff0000
+	depends on STM32U5X9J_DK_OSPI_SCRATCH_TEST
+	---help---
+		Offset used by the manual /dev/ospi0 scratch test. It must be 4 KiB
+		aligned and must point to an expendable region.
+
+config STM32U5X9J_DK_HSPI_RAM
+	bool "HSPI1 APS512xx RAM"
+	default y
+	select STM32U5_HSPI1
+	---help---
+		Initialize the 64 MiB APS512xx PSRAM through HSPI1 and map it at
+		0xa0000000.
+
+config STM32U5X9J_DK_HSPI_HEAP
+	bool "Add HSPI PSRAM to heap"
+	default y
+	depends on STM32U5X9J_DK_HSPI_RAM
+	---help---
+		Reserve the first 2 MiB of PSRAM for display/framebuffer bring-up
+		and add the remaining PSRAM region to the NuttX heap in
+		arm_addregion().
+
+config STM32U5X9J_DK_HSPI_DIAG
+	bool "HSPI1 PSRAM diagnostic node"
+	default y
+	depends on STM32U5X9J_DK_HSPI_RAM
+	---help---
+		Register /dev/hspiram0 with APS512xx base, size, framebuffer
+		reservation, heap-region, mapped state, and self-test status. A
+		manual "selftest" write runs a 32-byte save/write/read/restore
+		check without claiming ownership of the full RAM.
+
+config STM32U5X9J_DK_EMMC
+	bool "SDMMC1 eMMC"
+	default y
+	select MMCSD
+	select MMCSD_MMCSUPPORT
+	select MMCSD_SDIO
+	select SCHED_HPWORK
+	select SCHED_WORKQUEUE
+	select STM32U5_SDMMC1
+	---help---
+		Enable board-level eMMC bring-up on SDMMC1 using an 8-bit bus.
+
+config STM32U5X9J_DK_EMMC_AUTOMOUNT
+	bool "Try mounting existing vfat on /mnt/emmc"
+	default y
+	depends on STM32U5X9J_DK_EMMC && FS_FAT
+	---help---
+		Try to mount /dev/mmcsd0 as vfat at /mnt/emmc. Mount failure is
+		only logged; the board never formats eMMC automatically.
+
+config STM32U5X9J_DK_EMMC_INFO
+	bool "eMMC read-only diagnostic node"
+	default y
+	depends on STM32U5X9J_DK_EMMC
+	---help---
+		Register /dev/emmcinfo0 with read-only geometry and block-0 smoke
+		information. The diagnostic never erases, formats, or writes eMMC.
+
+config STM32U5X9J_DK_LCD
+	bool "DSI LCD framebuffer"
+	default y
+	select DRIVERS_VIDEO
+	select VIDEO_FB
+	select STM32U5_DMA2D
+	select STM32U5_DSIHOST
+	select STM32U5_GFXMMU
+	select STM32U5_GPU2D
+	select STM32U5_LTDC
+	---help---
+		Register a 480x480 ARGB8888 framebuffer at /dev/fb0 backed by the
+		reserved PSRAM display window.
+
+config STM32U5X9J_DK_LCD_COLORBAR
+	bool "Draw LCD color bars during bring-up"
+	default y
+	depends on STM32U5X9J_DK_LCD
+	---help---
+		Fill the framebuffer with vertical color bars after LCD bring-up.
+
+config STM32U5X9J_DK_LCD_PATTERN
+	bool "Draw extended LCD static pattern during bring-up"
+	default y
+	depends on STM32U5X9J_DK_LCD_COLORBAR
+	---help---
+		Draw a non-interactive framebuffer smoke pattern: solid clear,
+		basic RGB rectangles, then vertical color bars.
+
+config STM32U5X9J_DK_TOUCH
+	bool "Sitronix touchscreen"
+	default y
+	depends on STM32U5X9J_DK_I2C_BUSES
+	select INPUT
+	select INPUT_TOUCHSCREEN
+	select SCHED_LPWORK
+	---help---
+		Register the Sitronix touch controller on I2C5 through the generic
+		NuttX touchscreen upper half at /dev/input0.
+
+config STM32U5X9J_DK_STTS22H
+	bool "STTS22H temperature sensor"
+	default y
+	depends on STM32U5X9J_DK_I2C_PROBES
+
+config STM32U5X9J_DK_VL53L5CX
+	bool "VL53L5CX ranging sensor"
+	default y
+	depends on STM32U5X9J_DK_I2C_PROBES
+	---help---
+		Register the minimum pure-NuttX VL53L5CX /dev/range0 path. Full
+		ranging is intentionally blocked until the opaque firmware/config
+		table dependency is isolated.
+
+endmenu
+
+endif

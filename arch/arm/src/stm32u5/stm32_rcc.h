@@ -32,7 +32,9 @@
 #include "arm_internal.h"
 #include "chip.h"
 
-#if defined(CONFIG_STM32U5_STM32U585XX) || defined(CONFIG_STM32U5_STM32U5A5XX)
+#if defined(CONFIG_STM32U5_STM32U585XX) || \
+    defined(CONFIG_STM32U5_STM32U5A5XX) || \
+    defined(CONFIG_STM32U5_STM32U5A9XX)
 #  include "hardware/stm32u5xx_rcc.h"
 #else
 #  error "Unsupported STM32U5 chip"

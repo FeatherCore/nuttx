@@ -42,6 +42,7 @@
 #include "mpu.h"
 #include "arm_internal.h"
 #include "stm32_mpuinit.h"
+#include "hardware/stm32_memorymap.h"
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -113,7 +114,15 @@
 
 #ifdef STM32_SRAM5_SIZE
 #  define SRAM5_START  STM32_SRAM5_BASE
-#  define SRAM5_END    (SRAM3_START + STM32_SRAM5_SIZE)
+#  define SRAM5_END    (SRAM5_START + STM32_SRAM5_SIZE)
+#endif
+
+#ifdef CONFIG_STM32U5X9J_DK_HSPI_HEAP
+#  define STM32U5X9J_PSRAM_HEAP_START \
+     (STM32_HSPI1_BANK + 2 * 1024 * 1024)
+#  define STM32U5X9J_PSRAM_HEAP_SIZE \
+     (64 * 1024 * 1024 - 2 * 1024 * 1024)
+extern int stm32u5x9j_hspi_ram_initialize(void);
 #endif
 
 /* Some sanity checking.  If multiple memory regions are defined, verify
@@ -124,14 +133,16 @@
 #if CONFIG_MM_REGIONS < defined(CONFIG_STM32U5_SRAM2_HEAP) + \
                         defined(CONFIG_STM32U5_SRAM3_HEAP) + \
                         defined(CONFIG_STM32U5_SRAM5_HEAP) + \
-                        defined(CONFIG_STM32U5_FSMC_SRAM_HEAP) + 1
+                        defined(CONFIG_STM32U5_FSMC_SRAM_HEAP) + \
+                        defined(CONFIG_STM32U5X9J_DK_HSPI_HEAP) + 1
 #  error "You need more memory manager regions to support selected heap components"
 #endif
 
 #if CONFIG_MM_REGIONS > defined(CONFIG_STM32U5_SRAM2_HEAP) + \
                         defined(CONFIG_STM32U5_SRAM3_HEAP) + \
                         defined(CONFIG_STM32U5_SRAM5_HEAP) + \
-                        defined(CONFIG_STM32U5_FSMC_SRAM_HEAP) + 1
+                        defined(CONFIG_STM32U5_FSMC_SRAM_HEAP) + \
+                        defined(CONFIG_STM32U5X9J_DK_HSPI_HEAP) + 1
 #  warning "CONFIG_MM_REGIONS large enough but I do not know what some of the region(s) are"
 #endif
 
@@ -395,6 +406,25 @@ void arm_addregion(void)
   /* Add the external FSMC SRAM user heap region. */
 
   kumm_addregion((void *)CONFIG_HEAP2_BASE, CONFIG_HEAP2_SIZE);
+#endif
+
+#ifdef CONFIG_STM32U5X9J_DK_HSPI_HEAP
+  if (stm32u5x9j_hspi_ram_initialize() == OK)
+    {
+#  if defined(CONFIG_BUILD_PROTECTED) && defined(CONFIG_MM_KERNEL_HEAP)
+      stm32_mpu_uheap((uintptr_t)STM32U5X9J_PSRAM_HEAP_START,
+                      STM32U5X9J_PSRAM_HEAP_SIZE);
+#  endif
+
+      up_heap_color((void *)STM32U5X9J_PSRAM_HEAP_START,
+                    STM32U5X9J_PSRAM_HEAP_SIZE);
+      kumm_addregion((void *)STM32U5X9J_PSRAM_HEAP_START,
+                     STM32U5X9J_PSRAM_HEAP_SIZE);
+    }
+  else
+    {
+      ferr("ERROR: STM32U5x9J-DK HSPI PSRAM heap init failed\n");
+    }
 #endif
 }
 #endif

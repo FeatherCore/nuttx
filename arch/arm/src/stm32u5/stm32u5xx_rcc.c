@@ -128,6 +128,14 @@ static inline void rcc_enableahb1(void)
   regval |= RCC_AHB1ENR_DMA2DEN;
 #endif
 
+#ifdef CONFIG_STM32U5_GFXMMU
+  regval |= RCC_AHB1ENR_GFXMMUEN;
+#endif
+
+#ifdef CONFIG_STM32U5_GPU2D
+  regval |= RCC_AHB1ENR_GPU2DEN;
+#endif
+
 #ifdef CONFIG_STM32U5_GTZC1
   regval |= RCC_AHB1ENR_GTZC1EN;
 #endif
@@ -191,6 +199,9 @@ static inline void rcc_enableahb2(void)
 #if STM32_NPORTS > 8
              | RCC_AHB2ENR1_GPIOIEN
 #endif
+#if STM32_NPORTS > 9
+             | RCC_AHB2ENR1_GPIOJEN
+#endif
        );
 #endif
 
@@ -215,7 +226,7 @@ static inline void rcc_enableahb2(void)
 #endif
 
 #ifdef CONFIG_STM32U5_HASH
-  regval |= RCC_AHB2ENR1_HASHEN
+  regval |= RCC_AHB2ENR1_HASHEN;
 #endif
 
 #ifdef CONFIG_STM32U5_RNG
@@ -223,30 +234,30 @@ static inline void rcc_enableahb2(void)
 #endif
 
 #ifdef CONFIG_STM32U5_PKA
-  regval |= RCC_AHB2ENR_PKAEN;
+  regval |= RCC_AHB2ENR1_PKAEN;
 #endif
 
 #ifdef CONFIG_STM32U5_SAES
-  regval |= RCC_AHB2ENR1_SAES;
+  regval |= RCC_AHB2ENR1_SAESEN;
 #endif
 
 #ifdef CONFIG_STM32U5_OCTOSPIM
-  regval |= RCC_AHB2ENR1_OCTOSPIM;
+  regval |= RCC_AHB2ENR1_OCTOSPIMEN;
 #endif
 
 #ifdef CONFIG_STM32U5_OTFDEC1
-  regval |= RCC_AHB2ENR1_OTFDEC1;
+  regval |= RCC_AHB2ENR1_OTFDEC1EN;
 #endif
 
 #ifdef CONFIG_STM32U5_OTFDEC2
-  regval |= RCC_AHB2ENR1_OTFDEC2;
+  regval |= RCC_AHB2ENR1_OTFDEC2EN;
 #endif
 
-#ifdef CONFIG_STM32U5_SDMMC1EN
+#ifdef CONFIG_STM32U5_SDMMC1
   regval |= RCC_AHB2ENR1_SDMMC1EN;
 #endif
 
-#ifdef CONFIG_STM32U5_SDMMC2EN
+#ifdef CONFIG_STM32U5_SDMMC2
   regval |= RCC_AHB2ENR1_SDMMC2EN;
 #endif
 
@@ -272,6 +283,10 @@ static inline void rcc_enableahb2(void)
 
 #ifdef CONFIG_STM32U5_OCTOSPI2
   regval |= RCC_AHB2ENR2_OCTOSPI2EN;
+#endif
+
+#ifdef CONFIG_STM32U5_HSPI1
+  regval |= RCC_AHB2ENR2_HSPI1EN;
 #endif
 
 #ifdef CONFIG_STM32U5_SRAM5
@@ -422,6 +437,14 @@ static inline void rcc_enableapb1(void)
   regval |= RCC_APB1ENR2_I2C4EN;
 #endif
 
+#ifdef CONFIG_STM32U5_I2C5
+  regval |= RCC_APB1ENR2_I2C5EN;
+#endif
+
+#ifdef CONFIG_STM32U5_I2C6
+  regval |= RCC_APB1ENR2_I2C6EN;
+#endif
+
 #ifdef CONFIG_STM32U5_LPTIM2
   regval |= RCC_APB1ENR2_LPTIM2EN;
 #endif
@@ -491,6 +514,14 @@ static inline void rcc_enableapb2(void)
   regval |= RCC_APB2ENR_SAI2EN;
 #endif
 
+#ifdef CONFIG_STM32U5_LTDC
+  regval |= RCC_APB2ENR_LTDCEN;
+#endif
+
+#ifdef CONFIG_STM32U5_DSIHOST
+  regval |= RCC_APB2ENR_DSIHOSTEN;
+#endif
+
   putreg32(regval, STM32_RCC_APB2ENR);
 }
 
@@ -524,7 +555,7 @@ static inline void rcc_enableapb3(void)
   regval |= RCC_APB3ENR_LPUART1EN;
 #endif
 
-#ifdef CONFIG_STM32U5_I2C3EN
+#ifdef CONFIG_STM32U5_I2C3
   regval |= RCC_APB3ENR_I2C3EN;
 #endif
 

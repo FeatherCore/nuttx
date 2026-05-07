@@ -180,6 +180,7 @@
  *    CONFIG_STM32U5_I2C2
  *    CONFIG_STM32U5_I2C3
  *    CONFIG_STM32U5_I2C4
+ *    CONFIG_STM32U5_I2C5
  *
  *  To configure the ISR timeout using fixed values
  * (CONFIG_STM32U5_I2C_DYNTIMEO=n):
@@ -274,7 +275,8 @@
 /* At least one I2C peripheral must be enabled */
 
 #if defined(CONFIG_STM32U5_I2C1) || defined(CONFIG_STM32U5_I2C2) || \
-    defined(CONFIG_STM32U5_I2C3) || defined(CONFIG_STM32U5_I2C4)
+    defined(CONFIG_STM32U5_I2C3) || defined(CONFIG_STM32U5_I2C4) || \
+    defined(CONFIG_STM32U5_I2C5)
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -396,7 +398,9 @@ struct stm32_trace_s
 struct stm32_i2c_config_s
 {
   uint32_t base;              /* I2C base address */
+  uint32_t clk_reg;           /* Clock enable register */
   uint32_t clk_bit;           /* Clock enable bit */
+  uint32_t reset_reg;         /* Peripheral reset register */
   uint32_t reset_bit;         /* Reset bit */
   uint32_t scl_pin;           /* GPIO configuration for SCL as SCL */
   uint32_t sda_pin;           /* GPIO configuration for SDA as SDA */
@@ -522,7 +526,9 @@ static int stm32_i2c_pm_prepare(struct pm_callback_s *cb, int domain,
 static const struct stm32_i2c_config_s stm32_i2c1_config =
 {
   .base       = STM32_I2C1_BASE,
+  .clk_reg    = STM32_RCC_APB1ENR1,
   .clk_bit    = RCC_APB1ENR1_I2C1EN,
+  .reset_reg  = STM32_RCC_APB1RSTR1,
   .reset_bit  = RCC_APB1RSTR1_I2C1RST,
   .scl_pin    = GPIO_I2C1_SCL,
   .sda_pin    = GPIO_I2C1_SDA,
@@ -558,7 +564,9 @@ static struct stm32_i2c_priv_s stm32_i2c1_priv =
 static const struct stm32_i2c_config_s stm32_i2c2_config =
 {
   .base       = STM32_I2C2_BASE,
+  .clk_reg    = STM32_RCC_APB1ENR1,
   .clk_bit    = RCC_APB1ENR1_I2C2EN,
+  .reset_reg  = STM32_RCC_APB1RSTR1,
   .reset_bit  = RCC_APB1RSTR1_I2C2RST,
   .scl_pin    = GPIO_I2C2_SCL,
   .sda_pin    = GPIO_I2C2_SDA,
@@ -594,8 +602,10 @@ static struct stm32_i2c_priv_s stm32_i2c2_priv =
 static const struct stm32_i2c_config_s stm32_i2c3_config =
 {
   .base       = STM32_I2C3_BASE,
-  .clk_bit    = RCC_APB1ENR1_I2C3EN,
-  .reset_bit  = RCC_APB1RSTR1_I2C3RST,
+  .clk_reg    = STM32_RCC_APB3ENR,
+  .clk_bit    = RCC_APB3ENR_I2C3EN,
+  .reset_reg  = STM32_RCC_APB3RSTR,
+  .reset_bit  = RCC_APB3RSTR_I2C3RST,
   .scl_pin    = GPIO_I2C3_SCL,
   .sda_pin    = GPIO_I2C3_SDA,
 #ifndef CONFIG_I2C_POLLED
@@ -630,7 +640,9 @@ static struct stm32_i2c_priv_s stm32_i2c3_priv =
 static const struct stm32_i2c_config_s stm32_i2c4_config =
 {
   .base       = STM32_I2C4_BASE,
+  .clk_reg    = STM32_RCC_APB1ENR2,
   .clk_bit    = RCC_APB1ENR2_I2C4EN,
+  .reset_reg  = STM32_RCC_APB1RSTR2,
   .reset_bit  = RCC_APB1RSTR2_I2C4RST,
   .scl_pin    = GPIO_I2C4_SCL,
   .sda_pin    = GPIO_I2C4_SDA,
@@ -643,6 +655,44 @@ static const struct stm32_i2c_config_s stm32_i2c4_config =
 static struct stm32_i2c_priv_s stm32_i2c4_priv =
 {
   .config     = &stm32_i2c4_config,
+  .refs       = 0,
+  .lock       = NXMUTEX_INITIALIZER,
+#ifndef CONFIG_I2C_POLLED
+  .sem_isr    = SEM_INITIALIZER(0),
+#endif
+  .intstate   = INTSTATE_IDLE,
+  .msgc       = 0,
+  .msgv       = NULL,
+  .ptr        = NULL,
+  .frequency  = 0,
+  .dcnt       = 0,
+  .flags      = 0,
+  .status     = 0,
+#ifdef CONFIG_PM
+  .pm_cb.prepare = stm32_i2c_pm_prepare,
+#endif
+};
+#endif
+
+#ifdef CONFIG_STM32U5_I2C5
+static const struct stm32_i2c_config_s stm32_i2c5_config =
+{
+  .base       = STM32_I2C5_BASE,
+  .clk_reg    = STM32_RCC_APB1ENR2,
+  .clk_bit    = RCC_APB1ENR2_I2C5EN,
+  .reset_reg  = STM32_RCC_APB1RSTR2,
+  .reset_bit  = RCC_APB1RSTR2_I2C5RST,
+  .scl_pin    = GPIO_I2C5_SCL,
+  .sda_pin    = GPIO_I2C5_SDA,
+#ifndef CONFIG_I2C_POLLED
+  .ev_irq     = STM32_IRQ_I2C5_EV,
+  .er_irq     = STM32_IRQ_I2C5_ER
+#endif
+};
+
+static struct stm32_i2c_priv_s stm32_i2c5_priv =
+{
+  .config     = &stm32_i2c5_config,
   .refs       = 0,
   .lock       = NXMUTEX_INITIALIZER,
 #ifndef CONFIG_I2C_POLLED
@@ -2367,20 +2417,9 @@ static int stm32_i2c_init(struct stm32_i2c_priv_s *priv)
 
   /* Enable power and reset the peripheral */
 
-#ifdef CONFIG_STM32U5_I2C4
-  if (priv->config->base == STM32_I2C4_BASE)
-    {
-      modifyreg32(STM32_RCC_APB1ENR2, 0, priv->config->clk_bit);
-      modifyreg32(STM32_RCC_APB1RSTR2, 0, priv->config->reset_bit);
-      modifyreg32(STM32_RCC_APB1RSTR2, priv->config->reset_bit, 0);
-    }
-  else
-#endif
-    {
-      modifyreg32(STM32_RCC_APB1ENR1, 0, priv->config->clk_bit);
-      modifyreg32(STM32_RCC_APB1RSTR1, 0, priv->config->reset_bit);
-      modifyreg32(STM32_RCC_APB1RSTR1, priv->config->reset_bit, 0);
-    }
+  modifyreg32(priv->config->clk_reg, 0, priv->config->clk_bit);
+  modifyreg32(priv->config->reset_reg, 0, priv->config->reset_bit);
+  modifyreg32(priv->config->reset_reg, priv->config->reset_bit, 0);
 
   /* Configure pins */
 
@@ -2452,16 +2491,7 @@ static int stm32_i2c_deinit(struct stm32_i2c_priv_s *priv)
 
   /* Disable clocking */
 
-#ifdef CONFIG_STM32U5_I2C4
-  if (priv->config->base == STM32_I2C4_BASE)
-    {
-      modifyreg32(STM32_RCC_APB1ENR2, priv->config->clk_bit, 0);
-    }
-  else
-#endif
-    {
-      modifyreg32(STM32_RCC_APB1ENR1, priv->config->clk_bit, 0);
-    }
+  modifyreg32(priv->config->clk_reg, priv->config->clk_bit, 0);
 
   return OK;
 }
@@ -2977,6 +3007,11 @@ struct i2c_master_s *stm32_i2cbus_initialize(int port)
         priv = (struct stm32_i2c_priv_s *)&stm32_i2c4_priv;
         break;
 #endif
+#ifdef CONFIG_STM32U5_I2C5
+      case 5:
+        priv = (struct stm32_i2c_priv_s *)&stm32_i2c5_priv;
+        break;
+#endif
       default:
         return NULL;
     }
@@ -3058,4 +3093,4 @@ int stm32_i2cbus_uninitialize(struct i2c_master_s *dev)
   return OK;
 }
 
-#endif /* CONFIG_STM32U5_I2C1 || CONFIG_STM32U5_I2C2 || CONFIG_STM32U5_I2C3 || CONFIG_STM32U5_I2C4 */
+#endif /* CONFIG_STM32U5_I2C1 || CONFIG_STM32U5_I2C2 || CONFIG_STM32U5_I2C3 || CONFIG_STM32U5_I2C4 || CONFIG_STM32U5_I2C5 */

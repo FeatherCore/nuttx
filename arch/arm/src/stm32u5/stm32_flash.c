@@ -50,9 +50,9 @@
 #include "stm32_flash.h"
 #include "arm_internal.h"
 
-#if !defined(CONFIG_STM32U5_STM32U585XX)
-#elif !defined(CONFIG_STM32U5_STM32U5A5XX)
-#else
+#if !defined(CONFIG_STM32U5_STM32U585XX) && \
+    !defined(CONFIG_STM32U5_STM32U5A5XX) && \
+    !defined(CONFIG_STM32U5_STM32U5A9XX)
 #  error "Unrecognized STM32 chip"
 #endif
 
