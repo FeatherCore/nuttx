@@ -26,6 +26,8 @@
  * Private Data
  ****************************************************************************/
 
+#define STM32H7RS_UART4_TXDONE_TIMEOUT 1000000u
+
 static bool g_uart4_initialized;
 
 /****************************************************************************
@@ -76,6 +78,7 @@ void stm32h7rs_lowsetup(void)
 {
   uint32_t brr;
 
+  stm32h7rs_uart4_wait_txcomplete();
   stm32h7rs_uart4_gpio_config();
 
   modifyreg32(STM32H7RS_RCC_APB1ENR1, 0, RCC_APB1ENR1_UART4EN);
@@ -93,6 +96,27 @@ void stm32h7rs_lowsetup(void)
 
   putreg32(USART_CR1_UE | USART_CR1_TE | USART_CR1_RE, STM32H7RS_UART4_CR1);
   g_uart4_initialized = true;
+}
+
+void stm32h7rs_uart4_wait_txcomplete(void)
+{
+  uint32_t timeout = STM32H7RS_UART4_TXDONE_TIMEOUT;
+
+  if ((getreg32(STM32H7RS_RCC_APB1ENR1) & RCC_APB1ENR1_UART4EN) == 0)
+    {
+      return;
+    }
+
+  if ((getreg32(STM32H7RS_UART4_CR1) & (USART_CR1_UE | USART_CR1_TE)) !=
+      (USART_CR1_UE | USART_CR1_TE))
+    {
+      return;
+    }
+
+  while ((getreg32(STM32H7RS_UART4_ISR) & USART_ISR_TC) == 0 &&
+         timeout-- > 0)
+    {
+    }
 }
 
 void arm_lowputc(char ch)

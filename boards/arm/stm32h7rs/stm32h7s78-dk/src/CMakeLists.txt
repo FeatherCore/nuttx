@@ -5,10 +5,10 @@
 #
 # ##############################################################################
 
-set(SRCS stm32h7rs_bringup.c stm32h7rs_autoleds.c)
+set(SRCS stm32h7rs_bringup.c stm32h7rs_autoleds.c stm32h7s78_heap.c)
 
 if(CONFIG_STM32H7RS_XSPI)
-  list(APPEND SRCS stm32h7rs_extmem.c)
+  list(APPEND SRCS stm32h7rs_extmem.c stm32h7s78_xspi.c)
 endif()
 
 if(CONFIG_BOARDCTL_BOOT_IMAGE)

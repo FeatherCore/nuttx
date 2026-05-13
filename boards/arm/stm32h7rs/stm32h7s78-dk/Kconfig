@@ -7,4 +7,77 @@ if ARCH_BOARD_STM32H7S78_DK
 
 comment "STM32H7S78-DK Board Options"
 
+config STM32H7RS_APP_FORMAT_NXBOOT
+	bool "NXboot application image format"
+	default n
+	depends on STM32H7RS_XSPI
+	select BOARDCTL_BOOT_IMAGE
+	---help---
+		Build an image intended to be managed by NXboot.  The board linker
+		scripts place the loader in internal Flash and the application after
+		an NXboot header in memory-mapped XSPI2 NOR.
+
+config STM32H7RS_EXTNOR_OTA_PARTITION
+	bool "Create OTA partitions on external NOR"
+	default n
+	depends on STM32H7RS_APP_FORMAT_NXBOOT
+	select MTD
+	select MTD_PARTITION
+	---help---
+		Register /dev/ota0, /dev/ota1 and /dev/ota2 from the
+		STM32H7S78-DK XSPI2 NOR MTD.  The first implementation keeps the
+		partition table in Kconfig so NXboot slot geometry and board
+		bring-up stay in sync.
+
+config STM32H7RS_PSRAM_HEAP
+	bool "Use XSPI1 PSRAM as an extra heap region"
+	default n
+	depends on STM32H7RS_XSPI && !NXBOOT_BOOTLOADER
+	---help---
+		Add the STM32H7S78-DK XSPI1 PSRAM at 0x90000000 to the NuttX heap
+		from the board-specific arm_addregion() implementation.
+
+config STM32H7RS_PSRAM_HEAP_OFFSET
+	hex "XSPI1 PSRAM heap offset"
+	default 0x0
+	depends on STM32H7RS_PSRAM_HEAP
+	---help---
+		Reserve the first bytes of the memory-mapped XSPI1 PSRAM window
+		before adding the remaining range to the NuttX heap.  This is useful
+		during bring-up because low PSRAM addresses can be used for
+		destructive self-tests without overlapping malloc metadata or user
+		allocations.
+
+if STM32H7RS_EXTNOR_OTA_PARTITION
+
+config STM32H7RS_OTA_PRIMARY_SLOT_DEVPATH
+	string "Primary image slot devpath"
+	default "/dev/ota0"
+
+config STM32H7RS_OTA_SECONDARY_SLOT_DEVPATH
+	string "Secondary image slot devpath"
+	default "/dev/ota1"
+
+config STM32H7RS_OTA_TERTIARY_SLOT_DEVPATH
+	string "Tertiary image slot devpath"
+	default "/dev/ota2"
+
+config STM32H7RS_OTA_PRIMARY_SLOT_OFFSET
+	hex "Primary image slot offset in external NOR"
+	default 0x0
+
+config STM32H7RS_OTA_SECONDARY_SLOT_OFFSET
+	hex "Secondary image slot offset in external NOR"
+	default 0x02000000
+
+config STM32H7RS_OTA_TERTIARY_SLOT_OFFSET
+	hex "Tertiary image slot offset in external NOR"
+	default 0x04000000
+
+config STM32H7RS_OTA_SLOT_SIZE
+	hex "Image slot size"
+	default 0x02000000
+
+endif # STM32H7RS_EXTNOR_OTA_PARTITION
+
 endif # ARCH_BOARD_STM32H7S78_DK

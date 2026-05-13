@@ -11,14 +11,19 @@
 
 #include <nuttx/config.h>
 
+#include <errno.h>
+#include <sys/mount.h>
+
 #include <debug.h>
 
+#include "stm32h7s78-dk.h"
+
 /****************************************************************************
- * Private Function Prototypes
+ * Pre-processor Definitions
  ****************************************************************************/
 
-#ifdef CONFIG_STM32H7RS_XSPI
-int stm32h7rs_extmem_initialize(void);
+#if defined(CONFIG_FS_PROCFS) && !defined(CONFIG_NSH_PROC_MOUNTPOINT)
+#  define CONFIG_NSH_PROC_MOUNTPOINT "/proc"
 #endif
 
 /****************************************************************************
@@ -44,6 +49,14 @@ void board_late_initialize(void)
     }
 #else
   UNUSED(ret);
+#endif
+
+#ifdef CONFIG_FS_PROCFS
+  ret = mount(NULL, CONFIG_NSH_PROC_MOUNTPOINT, "procfs", 0, NULL);
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "procfs mount failed: %d\n", errno);
+    }
 #endif
 }
 #endif

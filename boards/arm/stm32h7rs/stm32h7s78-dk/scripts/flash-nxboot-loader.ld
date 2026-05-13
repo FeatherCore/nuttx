@@ -30,7 +30,7 @@
  *                   NXboot slots for the first-stage bring-up.
  *
  * Keep these checks in sync with arch/arm/src/stm32h7rs/Kconfig and the
- * nxboot-app linker script.
+ * nsh app linker script.
  */
 
 #if CONFIG_STM32H7RS_OTA_PRIMARY_SLOT_OFFSET != 0x0

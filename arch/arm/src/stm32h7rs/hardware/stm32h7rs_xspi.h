@@ -65,6 +65,13 @@
 #define XSPI_DCR3_CSBOUND_SHIFT          16
 #define XSPI_DCR3_CSBOUND(n)             ((uint32_t)(n) << \
                                            XSPI_DCR3_CSBOUND_SHIFT)
+#define XSPI_DCR3_MAXTRAN_SHIFT          0
+#define XSPI_DCR3_MAXTRAN(n)             ((uint32_t)(n) << \
+                                           XSPI_DCR3_MAXTRAN_SHIFT)
+
+#define XSPI_DCR4_REFRESH_SHIFT          0
+#define XSPI_DCR4_REFRESH(n)             ((uint32_t)(n) << \
+                                           XSPI_DCR4_REFRESH_SHIFT)
 
 #define XSPI_SR_TEF                      (1u << 0)
 #define XSPI_SR_TCF                      (1u << 1)

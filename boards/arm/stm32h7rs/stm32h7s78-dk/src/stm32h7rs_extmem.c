@@ -25,13 +25,15 @@
 #include <nuttx/fs/ioctl.h>
 #include <nuttx/mtd/mtd.h>
 
-#include "stm32h7rs.h"
+#include "chip.h"
+#include "hardware/stm32h7rs_memorymap.h"
+
+#include "stm32h7s78-dk.h"
 
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define STM32H7RS_XSPI2_NOR_BASE        0x70000000u
 #define STM32H7RS_NOR_BLOCK_SIZE        512u
 #define STM32H7RS_NOR_ERASE_SIZE        0x10000u
 
@@ -85,7 +87,7 @@ static struct stm32h7rs_xip_mtd_s g_nor_mtd =
       .ioctl  = stm32h7rs_xip_ioctl,
       .name   = "stm32h7rs-xspi2-nor",
     },
-  .base = STM32H7RS_XSPI2_NOR_BASE,
+  .base = STM32H7RS_XSPI2_MEM_BASE,
   .size = STM32H7RS_XSPI2_NOR_SIZE,
 };
 
@@ -261,13 +263,13 @@ int stm32h7rs_extmem_initialize(void)
 {
   int ret;
 
-  ret = stm32h7rs_xspi2_nor_initialize();
+  ret = stm32h7s78_xspi2_nor_initialize();
   if (ret < 0)
     {
       return ret;
     }
 
-  ret = stm32h7rs_xspi1_psram_initialize();
+  ret = stm32h7s78_xspi1_psram_initialize();
   if (ret < 0)
     {
       syslog(LOG_ERR, "stm32h7rs: XSPI1 PSRAM init failed: %d\n", ret);

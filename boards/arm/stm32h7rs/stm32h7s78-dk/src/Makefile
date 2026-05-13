@@ -7,10 +7,10 @@
 
 include $(TOPDIR)/Make.defs
 
-CSRCS = stm32h7rs_bringup.c stm32h7rs_autoleds.c
+CSRCS = stm32h7rs_bringup.c stm32h7rs_autoleds.c stm32h7s78_heap.c
 
 ifeq ($(CONFIG_STM32H7RS_XSPI),y)
-CSRCS += stm32h7rs_extmem.c
+CSRCS += stm32h7rs_extmem.c stm32h7s78_xspi.c
 endif
 
 ifeq ($(CONFIG_BOARDCTL_BOOT_IMAGE),y)

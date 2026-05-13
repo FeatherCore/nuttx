@@ -27,7 +27,11 @@
 #include <arch/barriers.h>
 
 #include "arm_internal.h"
+#ifdef CONFIG_ARM_MPU
+#  include "mpu.h"
+#endif
 #include "nvic.h"
+#include "stm32h7rs.h"
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -163,6 +167,7 @@ int board_boot_image(FAR const char *path, uint32_t hdr_size)
   syslog(LOG_INFO, "Boot vector msp=0x%08" PRIx32
          " reset=0x%08" PRIx32 " vtor=0x%08" PRIxPTR "\n",
          vt.spr, vt.reset, vtor);
+  stm32h7rs_uart4_wait_txcomplete();
 
   if (!stm32h7rs_valid_stack(vt.spr) || !stm32h7rs_valid_reset(vt.reset,
                                                                vtor))
