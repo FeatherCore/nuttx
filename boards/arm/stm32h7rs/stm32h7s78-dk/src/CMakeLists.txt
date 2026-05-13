@@ -16,7 +16,14 @@ if(CONFIG_BOARDCTL_BOOT_IMAGE)
 endif()
 
 target_sources(board PRIVATE ${SRCS})
-if(CONFIG_STM32H7RS_APP_FORMAT_NXBOOT)
+if(CONFIG_BUILD_PROTECTED)
+  set_property(
+    GLOBAL PROPERTY LD_SCRIPT "${NUTTX_BOARD_DIR}/scripts/memory.ld"
+                    "${NUTTX_BOARD_DIR}/scripts/kernel-space.ld")
+  set_property(
+    GLOBAL PROPERTY LD_SCRIPT_USER "${NUTTX_BOARD_DIR}/scripts/memory.ld"
+                    "${NUTTX_BOARD_DIR}/scripts/user-space.ld")
+elseif(CONFIG_STM32H7RS_APP_FORMAT_NXBOOT)
   if(CONFIG_NXBOOT_BOOTLOADER)
     set_property(GLOBAL PROPERTY LD_SCRIPT
                  "${NUTTX_BOARD_DIR}/scripts/flash-nxboot-loader.ld")

@@ -15,6 +15,7 @@
 
 #include <nuttx/cache.h>
 #include <nuttx/init.h>
+#include <nuttx/irq.h>
 
 #include "arm_internal.h"
 #include "chip.h"
@@ -22,6 +23,10 @@
 #  include "mpu.h"
 #endif
 #include "stm32h7rs.h"
+#ifdef CONFIG_BUILD_PROTECTED
+#  include "stm32h7rs_mpuinit.h"
+#  include "stm32h7rs_userspace.h"
+#endif
 #include "hardware/stm32h7rs_memorymap.h"
 
 /****************************************************************************
@@ -80,6 +85,13 @@ static void stm32h7rs_cache_setup(void)
 #endif
 }
 
+static void stm32h7rs_early_fault_setup(void)
+{
+#ifdef CONFIG_DEBUG_HARDFAULT_ALERT
+  irq_attach(STM32_IRQ_HARDFAULT, arm_hardfault, NULL);
+#endif
+}
+
 /****************************************************************************
  * Public Data
  ****************************************************************************/
@@ -120,6 +132,12 @@ void __start(void)
   arm_lowputc('\n');
   stm32h7rs_uart4_wait_txcomplete();
   stm32h7rs_cache_setup();
+  stm32h7rs_early_fault_setup();
+
+#ifdef CONFIG_BUILD_PROTECTED
+  stm32h7rs_userspace();
+  stm32h7rs_mpuinitialize();
+#endif
 
   nx_start();
 

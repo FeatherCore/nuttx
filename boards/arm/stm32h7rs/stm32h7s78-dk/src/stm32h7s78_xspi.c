@@ -501,7 +501,8 @@ static int stm32h7s78_psram_selftest(void)
       0x00001040u,
       0x00100000u,
       0x00ffffc0u,
-      0x01ffffc0u
+      0x01ffffc0u,
+      STM32H7RS_XSPI1_PSRAM_SIZE - 0x20u
     };
 
   const uint32_t alias_offsets[] =

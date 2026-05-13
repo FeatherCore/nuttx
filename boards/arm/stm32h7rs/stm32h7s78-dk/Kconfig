@@ -48,6 +48,25 @@ config STM32H7RS_PSRAM_HEAP_OFFSET
 		destructive self-tests without overlapping malloc metadata or user
 		allocations.
 
+config STM32H7RS_PROTECTED_USRAM_BASE
+	hex "Protected build user SRAM base"
+	default 0x24060000
+	depends on BUILD_PROTECTED
+	---help---
+		Base of the small internal SRAM window reserved for the protected
+		build user blob .data/.bss sections.  The remaining internal SRAM
+		below this address is available to the kernel heap.
+
+config STM32H7RS_PROTECTED_USRAM_SIZE
+	hex "Protected build user SRAM size"
+	default 0x12000
+	depends on BUILD_PROTECTED
+	---help---
+		Size of the protected build internal SRAM window reserved for user
+		.data/.bss.  STM32H7S78-DK has 456 KiB AXI SRAM, so the default
+		0x24060000..0x24071fff reserves 72 KiB for user static data and
+		leaves the rest of internal SRAM for kernel state and kernel heap.
+
 if STM32H7RS_EXTNOR_OTA_PARTITION
 
 config STM32H7RS_OTA_PRIMARY_SLOT_DEVPATH
