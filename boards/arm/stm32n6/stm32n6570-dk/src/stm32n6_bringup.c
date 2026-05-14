@@ -11,22 +11,19 @@
 
 #include <nuttx/config.h>
 
+#include <errno.h>
+#include <sys/mount.h>
+
 #include <debug.h>
 
+#include "stm32n6570-dk.h"
+
 /****************************************************************************
- * Private Function Prototypes
+ * Pre-processor Definitions
  ****************************************************************************/
 
-#ifdef CONFIG_STM32N6_XSPI
-int stm32n6_extmem_initialize(void);
-#endif
-
-#ifdef CONFIG_STM32N6_PSRAM_DIAG
-int stm32n6_psram_diag_register(void);
-#endif
-
-#ifdef CONFIG_STM32N6_EXTNOR_DIAG
-int stm32n6_nor_diag_register(void);
+#if defined(CONFIG_FS_PROCFS) && !defined(CONFIG_NSH_PROC_MOUNTPOINT)
+#  define CONFIG_NSH_PROC_MOUNTPOINT "/proc"
 #endif
 
 /****************************************************************************
@@ -38,7 +35,7 @@ void board_late_initialize(void)
 {
   int ret;
 
-  syslog(LOG_INFO, "STM32N6570-DK NXboot-FSBL bring-up\n");
+  syslog(LOG_INFO, "STM32N6570-DK NXboot bring-up\n");
 
 #ifdef CONFIG_STM32N6_XSPI
   ret = stm32n6_extmem_initialize();
@@ -46,26 +43,16 @@ void board_late_initialize(void)
     {
       syslog(LOG_ERR, "stm32n6_extmem_initialize failed: %d\n", ret);
     }
-  else
-    {
-#ifdef CONFIG_STM32N6_PSRAM_DIAG
-      ret = stm32n6_psram_diag_register();
-      if (ret < 0)
-        {
-          syslog(LOG_ERR, "stm32n6_psram_diag_register failed: %d\n",
-                 ret);
-        }
-#endif
-#ifdef CONFIG_STM32N6_EXTNOR_DIAG
-      ret = stm32n6_nor_diag_register();
-      if (ret < 0)
-        {
-          syslog(LOG_ERR, "stm32n6_nor_diag_register failed: %d\n", ret);
-        }
-#endif
-    }
 #else
   UNUSED(ret);
+#endif
+
+#ifdef CONFIG_FS_PROCFS
+  ret = mount(NULL, CONFIG_NSH_PROC_MOUNTPOINT, "procfs", 0, NULL);
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "procfs mount failed: %d\n", errno);
+    }
 #endif
 }
 #endif

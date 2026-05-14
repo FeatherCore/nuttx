@@ -3138,7 +3138,7 @@ config ARCH_BOARD_STM32N6570_DK
 	select ARCH_HAVE_BUTTONS
 	---help---
 		STMicro STM32N6570-DK Discovery kit.  The first NuttX port uses an
-		NXboot-FSBL image loaded by the STM32N6 BootROM, then starts an XIP
+		NXboot image loaded by the STM32N6 BootROM, then starts an XIP
 		application from XSPI2 NOR.
 
 config ARCH_BOARD_STM32L476VG_DISCO

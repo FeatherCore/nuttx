@@ -1,0 +1,31 @@
+# ##############################################################################
+# boards/arm/stm32n6/stm32n6570-dk/src/CMakeLists.txt
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+# ##############################################################################
+
+set(SRCS stm32n6_bringup.c stm32n6_autoleds.c stm32n6570_heap.c)
+
+if(CONFIG_STM32N6_XSPI)
+  list(APPEND SRCS stm32n6_extmem.c stm32n6570_xspi.c)
+endif()
+
+if(CONFIG_BOARDCTL_BOOT_IMAGE)
+  list(APPEND SRCS stm32n6_boot_image.c)
+endif()
+
+target_sources(board PRIVATE ${SRCS})
+
+if(CONFIG_STM32N6_APP_FORMAT_NXBOOT)
+  if(CONFIG_NXBOOT_BOOTLOADER)
+    set_property(GLOBAL PROPERTY LD_SCRIPT
+                 "${NUTTX_BOARD_DIR}/scripts/nxboot.ld")
+  else()
+    set_property(GLOBAL PROPERTY LD_SCRIPT
+                 "${NUTTX_BOARD_DIR}/scripts/nxboot-app.ld")
+  endif()
+else()
+  set_property(GLOBAL PROPERTY LD_SCRIPT
+               "${NUTTX_BOARD_DIR}/scripts/nxboot-app.ld")
+endif()

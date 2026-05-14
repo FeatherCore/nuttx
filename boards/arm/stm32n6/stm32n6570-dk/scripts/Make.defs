@@ -11,7 +11,7 @@ include $(TOPDIR)/arch/arm/src/armv8-m/Toolchain.defs
 
 ifeq ($(CONFIG_STM32N6_APP_FORMAT_NXBOOT),y)
   ifeq ($(CONFIG_NXBOOT_BOOTLOADER),y)
-    ARCHSCRIPT += $(BOARD_DIR)$(DELIM)scripts$(DELIM)nxboot-fsbl.ld
+    ARCHSCRIPT += $(BOARD_DIR)$(DELIM)scripts$(DELIM)nxboot.ld
   else
     ARCHSCRIPT += $(BOARD_DIR)$(DELIM)scripts$(DELIM)nxboot-app.ld
   endif

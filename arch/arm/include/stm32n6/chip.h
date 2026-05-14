@@ -22,7 +22,7 @@
 #  error STM32N6 chip not identified
 #endif
 
-/* STM32N6570-DK resources used by the first NXboot-FSBL port.  The SRAM and
+/* STM32N6570-DK resources used by the first NXboot port.  The SRAM and
  * XIP address ranges match STM32CubeN6 Template_FSBL_XIP_Custom.
  */
 

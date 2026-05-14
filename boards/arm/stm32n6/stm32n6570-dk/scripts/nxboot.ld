@@ -1,5 +1,5 @@
 /****************************************************************************
- * boards/arm/stm32n6/stm32n6570-dk/scripts/nxboot-fsbl.ld
+ * boards/arm/stm32n6/stm32n6570-dk/scripts/nxboot.ld
  *
  * SPDX-License-Identifier: Apache-2.0
  *

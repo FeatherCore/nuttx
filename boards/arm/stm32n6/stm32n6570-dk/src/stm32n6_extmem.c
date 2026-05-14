@@ -27,7 +27,7 @@
 
 #include <arch/stm32n6/chip.h>
 
-#include "stm32n6.h"
+#include "stm32n6570-dk.h"
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -141,7 +141,7 @@ static int stm32n6_xip_erase(FAR struct mtd_dev_s *dev, off_t startblock,
   size_t nbytes = nblocks * STM32N6_NOR_ERASE_SIZE;
   int ret;
 
-  ret = stm32n6_xspi2_nor_erase(offset, nbytes);
+  ret = stm32n6570_xspi2_nor_erase(offset, nbytes);
   return ret < 0 ? ret : (int)nblocks;
 #else
   return -EROFS;
@@ -157,7 +157,7 @@ static ssize_t stm32n6_xip_bwrite(FAR struct mtd_dev_s *dev,
   size_t nbytes = nblocks * STM32N6_NOR_BLOCK_SIZE;
   ssize_t ret;
 
-  ret = stm32n6_xspi2_nor_write(offset, buffer, nbytes);
+  ret = stm32n6570_xspi2_nor_write(offset, buffer, nbytes);
   return ret < 0 ? ret : ret / STM32N6_NOR_BLOCK_SIZE;
 #else
   return -EROFS;
@@ -190,7 +190,7 @@ static ssize_t stm32n6_xip_write(FAR struct mtd_dev_s *dev, off_t offset,
                                  FAR const uint8_t *buffer)
 {
 #ifdef CONFIG_STM32N6_EXTNOR_WRITE
-  return stm32n6_xspi2_nor_write(offset, buffer, nbytes);
+  return stm32n6570_xspi2_nor_write(offset, buffer, nbytes);
 #else
   return -EROFS;
 #endif
@@ -251,7 +251,7 @@ static int stm32n6_xip_ioctl(FAR struct mtd_dev_s *dev, int cmd,
 
 #ifdef CONFIG_STM32N6_EXTNOR_WRITE
       case MTDIOC_BULKERASE:
-        return stm32n6_xspi2_nor_erase(0, priv->size);
+        return stm32n6570_xspi2_nor_erase(0, priv->size);
 #endif
 
       default:
@@ -312,13 +312,13 @@ int stm32n6_extmem_initialize(void)
 
   syslog(LOG_INFO, "stm32n6: extmem init begin\n");
 
-  ret = stm32n6_xspi2_nor_initialize();
+  ret = stm32n6570_xspi2_nor_initialize();
   if (ret < 0)
     {
       return ret;
     }
 
-  ret = stm32n6_xspi1_psram_initialize();
+  ret = stm32n6570_xspi1_psram_initialize();
   if (ret < 0)
     {
       syslog(LOG_ERR, "stm32n6: XSPI1 PSRAM init failed: %d\n", ret);

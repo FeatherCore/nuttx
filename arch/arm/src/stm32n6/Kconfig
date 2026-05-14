@@ -16,8 +16,11 @@ config ARCH_CHIP_STM32N657X0
 	bool "STM32N657X0"
 	select ARCH_CORTEXM55
 	select ARCH_HAVE_FPU
+	select ARCH_HAVE_MPU
 	select ARCH_HAVE_RAMFUNCS
 	select ARM_HAVE_MVE
+	select ARMV8M_HAVE_DCACHE
+	select ARMV8M_HAVE_ICACHE
 	---help---
 		STM32N657 Cortex-M55 part used by STM32N6570-DK.
 
@@ -80,133 +83,5 @@ config USART1_TXBUFSIZE
 endif # USART1_SERIALDRIVER
 
 endmenu # STM32N6 USART Configuration
-
-config STM32N6_APP_FORMAT_NXBOOT
-	bool "NXboot application image format"
-	default n
-	select BOARDCTL_BOOT_IMAGE
-	---help---
-		Build an image managed by NXboot.  STM32N6570-DK places the
-		NXboot-FSBL payload in internal SRAM and XIP applications after an
-		NXboot header in XSPI2 NOR.
-
-config STM32N6_EXTNOR_OTA_PARTITION
-	bool "Create OTA partitions on external NOR"
-	default n
-	select MTD
-	select MTD_PARTITION
-	depends on STM32N6_APP_FORMAT_NXBOOT
-	---help---
-		Register /dev/ota0, /dev/ota1 and /dev/ota2 from the STM32N6570-DK
-		XSPI2 NOR MTD.  The first slot starts at 0x70100000 because
-		0x70000000..0x700fffff is reserved for the BootROM header plus
-		NXboot-FSBL payload.
-
-config STM32N6_EXTNOR_WRITE
-	bool "Enable external NOR write/erase operations"
-	default n
-	depends on STM32N6_XSPI
-	---help---
-		Expose MX66UW1G45G erase and page program support through the
-		STM32N6570-DK external NOR MTD.  Boot code never performs automatic
-		write or erase; operations are only triggered by explicit file system
-		or user commands.
-
-config STM32N6_EXTNOR_DIAG
-	bool "Register external NOR diagnostic device"
-	default n
-	depends on STM32N6_XSPI && STM32N6_EXTNOR_OTA_PARTITION && !NXBOOT_BOOTLOADER
-	---help---
-		Register /dev/nordiag0 with raw XIP NOR information.  This is a
-		diagnostic interface for the STM32N6570-DK boot/app/OTA image
-		space, not a filesystem mount path.
-
-config STM32N6_EXTNOR_SCRATCH_TEST
-	bool "Allow manual external NOR scratch erase/write test"
-	default n
-	depends on STM32N6_EXTNOR_DIAG && STM32N6_EXTNOR_WRITE
-	---help---
-		Allow /dev/nordiag0 to run an explicitly requested scratch-sector
-		erase/program/readback/restore test.  The test remains manual and
-		is never run during boot.
-
-if STM32N6_EXTNOR_SCRATCH_TEST
-
-config STM32N6_EXTNOR_SCRATCH_OFFSET
-	hex "External NOR scratch test offset"
-	default 0x07ff0000
-	---help---
-		Raw NOR offset used by /dev/nordiag0 when the scratch command does
-		not specify an offset.  It must stay in the tail reserve after the
-		three NXboot OTA slots.
-
-endif # STM32N6_EXTNOR_SCRATCH_TEST
-
-config STM32N6_PSRAM_HEAP
-	bool "Use XSPI1 PSRAM as an extra heap region"
-	default n
-	depends on STM32N6_XSPI && !NXBOOT_BOOTLOADER
-	---help---
-		App-side switch for adding STM32N6570-DK XSPI1 PSRAM at
-		0x90000000 to the NuttX heap after reserving framebuffer/diagnostic
-		space.
-
-if STM32N6_PSRAM_HEAP
-
-config STM32N6_PSRAM_HEAP_OFFSET
-	hex "XSPI1 PSRAM heap offset"
-	default 0x00200000
-	---help---
-		Offset from 0x90000000 where the app-side PSRAM heap begins.
-		The default keeps the first 2 MiB free for a future framebuffer
-		or diagnostics region.
-
-config STM32N6_PSRAM_HEAP_SIZE
-	hex "XSPI1 PSRAM heap size"
-	default 0x01e00000
-	---help---
-		Size of the PSRAM region added to the NuttX heap.
-
-endif # STM32N6_PSRAM_HEAP
-
-config STM32N6_PSRAM_DIAG
-	bool "Register XSPI1 PSRAM diagnostic device"
-	default n
-	depends on STM32N6_XSPI && !NXBOOT_BOOTLOADER
-	---help---
-		Register /dev/hspiram0 with PSRAM base, size, heap layout and a
-		manual 32-byte save/write/read/restore self-test.
-
-if STM32N6_EXTNOR_OTA_PARTITION
-
-config STM32N6_OTA_PRIMARY_SLOT_DEVPATH
-	string "Primary image slot devpath"
-	default "/dev/ota0"
-
-config STM32N6_OTA_SECONDARY_SLOT_DEVPATH
-	string "Secondary image slot devpath"
-	default "/dev/ota1"
-
-config STM32N6_OTA_TERTIARY_SLOT_DEVPATH
-	string "Tertiary image slot devpath"
-	default "/dev/ota2"
-
-config STM32N6_OTA_PRIMARY_SLOT_OFFSET
-	hex "Primary image slot offset in external NOR"
-	default 0x00100000
-
-config STM32N6_OTA_SECONDARY_SLOT_OFFSET
-	hex "Secondary image slot offset in external NOR"
-	default 0x02100000
-
-config STM32N6_OTA_TERTIARY_SLOT_OFFSET
-	hex "Tertiary image slot offset in external NOR"
-	default 0x04100000
-
-config STM32N6_OTA_SLOT_SIZE
-	hex "Image slot size"
-	default 0x02000000
-
-endif # STM32N6_EXTNOR_OTA_PARTITION
 
 endif # ARCH_CHIP_STM32N6

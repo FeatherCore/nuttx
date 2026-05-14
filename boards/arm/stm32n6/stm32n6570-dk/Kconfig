@@ -7,10 +7,101 @@ if ARCH_BOARD_STM32N6570_DK
 
 comment "STM32N6570-DK Board Options"
 
-config STM32N6570_DK_FSBL_IMAGE
-	bool "Build as BootROM-loaded NXboot-FSBL payload"
+config STM32N6570_DK_NXBOOT_IMAGE
+	bool "Build as BootROM-loaded NXboot payload"
 	default n
 	depends on NXBOOT_BOOTLOADER
+
+config STM32N6_APP_FORMAT_NXBOOT
+	bool "NXboot application image format"
+	default n
+	depends on STM32N6_XSPI
+	select BOARDCTL_BOOT_IMAGE
+	---help---
+		Build an image managed by NXboot.  STM32N6570-DK places the
+		NXboot payload in internal SRAM and XIP applications after an
+		NXboot header in XSPI2 NOR.
+
+config STM32N6_EXTNOR_OTA_PARTITION
+	bool "Create OTA partitions on external NOR"
+	default n
+	depends on STM32N6_APP_FORMAT_NXBOOT
+	select MTD
+	select MTD_PARTITION
+	---help---
+		Register /dev/ota0, /dev/ota1 and /dev/ota2 from the
+		STM32N6570-DK XSPI2 NOR MTD.  The first slot starts at
+		0x70100000 because 0x70000000..0x700fffff is reserved for the
+		BootROM header plus NXboot payload.
+
+config STM32N6_EXTNOR_WRITE
+	bool "Enable external NOR write/erase operations"
+	default n
+	depends on STM32N6_XSPI
+	---help---
+		Expose MX66UW1G45G erase and page program support through the
+		STM32N6570-DK external NOR MTD.  Boot code never performs automatic
+		write or erase; operations are only triggered by explicit file
+		system or user commands.
+
+config STM32N6_PSRAM_HEAP
+	bool "Use XSPI1 PSRAM as an extra heap region"
+	default n
+	depends on STM32N6_XSPI && !NXBOOT_BOOTLOADER
+	---help---
+		App-side switch for adding STM32N6570-DK XSPI1 PSRAM at
+		0x90000000 to the NuttX heap after reserving framebuffer or
+		early bring-up space.
+
+if STM32N6_PSRAM_HEAP
+
+config STM32N6_PSRAM_HEAP_OFFSET
+	hex "XSPI1 PSRAM heap offset"
+	default 0x00200000
+	---help---
+		Offset from 0x90000000 where the app-side PSRAM heap begins.
+		The default keeps the first 2 MiB free for a future framebuffer
+		or early bring-up region.
+
+config STM32N6_PSRAM_HEAP_SIZE
+	hex "XSPI1 PSRAM heap size"
+	default 0x01e00000
+	---help---
+		Size of the PSRAM region added to the NuttX heap.
+
+endif # STM32N6_PSRAM_HEAP
+
+if STM32N6_EXTNOR_OTA_PARTITION
+
+config STM32N6_OTA_PRIMARY_SLOT_DEVPATH
+	string "Primary image slot devpath"
+	default "/dev/ota0"
+
+config STM32N6_OTA_SECONDARY_SLOT_DEVPATH
+	string "Secondary image slot devpath"
+	default "/dev/ota1"
+
+config STM32N6_OTA_TERTIARY_SLOT_DEVPATH
+	string "Tertiary image slot devpath"
+	default "/dev/ota2"
+
+config STM32N6_OTA_PRIMARY_SLOT_OFFSET
+	hex "Primary image slot offset in external NOR"
+	default 0x00100000
+
+config STM32N6_OTA_SECONDARY_SLOT_OFFSET
+	hex "Secondary image slot offset in external NOR"
+	default 0x02100000
+
+config STM32N6_OTA_TERTIARY_SLOT_OFFSET
+	hex "Tertiary image slot offset in external NOR"
+	default 0x04100000
+
+config STM32N6_OTA_SLOT_SIZE
+	hex "Image slot size"
+	default 0x02000000
+
+endif # STM32N6_EXTNOR_OTA_PARTITION
 
 config STM32N6570_DK_LCD_COLORBAR
 	bool "Show LCD colorbar during bring-up"
