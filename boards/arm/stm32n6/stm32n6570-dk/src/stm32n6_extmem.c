@@ -27,13 +27,13 @@
 
 #include <arch/stm32n6/chip.h>
 
+#include "hardware/stm32n6_memorymap.h"
 #include "stm32n6570-dk.h"
 
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define STM32N6_XSPI2_NOR_BASE        0x70000000u
 #define STM32N6_NOR_BLOCK_SIZE        512u
 #define STM32N6_NOR_ERASE_SIZE        0x1000u
 
@@ -95,7 +95,7 @@ static struct stm32n6_xip_mtd_s g_nor_mtd =
       .ioctl  = stm32n6_xip_ioctl,
       .name   = "stm32n6-xspi2-nor",
     },
-  .base = STM32N6_XSPI2_NOR_BASE,
+  .base = STM32N6_XSPI2_MEM_BASE,
   .size = STM32N6_XSPI2_NOR_SIZE,
 };
 

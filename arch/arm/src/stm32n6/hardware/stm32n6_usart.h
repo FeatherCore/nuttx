@@ -53,6 +53,7 @@
 #define USART_CR1_RXNEIE_RXFNEIE       (1u << 5)
 #define USART_CR1_TCIE                 (1u << 6)
 #define USART_CR1_TXEIE_TXFNFIE        (1u << 7)
+#define USART_CR1_OVER8                (1u << 15)
 
 #define USART_ISR_PE                   (1u << 0)
 #define USART_ISR_FE                   (1u << 1)
@@ -61,6 +62,8 @@
 #define USART_ISR_RXNE_RXFNE           (1u << 5)
 #define USART_ISR_TC                   (1u << 6)
 #define USART_ISR_TXE_TXFNF            (1u << 7)
+#define USART_ISR_TEACK                (1u << 21)
+#define USART_ISR_REACK                (1u << 22)
 
 #define USART_ICR_PECF                 (1u << 0)
 #define USART_ICR_FECF                 (1u << 1)

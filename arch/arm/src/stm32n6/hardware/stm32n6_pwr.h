@@ -18,7 +18,21 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
+#define STM32N6_PWR_CR1                (STM32N6_PWR_BASE + 0x0000u)
+#define STM32N6_PWR_VOSCR              (STM32N6_PWR_BASE + 0x0020u)
 #define STM32N6_PWR_SVMCR3             (STM32N6_PWR_BASE + 0x003cu)
+
+#define PWR_CR1_SDEN                   (1u << 2)
+#define PWR_SUPPLY_CONFIG_MASK         PWR_CR1_SDEN
+
+#define PWR_VOSCR_VOS                  (1u << 0)
+#define PWR_VOSCR_VOSRDY               (1u << 1)
+#define PWR_VOSCR_ACTVOS               (1u << 16)
+#define PWR_VOSCR_ACTVOSRDY            (1u << 17)
+
+#define PWR_EXTERNAL_SOURCE_SUPPLY      0u
+#define PWR_REGULATOR_VOLTAGE_SCALE0    PWR_VOSCR_VOS
+#define PWR_REGULATOR_VOLTAGE_SCALE1    0u
 
 #define PWR_SVMCR3_VDDIO2VMEN          (1u << 0)
 #define PWR_SVMCR3_VDDIO3VMEN          (1u << 1)

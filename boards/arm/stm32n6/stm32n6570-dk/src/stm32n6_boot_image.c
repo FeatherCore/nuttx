@@ -28,14 +28,11 @@
 #include <arch/stm32n6/chip.h>
 
 #include "arm_internal.h"
+#ifdef CONFIG_ARM_MPU
+#  include "mpu.h"
+#endif
+#include "hardware/stm32n6_memorymap.h"
 #include "nvic.h"
-
-/****************************************************************************
- * Pre-processor Definitions
- ****************************************************************************/
-
-#define STM32N6_XSPI2_NOR_BASE        0x70000000u
-#define STM32N6_AXISRAM_BASE          0x34000000u
 
 /****************************************************************************
  * Private Types
@@ -57,6 +54,9 @@ static void cleanup_arm_nvic(void)
 
   UP_ISB();
   cpsid();
+
+  putreg32(NVIC_INTCTRL_PENDSTCLR | NVIC_INTCTRL_PENDSVCLR,
+           NVIC_INTCTRL);
 
   for (i = 0; i < NR_IRQS; i += 32)
     {
@@ -80,18 +80,18 @@ static uintptr_t stm32n6_slot_base(FAR const char *path)
 {
   if (strcmp(path, CONFIG_STM32N6_OTA_PRIMARY_SLOT_DEVPATH) == 0)
     {
-      return STM32N6_XSPI2_NOR_BASE + CONFIG_STM32N6_OTA_PRIMARY_SLOT_OFFSET;
+      return STM32N6_XSPI2_MEM_BASE + CONFIG_STM32N6_OTA_PRIMARY_SLOT_OFFSET;
     }
 
   if (strcmp(path, CONFIG_STM32N6_OTA_SECONDARY_SLOT_DEVPATH) == 0)
     {
-      return STM32N6_XSPI2_NOR_BASE +
+      return STM32N6_XSPI2_MEM_BASE +
              CONFIG_STM32N6_OTA_SECONDARY_SLOT_OFFSET;
     }
 
   if (strcmp(path, CONFIG_STM32N6_OTA_TERTIARY_SLOT_DEVPATH) == 0)
     {
-      return STM32N6_XSPI2_NOR_BASE + CONFIG_STM32N6_OTA_TERTIARY_SLOT_OFFSET;
+      return STM32N6_XSPI2_MEM_BASE + CONFIG_STM32N6_OTA_TERTIARY_SLOT_OFFSET;
     }
 
   return 0;
@@ -175,14 +175,21 @@ int board_boot_image(FAR const char *path, uint32_t hdr_size)
 #ifdef CONFIG_ARMV8M_ICACHE
   up_disable_icache();
 #endif
+#ifdef CONFIG_ARM_MPU
+  mpu_control(false, false, false);
+#endif
 
   putreg32(vtor, NVIC_VECTAB);
+  UP_DSB();
+  UP_ISB();
 
   __asm__ __volatile__("\tmsr msplim, %0\n"
+                       "\tmsr basepri, %0\n"
+                       "\tmsr faultmask, %0\n"
                        "\tmsr msp, %1\n"
                        "\tmsr control, %2\n"
                        "\tisb\n"
-                       "\tmov pc, %3\n"
+                       "\tbx %3\n"
                        :
                        : "r" (0), "r" (vt.spr), "r" (0),
                          "r" (vt.reset));

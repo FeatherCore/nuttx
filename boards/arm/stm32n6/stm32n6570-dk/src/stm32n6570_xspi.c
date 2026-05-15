@@ -42,6 +42,7 @@
 
 #define STM32N6570_XSPI_200MHZ           200000000u
 #define STM32N6570_XSPI_50MHZ            50000000u
+#define STM32N6570_XSPI_PSRAM_MAPPED_HZ  STM32N6570_XSPI_200MHZ
 #define STM32N6570_XSPI_NOR_RESET_DELAY_MS 100u
 #define STM32N6570_XSPI_STATUS_TIMEOUT   1000000u
 
@@ -84,20 +85,22 @@
 #define APS256_RESET_CMD                 0xffu
 #define APS256_READ_CMD                  0x00u
 #define APS256_WRITE_CMD                 0x80u
-#define APS256_HEXA_WRITE_CMD            0xa0u
+#define APS256_READ_LINEAR_BURST_CMD     0x20u
+#define APS256_WRITE_LINEAR_BURST_CMD    0xa0u
 #define APS256_REG_READ_CMD              0x40u
 #define APS256_REG_WRITE_CMD             0xc0u
 
 #define APS256_MR0_ADDR                  0x00000000u
 #define APS256_MR4_ADDR                  0x00000004u
 #define APS256_MR8_ADDR                  0x00000008u
-#define APS256_MR0_VALUE                 0x11u
+#define APS256_MR0_VALUE                 0x30u
 #define APS256_MR4_VALUE                 0x20u
 #define APS256_MR8_VALUE                 0x40u
 #define APS256_REG_DUMMY                 4u
 #define APS256_HEXA_DUMMY                6u
 #define APS256_DEVSIZE                   24u
 #define APS256_CSBOUND                   11u
+#define APS256_FIFO_THRESHOLD            8u
 #define APS256_RESET_DELAY_MS            1u
 
 #ifdef CONFIG_ARCH_RAMFUNCS
@@ -115,6 +118,15 @@ static void stm32n6570_nor_invalidate_cache(uint32_t offset, size_t nbytes)
   uintptr_t start = STM32N6_XSPI2_MEM_BASE + offset;
 
   up_invalidate_dcache(start, start + nbytes);
+}
+
+static uint32_t stm32n6570_psram_refresh(uint32_t source_hz,
+                                         uint32_t prescaler)
+{
+  uint32_t xspi_hz = source_hz / (prescaler + 1u);
+  uint32_t cycles = 2u * (xspi_hz / 1000000u);
+
+  return cycles > 4u ? cycles - 4u : 0u;
 }
 
 static int stm32n6570_nor_readid(uint8_t id[3])
@@ -138,7 +150,7 @@ static void stm32n6570_xspi2_gpio_config(void)
                   (1u << 4) | (1u << 5) | (1u << 6) | (1u << 8) |
                   (1u << 9) | (1u << 10) | (1u << 11);
 
-  modifyreg32(STM32N6_RCC_AHB4ENR, 0, RCC_AHB4ENR_GPIONEN);
+  putreg32(RCC_AHB4ENSR_GPIONENS, STM32N6_RCC_AHB4ENSR);
   (void)getreg32(STM32N6_RCC_AHB4ENR);
   stm32n6_xspi_config_gpio(STM32N6_GPION_BASE, pins, GPIO_AF_XSPIM);
 }
@@ -152,13 +164,20 @@ static void stm32n6570_xspi1_gpio_config(void)
                         (1u << 11) | (1u << 12) | (1u << 13) |
                         (1u << 14) | (1u << 15);
 
-  modifyreg32(STM32N6_RCC_AHB4ENR, 0,
-              RCC_AHB4ENR_GPIOOEN | RCC_AHB4ENR_GPIOPEN);
+  putreg32(RCC_AHB4ENSR_GPIOOENS | RCC_AHB4ENSR_GPIOPENS,
+           STM32N6_RCC_AHB4ENSR);
   (void)getreg32(STM32N6_RCC_AHB4ENR);
   stm32n6_xspi_config_gpio(STM32N6_GPIOO_BASE, gpioo_pins,
                            GPIO_AF_XSPIM);
   stm32n6_xspi_config_gpio(STM32N6_GPIOP_BASE, gpiop_pins,
                            GPIO_AF_XSPIM);
+}
+
+static void stm32n6570_xspi_enable_clocks(void)
+{
+  putreg32(RCC_AHB5ENSR_XSPI1ENS | RCC_AHB5ENSR_XSPI2ENS |
+           RCC_AHB5ENSR_XSPIMENS, STM32N6_RCC_AHB5ENSR);
+  (void)getreg32(STM32N6_RCC_AHB5ENR);
 }
 
 static int stm32n6570_nor_read_cfg2_spi(uint32_t address, uint8_t *value)
@@ -382,13 +401,19 @@ static STM32N6570_RAMFUNC int stm32n6570_xspi2_enter_memory_mapped(void)
   uint32_t ccr;
   int ret;
 
+  source_hz = stm32n6_xspi_get_source_hz(base);
+  if (source_hz < STM32N6570_XSPI_200MHZ)
+    {
+      syslog(LOG_WARNING,
+             "stm32n6: XSPI2 HSLV disabled, NOR mapped at 50MHz\n");
+    }
+
   ret = stm32n6_xspi_set_prescaler(base, prescaler);
   if (ret < 0)
     {
       return ret;
     }
 
-  source_hz = stm32n6_xspi_get_source_hz(base);
 #ifdef CONFIG_NXBOOT_BOOTLOADER
   syslog(LOG_INFO, "XSPI2 NOR optional prescaler=%" PRIu32
          " effective=%" PRIu32 "Hz\n", prescaler,
@@ -418,8 +443,14 @@ static int stm32n6570_xspi1_enter_memory_mapped(void)
   int ret;
 
   source_hz = stm32n6_xspi_get_source_hz(base);
-  target_hz = stm32n6_xspi_hslv_enabled(base) ? STM32N6570_XSPI_200MHZ :
-                                                STM32N6570_XSPI_50MHZ;
+  target_hz = STM32N6570_XSPI_PSRAM_MAPPED_HZ;
+  if (!stm32n6_xspi_hslv_enabled(base) && target_hz > STM32N6570_XSPI_50MHZ)
+    {
+      syslog(LOG_WARNING,
+             "stm32n6: XSPI1 HSLV disabled, PSRAM mapped at 50MHz\n");
+      target_hz = STM32N6570_XSPI_50MHZ;
+    }
+
   prescaler = stm32n6_xspi_prescaler(source_hz, target_hz);
 
   ret = stm32n6_xspi_set_prescaler(base, prescaler);
@@ -428,18 +459,23 @@ static int stm32n6570_xspi1_enter_memory_mapped(void)
       return ret;
     }
 
+  putreg32(stm32n6570_psram_refresh(source_hz, prescaler),
+           STM32N6_XSPI_DCR4(base));
+
   syslog(LOG_INFO, "XSPI1 PSRAM optional prescaler=%" PRIu32
-         " effective=%" PRIu32 "Hz\n", prescaler,
-         stm32n6_xspi_effective_hz(source_hz, prescaler));
+         " effective=%" PRIu32 "Hz refresh=%" PRIu32 "\n",
+         prescaler, stm32n6_xspi_effective_hz(source_hz, prescaler),
+         getreg32(STM32N6_XSPI_DCR4(base)));
 
   ccr = XSPI_CCR_IMODE_8_LINES | XSPI_CCR_ADMODE_8_LINES |
         XSPI_CCR_ADDTR | XSPI_CCR_ADSIZE_32 | XSPI_CCR_DMODE_16_LINES |
         XSPI_CCR_DDTR | XSPI_CCR_DQSE;
 
   return stm32n6_xspi_enter_memory_mapped(
-           base, ccr, XSPI_TCR_DCYC(APS256_HEXA_DUMMY), APS256_READ_CMD,
+           base, ccr, XSPI_TCR_DCYC(APS256_HEXA_DUMMY),
+           APS256_READ_LINEAR_BURST_CMD,
            ccr, XSPI_TCR_DCYC(APS256_HEXA_DUMMY),
-           APS256_HEXA_WRITE_CMD);
+           APS256_WRITE_LINEAR_BURST_CMD);
 }
 
 static int stm32n6570_psram_write_reg(uint32_t address, uint8_t value)
@@ -727,6 +763,10 @@ int stm32n6570_xspi2_nor_initialize(void)
   uint32_t header;
   uint8_t id[3] = {0};
   int ret;
+
+  syslog(LOG_INFO, "XSPI2 NOR init begin\n");
+
+  stm32n6570_xspi_enable_clocks();
 
   if (stm32n6_xspi_is_mapped(STM32N6_XSPI2_BASE))
     {
@@ -1102,6 +1142,10 @@ int stm32n6570_xspi1_psram_initialize(void)
   uint32_t source_hz;
   int ret;
 
+  syslog(LOG_INFO, "XSPI1 PSRAM init begin\n");
+
+  stm32n6570_xspi_enable_clocks();
+
   if (stm32n6_xspi_is_mapped(STM32N6_XSPI1_BASE))
     {
       syslog(LOG_INFO, "XSPI1 PSRAM already memory-mapped\n");
@@ -1121,8 +1165,10 @@ int stm32n6570_xspi1_psram_initialize(void)
     stm32n6_xspi_prescaler(source_hz, STM32N6570_XSPI_50MHZ);
 
   syslog(LOG_INFO, "XSPI1 PSRAM startup prescaler=%" PRIu32
-         " effective=%" PRIu32 "Hz\n", startup_prescaler,
-         stm32n6_xspi_effective_hz(source_hz, startup_prescaler));
+         " effective=%" PRIu32 "Hz refresh=%" PRIu32 "\n",
+         startup_prescaler,
+         stm32n6_xspi_effective_hz(source_hz, startup_prescaler),
+         stm32n6570_psram_refresh(source_hz, startup_prescaler));
 
   stm32n6570_xspi1_gpio_config();
 
@@ -1132,9 +1178,10 @@ int stm32n6570_xspi1_psram_initialize(void)
   psram_config.device_size    = APS256_DEVSIZE;
   psram_config.csht           = 5;
   psram_config.prescaler      = startup_prescaler;
-  psram_config.fifo_threshold = 4;
+  psram_config.fifo_threshold = APS256_FIFO_THRESHOLD;
   psram_config.csbound        = APS256_CSBOUND;
-  psram_config.refresh        = 0;
+  psram_config.refresh        =
+    stm32n6570_psram_refresh(source_hz, startup_prescaler);
   stm32n6_xspi_controller_config(&psram_config);
 
   ret = stm32n6_xspi_command_addr(STM32N6_XSPI1_BASE,

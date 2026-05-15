@@ -30,16 +30,9 @@
 #ifdef CONFIG_ARM_MPU
 #  include "mpu.h"
 #endif
+#include "hardware/stm32h7rs_memorymap.h"
 #include "nvic.h"
 #include "stm32h7rs.h"
-
-/****************************************************************************
- * Pre-processor Definitions
- ****************************************************************************/
-
-#define STM32H7RS_XSPI2_NOR_BASE        0x70000000u
-#define STM32H7RS_AXI_SRAM_BASE         0x24000000u
-#define STM32H7RS_AHB_SRAM_BASE         0x30000000u
 
 /****************************************************************************
  * Private Types
@@ -84,19 +77,19 @@ static uintptr_t stm32h7rs_slot_base(FAR const char *path)
 {
   if (strcmp(path, CONFIG_STM32H7RS_OTA_PRIMARY_SLOT_DEVPATH) == 0)
     {
-      return STM32H7RS_XSPI2_NOR_BASE +
+      return STM32H7RS_XSPI2_MEM_BASE +
              CONFIG_STM32H7RS_OTA_PRIMARY_SLOT_OFFSET;
     }
 
   if (strcmp(path, CONFIG_STM32H7RS_OTA_SECONDARY_SLOT_DEVPATH) == 0)
     {
-      return STM32H7RS_XSPI2_NOR_BASE +
+      return STM32H7RS_XSPI2_MEM_BASE +
              CONFIG_STM32H7RS_OTA_SECONDARY_SLOT_OFFSET;
     }
 
   if (strcmp(path, CONFIG_STM32H7RS_OTA_TERTIARY_SLOT_DEVPATH) == 0)
     {
-      return STM32H7RS_XSPI2_NOR_BASE +
+      return STM32H7RS_XSPI2_MEM_BASE +
              CONFIG_STM32H7RS_OTA_TERTIARY_SLOT_OFFSET;
     }
 

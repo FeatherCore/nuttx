@@ -101,8 +101,12 @@ int up_rtc_initialize(void)
 
 int stm32_bringup(void)
 {
+#ifdef HAVE_I2C_PROBES
   FAR struct i2c_master_s *i2c3 = NULL;
+#endif
+#if defined(CONFIG_STM32U5X9J_DK_TOUCH) || defined(HAVE_I2C_PROBES)
   FAR struct i2c_master_s *i2c5 = NULL;
+#endif
   int ret = OK;
 
 #ifdef CONFIG_FS_PROCFS
@@ -135,11 +139,12 @@ int stm32_bringup(void)
 #endif
 #endif /* CONFIG_INPUT_BUTTONS */
 
-#ifdef CONFIG_STM32U5X9J_DK_HSPI_RAM
-  ret = stm32u5x9j_hspi_ram_initialize();
+#if defined(CONFIG_STM32U5X9J_DK_OSPI_NOR) || \
+    defined(CONFIG_STM32U5X9J_DK_HSPI_RAM)
+  ret = stm32u5x9j_extmem_initialize();
   if (ret < 0)
     {
-      syslog(LOG_ERR, "ERROR: HSPI PSRAM bring-up failed: %d\n", ret);
+      syslog(LOG_ERR, "ERROR: external memory bring-up failed: %d\n", ret);
     }
 #ifdef CONFIG_STM32U5X9J_DK_HSPI_DIAG
   else
@@ -151,14 +156,6 @@ int stm32_bringup(void)
         }
     }
 #endif
-#endif
-
-#ifdef CONFIG_STM32U5X9J_DK_OSPI_NOR
-  ret = stm32u5x9j_flash_initialize();
-  if (ret < 0)
-    {
-      syslog(LOG_ERR, "ERROR: OSPI NOR bring-up failed: %d\n", ret);
-    }
 #endif
 
 #ifdef CONFIG_STM32U5X9J_DK_EMMC
@@ -182,13 +179,21 @@ int stm32_bringup(void)
   stm32_i2c_register_bus(2);
 #endif
 #ifdef CONFIG_STM32U5_I2C3
+#ifdef HAVE_I2C_PROBES
   i2c3 = stm32_i2c_register_bus(3);
+#else
+  stm32_i2c_register_bus(3);
+#endif
 #endif
 #ifdef CONFIG_STM32U5_I2C4
   stm32_i2c_register_bus(4);
 #endif
 #ifdef CONFIG_STM32U5_I2C5
+#if defined(CONFIG_STM32U5X9J_DK_TOUCH) || defined(HAVE_I2C_PROBES)
   i2c5 = stm32_i2c_register_bus(5);
+#else
+  stm32_i2c_register_bus(5);
+#endif
 #endif
 #endif /* CONFIG_STM32U5X9J_DK_I2C_BUSES */
 

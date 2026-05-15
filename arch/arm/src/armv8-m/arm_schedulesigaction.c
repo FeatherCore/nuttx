@@ -37,6 +37,7 @@
 
 #include "psr.h"
 #include "exc_return.h"
+#include "arm_control.h"
 #include "sched/sched.h"
 #include "arm_internal.h"
 #include "irq/irq.h"
@@ -139,7 +140,9 @@ void up_schedule_sigaction(struct tcb_s *tcb)
 #ifdef CONFIG_BUILD_PROTECTED
       tcb->xcp.regs[REG_LR]         = EXC_RETURN_THREAD;
       tcb->xcp.regs[REG_EXC_RETURN] = EXC_RETURN_THREAD;
-      tcb->xcp.regs[REG_CONTROL]    = getcontrol() & ~CONTROL_NPRIV;
+      tcb->xcp.regs[REG_CONTROL]    =
+        arm_control_set_mode(getcontrol(), tcb->xcp.regs[REG_EXC_RETURN],
+                             false);
 #endif
     }
 }

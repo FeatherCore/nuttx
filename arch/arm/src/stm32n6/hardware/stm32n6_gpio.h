@@ -22,6 +22,7 @@
 #define STM32N6_GPIO_OTYPER_OFFSET     0x0004u
 #define STM32N6_GPIO_OSPEEDR_OFFSET    0x0008u
 #define STM32N6_GPIO_PUPDR_OFFSET      0x000cu
+#define STM32N6_GPIO_BSRR_OFFSET       0x0018u
 #define STM32N6_GPIO_AFRL_OFFSET       0x0020u
 #define STM32N6_GPIO_AFRH_OFFSET       0x0024u
 
@@ -29,11 +30,13 @@
 #define STM32N6_GPIO_OTYPER(b)         ((b) + STM32N6_GPIO_OTYPER_OFFSET)
 #define STM32N6_GPIO_OSPEEDR(b)        ((b) + STM32N6_GPIO_OSPEEDR_OFFSET)
 #define STM32N6_GPIO_PUPDR(b)          ((b) + STM32N6_GPIO_PUPDR_OFFSET)
+#define STM32N6_GPIO_BSRR(b)           ((b) + STM32N6_GPIO_BSRR_OFFSET)
 #define STM32N6_GPIO_AFRL(b)           ((b) + STM32N6_GPIO_AFRL_OFFSET)
 #define STM32N6_GPIO_AFRH(b)           ((b) + STM32N6_GPIO_AFRH_OFFSET)
 
 #define GPIO_MODE_SHIFT(n)             ((n) << 1)
 #define GPIO_MODE_MASK(n)              (3u << GPIO_MODE_SHIFT(n))
+#define GPIO_MODE_OUTPUT               1u
 #define GPIO_MODE_ALT                  2u
 
 #define GPIO_SPEED_SHIFT(n)            ((n) << 1)

@@ -34,6 +34,7 @@
 #include <arch/armv8-m/nvicpri.h>
 
 #include "arm_internal.h"
+#include "arm_control.h"
 #include "psr.h"
 #include "exc_return.h"
 
@@ -158,7 +159,8 @@ void up_initial_state(struct tcb_s *tcb)
 
   xcp->regs[REG_EXC_RETURN] = EXC_RETURN_THREAD;
 
-  xcp->regs[REG_CONTROL] = getcontrol() & ~CONTROL_NPRIV;
+  xcp->regs[REG_CONTROL] =
+    arm_control_set_mode(getcontrol(), xcp->regs[REG_EXC_RETURN], false);
 
 #ifdef CONFIG_ARCH_FPU
   xcp->regs[REG_FPSCR]  |= ARMV8M_FPSCR_LTPSIZE_NONE;

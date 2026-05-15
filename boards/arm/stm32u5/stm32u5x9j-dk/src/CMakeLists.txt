@@ -20,7 +20,12 @@
 #
 # ##############################################################################
 
-set(SRCS stm32_boot.c stm32_bringup.c stm32_userleds.c stm32_extmem.c)
+set(SRCS stm32_boot.c stm32_bringup.c stm32_userleds.c stm32_extmem.c
+         stm32u5x9j_xspi.c)
+
+if(CONFIG_BUILD_PROTECTED)
+  list(APPEND SRCS stm32u5x9j_heap.c)
+endif()
 
 if(CONFIG_ARCH_BUTTONS)
   list(APPEND SRCS stm32_buttons.c)
@@ -48,5 +53,13 @@ endif()
 
 target_sources(board PRIVATE ${SRCS})
 
-# TODO: make this the default and then allow boards to redefine
-set_property(GLOBAL PROPERTY LD_SCRIPT "${NUTTX_BOARD_DIR}/scripts/flash.ld")
+if(CONFIG_BUILD_PROTECTED)
+  set_property(
+    GLOBAL PROPERTY LD_SCRIPT "${NUTTX_BOARD_DIR}/scripts/memory.ld"
+                    "${NUTTX_BOARD_DIR}/scripts/kernel-space.ld")
+  set_property(
+    GLOBAL PROPERTY LD_SCRIPT_USER "${NUTTX_BOARD_DIR}/scripts/memory.ld"
+                    "${NUTTX_BOARD_DIR}/scripts/user-space.ld")
+else()
+  set_property(GLOBAL PROPERTY LD_SCRIPT "${NUTTX_BOARD_DIR}/scripts/flash.ld")
+endif()

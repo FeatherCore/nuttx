@@ -192,8 +192,9 @@ int stm32_xspi_configure(FAR const struct stm32_xspi_config_s *config)
            XSPI_DCR1_CSHT(config->csht), STM32_XSPI_DCR1(base));
   putreg32(XSPI_DCR2_PRESCALER(config->prescaler),
            STM32_XSPI_DCR2(base));
-  putreg32(XSPI_DCR3_CSBOUND(config->csbound), STM32_XSPI_DCR3(base));
-  putreg32(0, STM32_XSPI_DCR4(base));
+  putreg32(XSPI_DCR3_MAXTRAN(config->maxtran) |
+           XSPI_DCR3_CSBOUND(config->csbound), STM32_XSPI_DCR3(base));
+  putreg32(XSPI_DCR4_REFRESH(config->refresh), STM32_XSPI_DCR4(base));
   putreg32((config->fifo_threshold - 1) << XSPI_CR_FTHRES_SHIFT,
            STM32_XSPI_CR(base));
   modifyreg32(STM32_XSPI_CR(base), 0, XSPI_CR_EN);

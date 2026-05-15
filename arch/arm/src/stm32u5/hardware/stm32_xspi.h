@@ -20,7 +20,7 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-/* Register Offsets **********************************************************/
+/* Register Offsets *********************************************************/
 
 #define STM32_XSPI_CR_OFFSET                0x0000
 #define STM32_XSPI_DCR1_OFFSET              0x0008
@@ -41,7 +41,7 @@
 
 #define STM32_XSPIM_CR_OFFSET               0x0000
 
-/* Register Addresses ********************************************************/
+/* Register Addresses *******************************************************/
 
 #define STM32_XSPI_CR(b)                    ((b) + STM32_XSPI_CR_OFFSET)
 #define STM32_XSPI_DCR1(b)                  ((b) + STM32_XSPI_DCR1_OFFSET)
@@ -79,15 +79,23 @@
 #define XSPI_DCR1_DEVSIZE_SHIFT             16
 #define XSPI_DCR1_DEVSIZE(n)                ((uint32_t)(n) << \
                                              XSPI_DCR1_DEVSIZE_SHIFT)
+#define XSPI_DCR1_MTYP_MICRON              0
 #define XSPI_DCR1_MTYP_MACRONIX             (1 << 24)
 #define XSPI_DCR1_MTYP_APMEM_16BIT          ((4 | 2) << 24)
 
 #define XSPI_DCR2_PRESCALER_MASK            0xff
 #define XSPI_DCR2_PRESCALER(n)              ((uint32_t)(n))
 
+#define XSPI_DCR3_MAXTRAN_SHIFT             0
+#define XSPI_DCR3_MAXTRAN(n)                ((uint32_t)(n) << \
+                                             XSPI_DCR3_MAXTRAN_SHIFT)
 #define XSPI_DCR3_CSBOUND_SHIFT             16
 #define XSPI_DCR3_CSBOUND(n)                ((uint32_t)(n) << \
                                              XSPI_DCR3_CSBOUND_SHIFT)
+
+#define XSPI_DCR4_REFRESH_SHIFT             0
+#define XSPI_DCR4_REFRESH(n)                ((uint32_t)(n) << \
+                                             XSPI_DCR4_REFRESH_SHIFT)
 
 #define XSPI_SR_TEF                         (1 << 0)
 #define XSPI_SR_TCF                         (1 << 1)

@@ -37,7 +37,7 @@ static void stm32n6_usart1_gpio_config(void)
 {
   uint32_t regval;
 
-  modifyreg32(STM32N6_RCC_AHB4ENR, 0, RCC_AHB4ENR_GPIOEEN);
+  putreg32(RCC_AHB4ENSR_GPIOEENS, STM32N6_RCC_AHB4ENSR);
   (void)getreg32(STM32N6_RCC_AHB4ENR);
 
   regval = getreg32(STM32N6_GPIO_MODER(STM32N6_GPIOE_BASE));
@@ -74,11 +74,15 @@ static void stm32n6_usart1_gpio_config(void)
 void stm32n6_lowsetup(void)
 {
   uint32_t brr;
+  uint32_t timeout;
 
   stm32n6_usart1_gpio_config();
 
-  modifyreg32(STM32N6_RCC_APB2ENR, 0, RCC_APB2ENR_USART1EN);
+  putreg32(RCC_APB2ENSR_USART1ENS, STM32N6_RCC_APB2ENSR);
   (void)getreg32(STM32N6_RCC_APB2ENR);
+
+  putreg32(RCC_APB2RSTR_USART1RST, STM32N6_RCC_APB2RSTSR);
+  putreg32(RCC_APB2RSTR_USART1RST, STM32N6_RCC_APB2RSTCR);
 
   putreg32(0, STM32N6_USART1_CR1);
   putreg32(0, STM32N6_USART1_CR2);
@@ -92,6 +96,18 @@ void stm32n6_lowsetup(void)
 
   putreg32(USART_CR1_UE | USART_CR1_TE | USART_CR1_RE,
            STM32N6_USART1_CR1);
+
+  timeout = 1000000u;
+  while ((getreg32(STM32N6_USART1_ISR) &
+          (USART_ISR_TEACK | USART_ISR_REACK)) !=
+         (USART_ISR_TEACK | USART_ISR_REACK))
+    {
+      if (timeout-- == 0)
+        {
+          break;
+        }
+    }
+
   g_usart1_initialized = true;
 }
 

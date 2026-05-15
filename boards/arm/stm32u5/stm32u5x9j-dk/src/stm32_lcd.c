@@ -28,8 +28,6 @@
 #include "stm32_ltdc.h"
 #include "stm32u5x9j-dk.h"
 
-#include "hardware/stm32_memorymap.h"
-
 #ifdef CONFIG_STM32U5X9J_DK_LCD
 
 /****************************************************************************
@@ -43,7 +41,7 @@
 #define STM32U5X9J_LCD_STRIDE    (STM32U5X9J_LCD_XRES * 4)
 #define STM32U5X9J_LCD_FBLEN     (STM32U5X9J_LCD_STRIDE * \
                                   STM32U5X9J_LCD_YRES)
-#define STM32U5X9J_LCD_FB        ((uintptr_t)STM32_HSPI1_BANK)
+#define STM32U5X9J_LCD_FB        ((uintptr_t)STM32U5X9J_HSPI1_PSRAM_MEM_BASE)
 
 #define STM32U5X9J_LCD_VSYNC     1
 #define STM32U5X9J_LCD_VBP       12
@@ -387,7 +385,7 @@ int stm32u5x9j_lcd_initialize(void)
   int ret;
 
 #ifdef CONFIG_STM32U5X9J_DK_HSPI_RAM
-  ret = stm32u5x9j_hspi_ram_initialize();
+  ret = stm32u5x9j_hspi1_psram_initialize();
   if (ret < 0)
     {
       return ret;

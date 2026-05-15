@@ -153,6 +153,8 @@ void up_irqinitialize(void)
 
   irq_attach(STM32_IRQ_SVCALL, arm_svcall, NULL);
   irq_attach(STM32_IRQ_HARDFAULT, arm_hardfault, NULL);
+  irq_attach(STM32_IRQ_BUSFAULT, arm_busfault, NULL);
+  irq_attach(STM32_IRQ_USAGEFAULT, arm_usagefault, NULL);
 
   up_prioritize_irq(STM32_IRQ_PENDSV, NVIC_SYSH_PRIORITY_MIN);
   stm32n6_prioritize_syscall(NVIC_SYSH_SVCALL_PRIORITY);
@@ -161,6 +163,9 @@ void up_irqinitialize(void)
   irq_attach(STM32_IRQ_MEMFAULT, arm_memfault, NULL);
   up_enable_irq(STM32_IRQ_MEMFAULT);
 #endif
+
+  putreg32(NVIC_INTCTRL_PENDSTCLR | NVIC_INTCTRL_PENDSVCLR,
+           NVIC_INTCTRL);
 
 #ifndef CONFIG_SUPPRESS_INTERRUPTS
   arm_color_intstack();

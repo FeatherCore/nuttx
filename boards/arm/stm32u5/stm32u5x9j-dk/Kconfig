@@ -51,25 +51,27 @@ config STM32U5X9J_DK_I2C_PROBES
 config STM32U5X9J_DK_OSPI_NOR
 	bool "OSPI1 MX25UM51245G NOR"
 	default y
-	select FS_LITTLEFS
-	select MTD
 	select STM32U5_OCTOSPIM
 	select STM32U5_OCTOSPI1
 	---help---
-		Initialize the 64 MiB MX25UM51245G external NOR and register it as
-		/dev/mtd0. The default bring-up does not erase or format it.
+		Initialize the 64 MiB MX25UM51245G external NOR, read its JEDEC
+		ID, and leave it in memory-mapped mode at the OCTOSPI1 XIP
+		window. The default bring-up does not register the NOR as a
+		writable device because this region is reserved for later XIP code.
 
-config STM32U5X9J_DK_FLASH_AUTOMOUNT
-	bool "Try mounting existing littlefs on /mnt/flash"
-	default y
-	depends on STM32U5X9J_DK_OSPI_NOR && FS_LITTLEFS
+config STM32U5X9J_DK_OSPI_MTD
+	bool "Register OSPI1 NOR as /dev/mtd0"
+	default n
+	depends on STM32U5X9J_DK_OSPI_NOR
+	select MTD
 	---help---
-		Try to mount /dev/mtd0 as littlefs at /mnt/flash. Mount failure is
-		only logged; the board never formats or erases flash automatically.
+		Optional development path that exposes the external NOR through
+		/dev/mtd0. Keep this disabled when the NOR is used as an XIP
+		execution region.
 
 config STM32U5X9J_DK_OSPI_DIAG
 	bool "OSPI1 NOR diagnostic node"
-	default y
+	default n
 	depends on STM32U5X9J_DK_OSPI_NOR
 	---help---
 		Register /dev/ospi0 with non-destructive MX25UM51245G diagnostic
@@ -123,7 +125,7 @@ config STM32U5X9J_DK_HSPI_DIAG
 
 config STM32U5X9J_DK_EMMC
 	bool "SDMMC1 eMMC"
-	default y
+	default n
 	select MMCSD
 	select MMCSD_MMCSUPPORT
 	select MMCSD_SDIO
@@ -135,7 +137,7 @@ config STM32U5X9J_DK_EMMC
 
 config STM32U5X9J_DK_EMMC_AUTOMOUNT
 	bool "Try mounting existing vfat on /mnt/emmc"
-	default y
+	default n
 	depends on STM32U5X9J_DK_EMMC && FS_FAT
 	---help---
 		Try to mount /dev/mmcsd0 as vfat at /mnt/emmc. Mount failure is

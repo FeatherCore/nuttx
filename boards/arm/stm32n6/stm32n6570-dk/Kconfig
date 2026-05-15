@@ -50,26 +50,38 @@ config STM32N6_PSRAM_HEAP
 	depends on STM32N6_XSPI && !NXBOOT_BOOTLOADER
 	---help---
 		App-side switch for adding STM32N6570-DK XSPI1 PSRAM at
-		0x90000000 to the NuttX heap after reserving framebuffer or
-		early bring-up space.
-
-if STM32N6_PSRAM_HEAP
+		0x90000000 to the NuttX heap.  The heap starts after
+		STM32N6_PSRAM_HEAP_OFFSET and extends to the end of PSRAM.
 
 config STM32N6_PSRAM_HEAP_OFFSET
 	hex "XSPI1 PSRAM heap offset"
+	default 0x0 if BUILD_PROTECTED
 	default 0x00200000
+	depends on STM32N6_PSRAM_HEAP
 	---help---
 		Offset from 0x90000000 where the app-side PSRAM heap begins.
-		The default keeps the first 2 MiB free for a future framebuffer
-		or early bring-up region.
+		The protected KNSh configuration uses offset 0 so all PSRAM
+		becomes the user heap.  The flat NSH default keeps the first
+		2 MiB free for a future framebuffer or early bring-up region.
 
-config STM32N6_PSRAM_HEAP_SIZE
-	hex "XSPI1 PSRAM heap size"
-	default 0x01e00000
+config STM32N6_PROTECTED_USRAM_BASE
+	hex "Protected build user SRAM base"
+	default 0x341e0000
+	depends on BUILD_PROTECTED
 	---help---
-		Size of the PSRAM region added to the NuttX heap.
+		Base of the small internal SRAM window reserved for the protected
+		build user blob .data/.bss sections.  The remaining internal SRAM
+		below this address is available to the kernel heap.
 
-endif # STM32N6_PSRAM_HEAP
+config STM32N6_PROTECTED_USRAM_SIZE
+	hex "Protected build user SRAM size"
+	default 0x20000
+	depends on BUILD_PROTECTED
+	---help---
+		Size of the protected build internal SRAM window reserved for user
+		.data/.bss.  STM32N6570-DK currently gives the top 128 KiB of the
+		2 MiB app SRAM window to user static data and leaves the rest of
+		internal SRAM for kernel sections and kernel heap.
 
 if STM32N6_EXTNOR_OTA_PARTITION
 

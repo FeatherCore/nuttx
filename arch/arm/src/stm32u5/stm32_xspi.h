@@ -40,7 +40,9 @@ struct stm32_xspi_config_s
   uint32_t csht;
   uint32_t prescaler;
   uint32_t fifo_threshold;
+  uint32_t maxtran;
   uint32_t csbound;
+  uint32_t refresh;
 };
 
 /****************************************************************************

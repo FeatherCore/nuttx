@@ -8,14 +8,14 @@
 #ifndef __BOARDS_ARM_STM32N6_STM32N6570_DK_INCLUDE_BOARD_H
 #define __BOARDS_ARM_STM32N6_STM32N6570_DK_INCLUDE_BOARD_H
 
-/* Target clock profile from STM32CubeN6 Template_FSBL_XIP_Custom:
- * Cortex-M55 at 600 MHz, with bus/peripheral clocks in the 400/200 MHz
+/* Target clock profile from STM32CubeN6 Template FSBL 800 MHz setup:
+ * Cortex-M55 at 800 MHz, with bus/peripheral clocks in the 400/200 MHz
  * class.  The first code drop exposes these as fixed bring-up constants;
  * the RCC sequence is translated in arch/arm/src/stm32n6/stm32n6_rcc.c.
  */
 
 #define STM32N6_SYSCLK_FREQUENCY       400000000ul
-#define STM32N6_CPUCLK_FREQUENCY       600000000ul
+#define STM32N6_CPUCLK_FREQUENCY       800000000ul
 #define STM32N6_SYSBUS_FREQUENCY       400000000ul
 #define STM32N6_HCLK_FREQUENCY         200000000ul
 #define STM32N6_PCLK1_FREQUENCY        200000000ul

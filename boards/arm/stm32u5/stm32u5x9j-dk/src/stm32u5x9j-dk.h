@@ -32,6 +32,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "hardware/stm32_memorymap.h"
 #include "stm32_gpio.h"
 
 /****************************************************************************
@@ -92,6 +93,19 @@
 #define GPIO_LCD_RESET     (GPIO_OUTPUT | GPIO_PUSHPULL | GPIO_SPEED_2MHZ | \
                             GPIO_OUTPUT_SET | GPIO_PORTD | GPIO_PIN5)
 
+/* STM32U5x9J-DK external memories. */
+
+#define STM32U5X9J_OSPI1_NOR_MEM_BASE        STM32_OCTOSPI1_BANK
+#define STM32U5X9J_OSPI1_NOR_SIZE            (64u * 1024u * 1024u)
+
+#define STM32U5X9J_HSPI1_PSRAM_MEM_BASE      STM32_HSPI1_BANK
+#define STM32U5X9J_HSPI1_PSRAM_SIZE          (64u * 1024u * 1024u)
+#define STM32U5X9J_HSPI1_PSRAM_FB_SIZE       (2u * 1024u * 1024u)
+#define STM32U5X9J_HSPI1_PSRAM_HEAP_BASE     \
+  (STM32U5X9J_HSPI1_PSRAM_MEM_BASE + STM32U5X9J_HSPI1_PSRAM_FB_SIZE)
+#define STM32U5X9J_HSPI1_PSRAM_HEAP_SIZE     \
+  (STM32U5X9J_HSPI1_PSRAM_SIZE - STM32U5X9J_HSPI1_PSRAM_FB_SIZE)
+
 /****************************************************************************
  * Public Types
  ****************************************************************************/
@@ -119,14 +133,21 @@
 
 int stm32_bringup(void);
 
+#if defined(CONFIG_STM32U5X9J_DK_OSPI_NOR) || \
+    defined(CONFIG_STM32U5X9J_DK_HSPI_RAM)
+int stm32u5x9j_extmem_initialize(void);
+#endif
+
 #ifdef CONFIG_STM32U5X9J_DK_OSPI_NOR
-int stm32u5x9j_ospi_nor_initialize(void);
-int stm32u5x9j_flash_initialize(void);
+int stm32u5x9j_ospi1_nor_initialize(void);
+#ifdef CONFIG_STM32U5X9J_DK_OSPI_DIAG
+int stm32u5x9j_ospi_diag_initialize(void);
+#endif
 #endif
 
 #ifdef CONFIG_STM32U5X9J_DK_HSPI_RAM
-int stm32u5x9j_hspi_ram_initialize(void);
-bool stm32u5x9j_hspi_ram_is_mapped(void);
+int stm32u5x9j_hspi1_psram_initialize(void);
+bool stm32u5x9j_hspi1_psram_is_mapped(void);
 #ifdef CONFIG_STM32U5X9J_DK_HSPI_DIAG
 int stm32u5x9j_hspi_diag_initialize(void);
 #endif

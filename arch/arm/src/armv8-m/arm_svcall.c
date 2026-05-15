@@ -41,11 +41,8 @@
 #include "sched/sched.h"
 #include "signal/signal.h"
 #include "exc_return.h"
+#include "arm_control.h"
 #include "arm_internal.h"
-
-/****************************************************************************
- * Private Functions
- ****************************************************************************/
 
 /****************************************************************************
  * Public Functions
@@ -176,7 +173,9 @@ int arm_svcall(int irq, void *context, void *arg)
 
           /* Return unprivileged mode */
 
-          regs[REG_CONTROL]    = getcontrol() | CONTROL_NPRIV;
+          regs[REG_CONTROL]    =
+            arm_control_set_mode(regs[REG_CONTROL], regs[REG_EXC_RETURN],
+                                 true);
 
           /* Change the parameter ordering to match the expectation of struct
            * userpace_s task_startup:
@@ -214,7 +213,9 @@ int arm_svcall(int irq, void *context, void *arg)
 
           /* Return unprivileged mode */
 
-          regs[REG_CONTROL]    = getcontrol() | CONTROL_NPRIV;
+          regs[REG_CONTROL]    =
+            arm_control_set_mode(regs[REG_CONTROL], regs[REG_EXC_RETURN],
+                                 true);
 
           /* Change the parameter ordering to match the expectation of the
            * user space pthread_startup:
@@ -259,7 +260,9 @@ int arm_svcall(int irq, void *context, void *arg)
 
           /* Return unprivileged mode */
 
-          regs[REG_CONTROL]    = getcontrol() | CONTROL_NPRIV;
+          regs[REG_CONTROL]    =
+            arm_control_set_mode(regs[REG_CONTROL], regs[REG_EXC_RETURN],
+                                 true);
 
           /* Change the parameter ordering to match the expectation of struct
            * userpace_s signal_handler.
@@ -296,7 +299,9 @@ int arm_svcall(int irq, void *context, void *arg)
 
           /* Return privileged mode */
 
-          regs[REG_CONTROL]    = getcontrol() & ~CONTROL_NPRIV;
+          regs[REG_CONTROL]    =
+            arm_control_set_mode(regs[REG_CONTROL], regs[REG_EXC_RETURN],
+                                 false);
           rtcb->xcp.sigreturn  = 0;
         }
         break;
@@ -341,7 +346,9 @@ int arm_svcall(int irq, void *context, void *arg)
 
           /* Return privileged mode */
 
-          regs[REG_CONTROL]    = getcontrol() & ~CONTROL_NPRIV;
+          regs[REG_CONTROL]    =
+            arm_control_set_mode(regs[REG_CONTROL], regs[REG_EXC_RETURN],
+                                 false);
 
           /* Offset R0 to account for the reserved values */
 

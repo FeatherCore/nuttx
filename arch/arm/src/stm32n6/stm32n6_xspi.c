@@ -40,6 +40,8 @@
 #define STM32N6_XSPI_TIMEOUT             1000000u
 #define STM32N6_XSPI_200MHZ              200000000u
 #define STM32N6_XSPI_50MHZ               50000000u
+#define STM32N6_XSPI_IC3_200MHZ_DIV      4u
+#define STM32N6_XSPI_IC3_50MHZ_DIV       16u
 
 #ifdef CONFIG_ARCH_RAMFUNCS
 #  define STM32N6_RAMFUNC locate_code(".ramfunc") noinline_function
@@ -129,8 +131,8 @@ static void stm32n6_xspi_read_hslv_otp(void)
 {
   uint32_t fuse;
 
-  modifyreg32(STM32N6_RCC_APB4ENR2, 0,
-              RCC_APB4ENR2_SYSCFGEN | RCC_APB4ENR2_BSECEN);
+  putreg32(RCC_APB4ENSR2_SYSCFGENS | RCC_APB4ENSR2_BSECENS,
+           STM32N6_RCC_APB4ENSR2);
   (void)getreg32(STM32N6_RCC_APB4ENR2);
 
   fuse = getreg32(STM32N6_BSEC_FVR(STM32N6_BSEC_HSLV_FUSE));
@@ -161,10 +163,11 @@ static void stm32n6_xspi_read_hslv_otp(void)
 
 static void stm32n6_xspi_config_ic3(void)
 {
-  uint32_t div = g_vddio3_hslv ? 6u : 24u;
+  uint32_t div = g_vddio3_hslv ? STM32N6_XSPI_IC3_200MHZ_DIV :
+                                 STM32N6_XSPI_IC3_50MHZ_DIV;
 
   putreg32(RCC_ICCFGR(RCC_ICCFGR_SEL_PLL1, div), STM32N6_RCC_IC3CFGR);
-  modifyreg32(STM32N6_RCC_DIVENR, 0, RCC_DIVENR_IC3EN);
+  putreg32(RCC_DIVENSR_IC3ENS, STM32N6_RCC_DIVENSR);
 
   syslog(LOG_INFO, "stm32n6: XSPI2 IC3 divider=%" PRIu32
          " source=%" PRIu32 "Hz\n", div, g_xspi2_source_hz);
@@ -305,18 +308,24 @@ int stm32n6_xspi_common_setup(void)
       return OK;
     }
 
+  syslog(LOG_INFO, "stm32n6: XSPI common setup begin\n");
+
   stm32n6_power_config();
   stm32n6_xspi_read_hslv_otp();
   stm32n6_xspi_config_ic3();
 
-  modifyreg32(STM32N6_RCC_MISCENR, 0, RCC_MISCENR_XSPIPHYCOMPEN);
+  putreg32(RCC_MISCENSR_XSPIPHYCOMPENS, STM32N6_RCC_MISCENSR);
   modifyreg32(STM32N6_RCC_CCIPR6,
               RCC_CCIPR6_XSPI1SEL_MASK | RCC_CCIPR6_XSPI2SEL_MASK,
               RCC_CCIPR6_XSPI1SEL_HCLK | RCC_CCIPR6_XSPI2SEL_IC3);
-  modifyreg32(STM32N6_RCC_AHB5ENR, 0,
-              RCC_AHB5ENR_XSPI1EN | RCC_AHB5ENR_XSPI2EN |
-              RCC_AHB5ENR_XSPIMEN);
+  putreg32(RCC_AHB5ENSR_XSPI1ENS | RCC_AHB5ENSR_XSPI2ENS |
+           RCC_AHB5ENSR_XSPIMENS, STM32N6_RCC_AHB5ENSR);
   (void)getreg32(STM32N6_RCC_AHB5ENR);
+
+  modifyreg32(STM32N6_XSPI_CR(STM32N6_XSPI1_BASE), XSPI_CR_EN, 0);
+  modifyreg32(STM32N6_XSPI_CR(STM32N6_XSPI2_BASE), XSPI_CR_EN, 0);
+  putreg32(RCC_AHB5RSTR_XSPIMRST, STM32N6_RCC_AHB5RSTSR);
+  putreg32(RCC_AHB5RSTR_XSPIMRST, STM32N6_RCC_AHB5RSTCR);
 
   putreg32(XSPIM_CR_CSSEL_OVR_EN | XSPIM_CR_REQ2ACK_TIME(1),
            STM32N6_XSPIM_CR);
@@ -505,8 +514,8 @@ void stm32n6_xspi_controller_config(
 
   fthreshold = config->fifo_threshold > 0 ? config->fifo_threshold - 1u : 0;
 
-  modifyreg32(STM32N6_RCC_AHB5RSTR, 0, config->reset);
-  modifyreg32(STM32N6_RCC_AHB5RSTR, config->reset, 0);
+  putreg32(config->reset, STM32N6_RCC_AHB5RSTSR);
+  putreg32(config->reset, STM32N6_RCC_AHB5RSTCR);
 
   putreg32(0, STM32N6_XSPI_CR(config->base));
   putreg32(config->memory_type | XSPI_DCR1_DEVSIZE(config->device_size) |

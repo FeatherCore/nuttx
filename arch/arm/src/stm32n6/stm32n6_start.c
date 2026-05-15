@@ -15,6 +15,7 @@
 
 #include <nuttx/cache.h>
 #include <nuttx/init.h>
+#include <nuttx/irq.h>
 
 #include "arm_internal.h"
 #include "chip.h"
@@ -23,6 +24,8 @@
 #endif
 #include "hardware/stm32n6_memorymap.h"
 #include "stm32n6.h"
+#include "stm32n6_mpuinit.h"
+#include "stm32n6_userspace.h"
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -37,6 +40,29 @@
 
 #  define STM32N6_NORMAL_CACHEABLE_XN \
     (STM32N6_NORMAL_CACHEABLE | MPU_RBAR_XN)
+
+#  ifdef CONFIG_NXBOOT_BOOTLOADER
+#    define STM32N6_RAM_MPU_FLAGS STM32N6_NORMAL_CACHEABLE
+#  else
+#    define STM32N6_RAM_MPU_FLAGS STM32N6_NORMAL_CACHEABLE_XN
+#  endif
+
+#  ifdef CONFIG_BUILD_PROTECTED
+#    define STM32N6_XSPI2_MPU_BASE \
+       (STM32N6_XSPI2_MEM_BASE + CONFIG_STM32N6_OTA_PRIMARY_SLOT_OFFSET + \
+        CONFIG_NXBOOT_HEADER_SIZE)
+#    define STM32N6_XSPI2_MPU_SIZE \
+       (CONFIG_NUTTX_USERSPACE - STM32N6_XSPI2_MPU_BASE)
+#    define STM32N6_PSRAM_MPU_FLAGS1 \
+       (MPU_RBAR_AP_RWRW | MPU_RBAR_SH_OUTER | MPU_RBAR_XN)
+#    define STM32N6_PSRAM_MPU_FLAGS2 \
+       (MPU_RLAR_WRITE_BACK | MPU_RLAR_PXN)
+#  else
+#    define STM32N6_XSPI2_MPU_BASE STM32N6_XSPI2_MEM_BASE
+#    define STM32N6_XSPI2_MPU_SIZE STM32N6_XSPI2_NOR_SIZE
+#    define STM32N6_PSRAM_MPU_FLAGS1 STM32N6_NORMAL_CACHEABLE_XN
+#    define STM32N6_PSRAM_MPU_FLAGS2 MPU_RLAR_WRITE_BACK
+#  endif
 #endif
 
 /****************************************************************************
@@ -51,20 +77,20 @@ static void stm32n6_cache_setup(void)
       {
         .base   = CONFIG_RAM_START,
         .size   = CONFIG_RAM_SIZE,
-        .flags1 = STM32N6_NORMAL_CACHEABLE_XN,
+        .flags1 = STM32N6_RAM_MPU_FLAGS,
         .flags2 = MPU_RLAR_WRITE_BACK
       },
       {
-        .base   = STM32N6_XSPI2_MEM_BASE,
-        .size   = STM32N6_XSPI2_NOR_SIZE,
+        .base   = STM32N6_XSPI2_MPU_BASE,
+        .size   = STM32N6_XSPI2_MPU_SIZE,
         .flags1 = STM32N6_NORMAL_CACHEABLE_RO,
         .flags2 = MPU_RLAR_WRITE_BACK
       },
       {
         .base   = STM32N6_XSPI1_MEM_BASE,
         .size   = STM32N6_XSPI1_PSRAM_SIZE,
-        .flags1 = STM32N6_NORMAL_CACHEABLE_XN,
-        .flags2 = MPU_RLAR_WRITE_BACK
+        .flags1 = STM32N6_PSRAM_MPU_FLAGS1,
+        .flags2 = STM32N6_PSRAM_MPU_FLAGS2
       },
     };
 
@@ -78,6 +104,13 @@ static void stm32n6_cache_setup(void)
 #endif
 #ifdef CONFIG_ARMV8M_DCACHE
   up_enable_dcache();
+#endif
+}
+
+static void stm32n6_early_fault_setup(void)
+{
+#ifdef CONFIG_DEBUG_HARDFAULT_ALERT
+  irq_attach(STM32_IRQ_HARDFAULT, arm_hardfault, NULL);
 #endif
 }
 
@@ -126,6 +159,11 @@ void __start(void)
   arm_lowputc('\n');
   stm32n6_clock_bootlog();
   stm32n6_cache_setup();
+  stm32n6_early_fault_setup();
+#ifdef CONFIG_BUILD_PROTECTED
+  stm32n6_userspace();
+  stm32n6_mpuinitialize();
+#endif
 
   nx_start();
 

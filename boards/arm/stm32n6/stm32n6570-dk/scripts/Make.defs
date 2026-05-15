@@ -9,7 +9,15 @@ include $(TOPDIR)/.config
 include $(TOPDIR)/tools/Config.mk
 include $(TOPDIR)/arch/arm/src/armv8-m/Toolchain.defs
 
-ifeq ($(CONFIG_STM32N6_APP_FORMAT_NXBOOT),y)
+ifeq ($(CONFIG_BUILD_PROTECTED),y)
+  ARCHSCRIPT += $(BOARD_DIR)$(DELIM)scripts$(DELIM)memory.ld
+  ARCHSCRIPT += $(BOARD_DIR)$(DELIM)scripts$(DELIM)kernel-space.ld
+
+  # The board heap overrides must be linked before libkarch's weak
+  # arm_allocateheap.o is selected.
+
+  EXTRA_OBJS += board$(DELIM)stm32n6570_heap$(OBJEXT)
+else ifeq ($(CONFIG_STM32N6_APP_FORMAT_NXBOOT),y)
   ifeq ($(CONFIG_NXBOOT_BOOTLOADER),y)
     ARCHSCRIPT += $(BOARD_DIR)$(DELIM)scripts$(DELIM)nxboot.ld
   else

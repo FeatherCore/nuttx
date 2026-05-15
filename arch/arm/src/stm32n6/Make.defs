@@ -15,6 +15,11 @@ CHIP_CSRCS += stm32n6_timerisr.c
 CHIP_CSRCS += stm32n6_serial.c
 CHIP_CSRCS += stm32n6_allocateheap.c
 
+ifeq ($(CONFIG_BUILD_PROTECTED),y)
+CHIP_CSRCS += stm32n6_userspace.c
+CHIP_CSRCS += stm32n6_mpuinit.c
+endif
+
 ifeq ($(CONFIG_STM32N6_XSPI),y)
 CHIP_CSRCS += stm32n6_xspi.c
 endif

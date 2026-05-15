@@ -58,7 +58,7 @@ void stm32_board_initialize(void)
    * asks for the additional region.
    */
 
-  (void)stm32u5x9j_hspi_ram_initialize();
+  (void)stm32u5x9j_hspi1_psram_initialize();
 #endif
 }
 
