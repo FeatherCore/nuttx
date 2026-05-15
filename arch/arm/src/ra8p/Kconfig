@@ -1,0 +1,68 @@
+#
+# For a description of the syntax of this configuration file,
+# see the file kconfig-language.txt in the NuttX tools repository.
+#
+
+comment "RA8P Configuration Options"
+
+choice
+	prompt "RA8P Chip Selection"
+	default ARCH_CHIP_R7KA8P1KFLCAC
+	depends on ARCH_CHIP_RA8P
+
+config ARCH_CHIP_R7KA8P1KFLCAC
+	bool "R7KA8P1KFLCAC"
+	select RA8P1_FAMILY
+	select RA8P_HAVE_MRAM
+	select RA8P_HAVE_OSPI_B
+	select RA8P_HAVE_SDRAM
+	select RA8P_HAVE_SCI_UART
+	select RA8P_HAVE_GPT
+
+endchoice # RA8P Chip Selection
+
+config RA8P1_FAMILY
+	bool
+	default n
+	select ARCH_CORTEXM85
+	select ARCH_HAVE_FPU
+
+menu "RA8P Peripheral Support"
+
+config RA8P_HAVE_MRAM
+	bool
+	default n
+
+config RA8P_HAVE_OSPI_B
+	bool
+	default n
+
+config RA8P_HAVE_SDRAM
+	bool
+	default n
+
+config RA8P_HAVE_SCI_UART
+	bool
+	default n
+
+config RA8P_HAVE_GPT
+	bool
+	default n
+
+config RA8P_OSPI_B
+	bool "OSPI_B controller"
+	default n
+	depends on RA8P_HAVE_OSPI_B
+	---help---
+		Enable the RA8P OSPI_B controller.  The EK-RA8P1 bring-up uses this
+		for the Macronix MX25LW51245G external NOR on OSPI0 CS1.
+
+config RA8P_SDRAM
+	bool "External SDRAM controller"
+	default n
+	depends on RA8P_HAVE_SDRAM
+	---help---
+		Enable the RA8P external SDRAM controller.  The EK-RA8P1 exposes this
+		memory at 0x68000000.
+
+endmenu

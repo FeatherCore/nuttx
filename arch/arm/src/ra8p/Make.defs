@@ -1,0 +1,25 @@
+############################################################################
+# arch/arm/src/ra8p/Make.defs
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+############################################################################
+
+# RA8P is Cortex-M85/ARMv8-M.
+
+HEAD_ASRC =
+
+include armv8-m/Make.defs
+
+CHIP_CSRCS += ra8p_start.c
+CHIP_CSRCS += ra8p_clockconfig.c
+CHIP_CSRCS += ra8p_irq.c
+CHIP_CSRCS += ra8p_allocateheap.c
+CHIP_CSRCS += ra8p_lowputc.c
+CHIP_CSRCS += ra8p_serial.c
+CHIP_CSRCS += ra8p_timerisr.c
+
+ifeq ($(CONFIG_BUILD_PROTECTED),y)
+CHIP_CSRCS += ra8p_userspace.c
+CHIP_CSRCS += ra8p_mpuinit.c
+endif

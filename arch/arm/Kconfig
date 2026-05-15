@@ -366,6 +366,15 @@ config ARCH_CHIP_RA4
 	---help---
 		Renesas RA4 Architecture (ARM Cortex-M4F/M33).
 
+config ARCH_CHIP_RA8P
+	bool "Renesas RA8P"
+	select ARCH_CORTEXM85
+	select ARCH_HAVE_FPU
+	select ARCH_HAVE_MPU
+	select ARM_HAVE_MPU_UNIFIED
+	---help---
+		Renesas RA8P Architecture (ARM Cortex-M85).
+
 config ARCH_CHIP_RP2040
 	bool "Raspberry Pi RP2040"
 	select ARCH_CORTEXM0
@@ -1214,6 +1223,7 @@ config ARCH_CHIP
 	default "nrf91"		if ARCH_CHIP_NRF91
 	default "nuc1xx"	if ARCH_CHIP_NUC1XX
 	default "ra4"			if ARCH_CHIP_RA4
+	default "ra8p"			if ARCH_CHIP_RA8P
 	default "rp2040"	if ARCH_CHIP_RP2040
 	default "rp23xx"	if ARCH_CHIP_RP23XX
 	default "s32k1xx"	if ARCH_CHIP_S32K1XX
@@ -1701,6 +1711,9 @@ source "arch/arm/src/nuc1xx/Kconfig"
 endif
 if ARCH_CHIP_RA4
 source "arch/arm/src/ra4/Kconfig"
+endif
+if ARCH_CHIP_RA8P
+source "arch/arm/src/ra8p/Kconfig"
 endif
 if ARCH_CHIP_RP2040
 source "arch/arm/src/rp2040/Kconfig"

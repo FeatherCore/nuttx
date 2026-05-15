@@ -1,0 +1,78 @@
+#
+# For a description of the syntax of this configuration file,
+# see the file kconfig-language.txt in the NuttX tools repository.
+#
+
+if ARCH_BOARD_EK_RA8P1
+
+comment "EK-RA8P1 Board Options"
+
+config EK_RA8P1_APP_FORMAT_NXBOOT
+	bool "NXboot application image format"
+	default n
+	select BOARDCTL_BOOT_IMAGE
+	---help---
+		Build an image managed by NXboot.  The loader is linked in
+		internal MRAM and applications are linked after an NXboot header in
+		OSPI0 CS1 NOR.
+
+config EK_RA8P1_EXTNOR_OTA_PARTITION
+	bool "Create OTA partitions on OSPI NOR"
+	default n
+	depends on EK_RA8P1_APP_FORMAT_NXBOOT
+	select MTD
+	select MTD_PARTITION
+	---help---
+		Register external OSPI NOR image slots for NXboot.  The EK-RA8P1
+		uses the 64 MiB MX25LW51245G device on OSPI0 CS1, split into two
+		32 MiB slots.
+
+config EK_RA8P1_SDRAM_HEAP
+	bool "Use external SDRAM as heap"
+	default n
+	depends on RA8P_SDRAM && !NXBOOT_BOOTLOADER
+	---help---
+		Use external SDRAM at 0x68000000 for dynamic allocation after the
+		SDRAM controller has been initialized.  In protected KNSh with a
+		kernel heap this is the primary user heap; in flat builds it is
+		added as an extra heap region and requires CONFIG_MM_REGIONS > 1.
+
+config EK_RA8P1_PROTECTED_USRAM_BASE
+	hex "Protected build user SRAM base"
+	default 0x221b4000
+	depends on BUILD_PROTECTED
+	---help---
+		Base of the internal SRAM window reserved for protected user-space
+		.data/.bss and user stacks.  The default gives the top 128 KiB of
+		RA8P1 SRAM to user-space and leaves the lower SRAM to the kernel.
+
+config EK_RA8P1_PROTECTED_USRAM_SIZE
+	hex "Protected build user SRAM size"
+	default 0x20000
+	depends on BUILD_PROTECTED
+
+if EK_RA8P1_EXTNOR_OTA_PARTITION
+
+config EK_RA8P1_OTA_PRIMARY_SLOT_DEVPATH
+	string "Primary image slot devpath"
+	default "/dev/ota0"
+
+config EK_RA8P1_OTA_SECONDARY_SLOT_DEVPATH
+	string "Secondary image slot devpath"
+	default "/dev/ota1"
+
+config EK_RA8P1_OTA_PRIMARY_SLOT_OFFSET
+	hex "Primary image slot offset in OSPI NOR"
+	default 0x00000000
+
+config EK_RA8P1_OTA_SECONDARY_SLOT_OFFSET
+	hex "Secondary image slot offset in OSPI NOR"
+	default 0x02000000
+
+config EK_RA8P1_OTA_SLOT_SIZE
+	hex "Image slot size"
+	default 0x02000000
+
+endif # EK_RA8P1_EXTNOR_OTA_PARTITION
+
+endif # ARCH_BOARD_EK_RA8P1

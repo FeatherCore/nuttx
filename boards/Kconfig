@@ -59,6 +59,15 @@ config ARCH_BOARD_XIAO_RA4M1
 		This options selects the Seeed Studio XIAO RA4M1 board featuring the Renesas
 		R7FA4M1 MCU running at 48 MHz.
 
+config ARCH_BOARD_EK_RA8P1
+	bool "Renesas EK-RA8P1"
+	depends on ARCH_CHIP_RA8P
+	select ARCH_HAVE_LEDS
+	---help---
+		This option selects the Renesas EK-RA8P1 evaluation kit featuring
+		the R7KA8P1KFLCAC Cortex-M85 MCU, internal MRAM, external SDRAM,
+		and external OSPI NOR.
+
 config ARCH_BOARD_ARDUINO_M0
 	bool "Arduino M0"
 	depends on ARCH_CHIP_SAMD21G18A
@@ -3635,6 +3644,7 @@ config ARCH_BOARD
 	default "arduino-mega2560"             if ARCH_BOARD_ARDUINO_MEGA2560
 	default "arduino-due"                  if ARCH_BOARD_ARDUINO_DUE
 	default "arduino-r4-minima"            if ARCH_BOARD_ARDUINO_R4_MINIMA
+	default "ek-ra8p1"                     if ARCH_BOARD_EK_RA8P1
 	default "arduino-m0"                   if ARCH_BOARD_ARDUINO_M0
 	default "arduino-nano-33ble"           if ARCH_BOARD_ARDUINO_NANO_33BLE
 	default "arduino-nano-33ble-rev2"      if ARCH_BOARD_ARDUINO_NANO_33BLE_REV2
@@ -4379,6 +4389,9 @@ source "boards/arm/ra4/arduino-r4-minima/Kconfig"
 endif
 if ARCH_BOARD_XIAO_RA4M1
 source "boards/arm/ra4/xiao-ra4m1/Kconfig"
+endif
+if ARCH_BOARD_EK_RA8P1
+source "boards/arm/ra8p/ek-ra8p1/Kconfig"
 endif
 if ARCH_BOARD_ARDUINO_M0
 source "boards/arm/samd2l2/arduino-m0/Kconfig"
