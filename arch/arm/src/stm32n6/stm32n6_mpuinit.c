@@ -34,7 +34,7 @@
   (MPU_RBAR_AP_RWRW | MPU_RBAR_SH_NO | MPU_RBAR_XN)
 
 #define STM32N6_USER_EXTSRAM \
-  (MPU_RBAR_AP_RWRW | MPU_RBAR_SH_OUTER | MPU_RBAR_XN)
+  (MPU_RBAR_AP_RWRW | MPU_RBAR_SH_NO | MPU_RBAR_XN)
 
 /****************************************************************************
  * Public Functions
