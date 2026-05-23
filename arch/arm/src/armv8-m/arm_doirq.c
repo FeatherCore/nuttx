@@ -48,7 +48,12 @@ void exception_direct(void)
 {
   int irq = getipsr();
 
-#ifdef CONFIG_ARCH_FPU
+#if defined(CONFIG_ARCH_FPU) && !defined(CONFIG_ARMV8M_LAZYFPU)
+  /* This helper executes an FP instruction to normalize FPSCR.LTPSIZE.  Do
+   * not run it under lazy FPU: FPCCR.ASPEN would create FP state for an IRQ
+   * that interrupted an integer-only thread.
+   */
+
   __asm__ __volatile__
     (
       "mov r0, %0\n"

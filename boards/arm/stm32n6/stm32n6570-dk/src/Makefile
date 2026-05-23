@@ -17,4 +17,12 @@ ifeq ($(CONFIG_BOARDCTL_BOOT_IMAGE),y)
 CSRCS += stm32n6_boot_image.c
 endif
 
+ifeq ($(CONFIG_STM32N6570_DK_LCD),y)
+CSRCS += stm32n6570_lcd.c
+endif
+
+ifeq ($(CONFIG_STM32N6570_DK_GT911),y)
+CSRCS += stm32n6570_touch.c
+endif
+
 include $(TOPDIR)/boards/Board.mk

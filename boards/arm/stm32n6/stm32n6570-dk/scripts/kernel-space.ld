@@ -53,7 +53,7 @@ SECTIONS
     {
         _sramfuncs = ABSOLUTE(.);
         *(.ramfunc .ramfunc.*)
-        . = ALIGN(4);
+        . = ALIGN(32);
         _eramfuncs = ABSOLUTE(.);
     } > ksram AT > kflash
 

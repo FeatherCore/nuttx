@@ -41,6 +41,24 @@
  * Private Functions
  ****************************************************************************/
 
+static bool nxsched_defer_syscall_yield(FAR struct tcb_s *tcb,
+                                        int sched_priority)
+{
+#if defined(CONFIG_LIB_SYSCALL) && defined(CONFIG_ARMV8M_SYSCALL_KERNEL_STACK)
+  /* A same-priority setpriority is sched_yield().  In the ARMv8-M protected
+   * syscall-kstack prototype, do not use sched_yield() to reorder a task while
+   * it is still executing on its protected syscall stack.  Let the syscall
+   * return first; a later tick or blocking point can switch from a normal
+   * exception context.
+   */
+
+  return sched_priority == tcb->sched_priority &&
+         (tcb->flags & TCB_FLAG_SYSCALL) != 0;
+#else
+  return false;
+#endif
+}
+
 /****************************************************************************
  * Name:  nxsched_running_setpriority
  *
@@ -75,6 +93,11 @@ static inline void nxsched_running_setpriority(FAR struct tcb_s *tcb,
 #else
   nxttcb = tcb->flink;
 #endif
+
+  if (nxsched_defer_syscall_yield(tcb, sched_priority))
+    {
+      return;
+    }
 
   /* A context switch will occur:
    * CASE 1. The new priority of the running task becomes less than or

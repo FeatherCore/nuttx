@@ -13,7 +13,8 @@
  *   0x08080000..            user blob, begins with struct userspace_s
  *
  * SRAM1/2/3/5 are contiguous on STM32U5x9J and are reserved for the kernel.
- * User .data/.bss and the user heap live in HSPI1 PSRAM.
+ * User .data/.bss and the user heap live in HSPI1 PSRAM.  The first 2 MiB
+ * are reserved for the framebuffer used by the DK LCD path.
  */
 
 #if CONFIG_NUTTX_USERSPACE != 0x08080000
@@ -25,5 +26,5 @@ MEMORY
   kflash (rx)  : ORIGIN = 0x08000000, LENGTH =   512K
   uflash (rx)  : ORIGIN = 0x08080000, LENGTH =  3584K
   ksram  (rwx) : ORIGIN = 0x20000000, LENGTH =  2496K
-  usram  (rwx) : ORIGIN = 0xa0000000, LENGTH =    64M
+  usram  (rwx) : ORIGIN = 0xa0200000, LENGTH =    62M
 }

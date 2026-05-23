@@ -39,8 +39,13 @@
  ****************************************************************************/
 
 #define STM32U5X9J_INTERNAL_SRAM_END (STM32_SRAM5_BASE + STM32_SRAM5_SIZE)
-#define STM32U5X9J_PSRAM_BASE        STM32U5X9J_HSPI1_PSRAM_MEM_BASE
-#define STM32U5X9J_PSRAM_SIZE        STM32U5X9J_HSPI1_PSRAM_SIZE
+#ifdef CONFIG_STM32U5X9J_DK_LCD
+#  define STM32U5X9J_PSRAM_BASE      STM32U5X9J_HSPI1_PSRAM_HEAP_BASE
+#  define STM32U5X9J_PSRAM_SIZE      STM32U5X9J_HSPI1_PSRAM_HEAP_SIZE
+#else
+#  define STM32U5X9J_PSRAM_BASE      STM32U5X9J_HSPI1_PSRAM_MEM_BASE
+#  define STM32U5X9J_PSRAM_SIZE      STM32U5X9J_HSPI1_PSRAM_SIZE
+#endif
 #define STM32U5X9J_PSRAM_END         (STM32U5X9J_PSRAM_BASE + \
                                       STM32U5X9J_PSRAM_SIZE)
 
@@ -53,8 +58,10 @@
  *
  * Description:
  *   In the protected KNSh configuration the initial user heap is backed by
- *   HSPI1 PSRAM.  User .data/.bss are also linked into the bottom of PSRAM,
- *   so the heap begins after the user bss.
+ *   HSPI1 PSRAM.  User .data/.bss are also linked into PSRAM, so the heap
+ *   begins after the user bss.  With the LCD enabled, the linker script
+ *   reserves the framebuffer at the bottom of PSRAM and starts user memory
+ *   after it.
  *
  ****************************************************************************/
 

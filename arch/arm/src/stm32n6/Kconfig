@@ -48,11 +48,95 @@ config STM32N6_DISPLAY
 	bool "Display controller block"
 	default n
 
+config STM32N6_LTDC_FB_DOUBLE_BUFFER
+	bool "LTDC framebuffer double buffering"
+	default n
+	depends on STM32N6_DISPLAY
+	---help---
+		Expose two screen-sized framebuffer pages through the NuttX
+		framebuffer interface and switch the LTDC scanout address with
+		FBIOPAN_DISPLAY.
+
 config STM32N6_I2C
 	bool "I2C"
 	default n
 
+config STM32N6_I2C2
+	bool "I2C2"
+	default n
+	depends on STM32N6_I2C
+
+config STM32N6_I2CTIMEO
+	int "I2C poll timeout"
+	default 2000000
+	depends on STM32N6_I2C
+
+config STM32N6_I2C2_TIMING
+	hex "I2C2 TIMINGR value"
+	default 0xe0b03c3d
+	depends on STM32N6_I2C2
+	---help---
+		TIMINGR used by the minimal STM32N6 I2C2 master driver.
+		The default matches the STM32CubeN6 timing algorithm for a
+		200 MHz PCLK1 source and 100 kHz standard-mode bus.
+
 endmenu # STM32N6 Peripheral Selection
+
+menu "STM32N6 Memory Attribute Configuration"
+
+choice
+	prompt "XSPI1 PSRAM MPU shareability"
+	default STM32N6_PSRAM_MPU_SHARE_NONE
+	depends on ARM_MPU
+	---help---
+		Select the ARMv8-M MPU shareability attribute used for the
+		STM32N6 XSPI1 PSRAM memory-mapped window.  Cortex-M55 treats
+		Shareable data transactions as Non-cacheable for the L1 data
+		cache, so CPU-owned PSRAM heap and stack traffic must be mapped
+		Non-shareable to benefit from the write-back cache policy.  PSRAM
+		ranges shared with LTDC, DMA, or other bus masters still require
+		explicit cache maintenance or a non-cacheable MPU override.
+
+config STM32N6_PSRAM_MPU_SHARE_OUTER
+	bool "Outer shareable"
+
+config STM32N6_PSRAM_MPU_SHARE_NONE
+	bool "Non-shareable"
+
+endchoice
+
+choice
+	prompt "XSPI1 PSRAM MPU cache policy"
+	default STM32N6_PSRAM_MPU_WRITE_BACK
+	depends on ARM_MPU
+	---help---
+		Select the ARMv8-M MAIR cache attribute used for the STM32N6
+		XSPI1 PSRAM memory-mapped window.
+
+config STM32N6_PSRAM_MPU_WRITE_BACK
+	bool "Write-back cacheable"
+
+config STM32N6_PSRAM_MPU_WRITE_THROUGH
+	bool "Write-through cacheable"
+
+config STM32N6_PSRAM_MPU_NONCACHEABLE
+	bool "Non-cacheable"
+
+endchoice
+
+config STM32N6_PSRAM_MPU_NO_WRITE_ALLOCATE
+	bool "Use no-write-allocate cacheable MAIR for PSRAM"
+	default y
+	depends on ARM_MPU && !STM32N6_PSRAM_MPU_NONCACHEABLE
+	---help---
+		Use read-allocate, no-write-allocate MAIR encodings for the
+		STM32N6 XSPI1 PSRAM MPU region.  This avoids the cacheable
+		write-allocate linefill path and allows non-shareable cacheable
+		PSRAM to be used for CPU-owned stack and heap traffic.  PSRAM
+		regions shared with LTDC, DMA, or other bus masters still require
+		a non-cacheable MPU override or explicit cache maintenance.
+
+endmenu # STM32N6 Memory Attribute Configuration
 
 menu "STM32N6 USART Configuration"
 	depends on STM32N6_USART
@@ -79,6 +163,24 @@ config USART1_RXBUFSIZE
 config USART1_TXBUFSIZE
 	int "USART1 transmit buffer size"
 	default 256
+
+config STM32N6_USART1_TX_POLL_DRAIN
+	bool "Drain USART1 TX buffer by polling"
+	default n
+	---help---
+		Diagnostic option for early STM32N6 protected-mode bring-up.  When
+		enabled, USART1 drains the software TX buffer synchronously when TX
+		interrupts are enabled, instead of depending on later TXE/TXFNF
+		interrupts to continue moving console output.
+
+config STM32N6_USART1_HIGH_PRIORITY
+	bool "Run USART1 at high IRQ priority"
+	default n
+	select ARCH_IRQPRIO
+	---help---
+		Diagnostic option for early STM32N6 protected-mode bring-up.  When
+		enabled, USART1 uses NVIC_SYSH_HIGH_PRIORITY so console TX/RX IRQs
+		are not masked by the normal BASEPRI critical-section threshold.
 
 endif # USART1_SERIALDRIVER
 

@@ -12,7 +12,6 @@
 #include <nuttx/config.h>
 
 #include <sys/types.h>
-#include <syslog.h>
 #include <stdint.h>
 #include <inttypes.h>
 #include <assert.h>
@@ -23,15 +22,16 @@
 #include <nuttx/board.h>
 #include <nuttx/compiler.h>
 #include <nuttx/kmalloc.h>
-#include <nuttx/userspace.h>
+#if defined(CONFIG_BUILD_PROTECTED) && defined(CONFIG_MM_KERNEL_HEAP) && \
+    defined(CONFIG_STM32N6_PSRAM_HEAP)
+#  include <nuttx/userspace.h>
+#endif
 
 #include <arch/board/board.h>
-#include <arch/stm32n6/chip.h>
 
 #include "arm_internal.h"
 #include "hardware/stm32n6_memorymap.h"
 #include "stm32n6_mpuinit.h"
-
 #include "stm32n6570-dk.h"
 
 /****************************************************************************
@@ -52,13 +52,17 @@
           (STM32N6_XSPI1_PSRAM_SIZE - CONFIG_STM32N6_PSRAM_HEAP_OFFSET)
 #endif
 
-#define STM32N6570_USER_HEAP_BOOT_SIZE 0x2000
-
 #if defined(CONFIG_BUILD_PROTECTED) && defined(CONFIG_MM_KERNEL_HEAP)
 #  ifndef CONFIG_STM32N6_PROTECTED_USRAM_BASE
 #    error CONFIG_STM32N6_PROTECTED_USRAM_BASE is required
 #  endif
 #  define STM32N6570_KERNEL_HEAP_END CONFIG_STM32N6_PROTECTED_USRAM_BASE
+#  define STM32N6570_BOOTSTRAP_UHEAP_SIZE \
+          CONFIG_STM32N6_PROTECTED_UHEAP_SIZE
+#  if defined(CONFIG_STM32N6_PSRAM_HEAP) && \
+      STM32N6570_BOOTSTRAP_UHEAP_SIZE == 0
+#    error STM32N6570-DK protected PSRAM heap requires an internal bootstrap user heap
+#  endif
 #endif
 
 /****************************************************************************
@@ -66,15 +70,29 @@
  ****************************************************************************/
 
 /****************************************************************************
+ * Name: stm32n6570_heap_link
+ *
+ * Description:
+ *   Linker anchor used by nxboot-app.ld so this board heap object is pulled
+ *   even when only arm_addregion() is needed from it.
+ *
+ ****************************************************************************/
+
+void stm32n6570_heap_link(void)
+{
+}
+
+/****************************************************************************
  * Name: up_allocate_heap
  *
  * Description:
  *   In the protected KNSh configuration the initial user heap is a small
- *   user SRAM bootstrap region reserved by user-space.ld.  The XSPI PSRAM is
- *   added later as a second user heap region from arm_addregion().
+ *   internal user SRAM bootstrap region.  The XSPI1 PSRAM window is added
+ *   later from arm_addregion().
  *
- *   Keeping struct mm_heap_s in internal user SRAM avoids taking allocator
- *   mutex atomics on the memory-mapped XSPI PSRAM window.
+ *   Keeping struct mm_heap_s and the earliest allocator state in internal
+ *   SRAM avoids depending on memory-mapped PSRAM while nx_start() is still
+ *   constructing the protected user and kernel heaps.
  *
  ****************************************************************************/
 
@@ -82,35 +100,27 @@
     defined(CONFIG_STM32N6_PSRAM_HEAP)
 void up_allocate_heap(void **heap_start, size_t *heap_size)
 {
-  uintptr_t boot_heap;
-  int ret;
-
-  ret = stm32n6570_xspi1_psram_initialize();
-  if (ret < 0)
-    {
-      ferr("ERROR: STM32N6570-DK PSRAM user heap init failed: %d\n", ret);
-      PANIC();
-    }
+  uintptr_t heap_end = USERSPACE->us_bssend;
+  uintptr_t heap_base = heap_end - STM32N6570_BOOTSTRAP_UHEAP_SIZE;
 
   board_autoled_on(LED_HEAPALLOCATE);
 
-  DEBUGASSERT(USERSPACE->us_bssend >=
-              CONFIG_STM32N6_PROTECTED_USRAM_BASE +
-              STM32N6570_USER_HEAP_BOOT_SIZE);
+  DEBUGASSERT(heap_end > heap_base);
+  DEBUGASSERT(heap_base >= CONFIG_STM32N6_PROTECTED_USRAM_BASE);
+  DEBUGASSERT(heap_end <= CONFIG_STM32N6_PROTECTED_USRAM_BASE +
+                          CONFIG_STM32N6_PROTECTED_USRAM_SIZE);
 
-  boot_heap = USERSPACE->us_bssend - STM32N6570_USER_HEAP_BOOT_SIZE;
+  *heap_start = (FAR void *)heap_base;
+  *heap_size  = STM32N6570_BOOTSTRAP_UHEAP_SIZE;
 
-  *heap_start = (FAR void *)boot_heap;
-  *heap_size  = STM32N6570_USER_HEAP_BOOT_SIZE;
-
-  syslog(LOG_INFO,
-         "stm32n6: user SRAM bootstrap heap base=0x%08" PRIx32
-         " size=0x%08" PRIx32 " psram=0x%08" PRIx32
-         " psram-size=0x%08" PRIx32 "\n",
-         (uint32_t)boot_heap, (uint32_t)STM32N6570_USER_HEAP_BOOT_SIZE,
-         (uint32_t)STM32N6570_PSRAM_HEAP_BASE,
-         (uint32_t)STM32N6570_PSRAM_HEAP_SIZE);
+  finfo("user SRAM bootstrap heap base=0x%08" PRIx32
+        " size=0x%08" PRIx32 " psram=0x%08" PRIx32
+        " psram-size=0x%08" PRIx32 "\n",
+        (uint32_t)heap_base, (uint32_t)*heap_size,
+        (uint32_t)STM32N6570_PSRAM_HEAP_BASE,
+        (uint32_t)STM32N6570_PSRAM_HEAP_SIZE);
 }
+#endif
 
 /****************************************************************************
  * Name: up_allocate_kheap
@@ -121,6 +131,7 @@ void up_allocate_heap(void **heap_start, size_t *heap_size)
  *
  ****************************************************************************/
 
+#if defined(CONFIG_BUILD_PROTECTED) && defined(CONFIG_MM_KERNEL_HEAP)
 void up_allocate_kheap(void **heap_start, size_t *heap_size)
 {
   DEBUGASSERT(g_idle_topstack < STM32N6570_KERNEL_HEAP_END);
@@ -129,11 +140,10 @@ void up_allocate_kheap(void **heap_start, size_t *heap_size)
   *heap_start = (FAR void *)g_idle_topstack;
   *heap_size  = STM32N6570_KERNEL_HEAP_END - g_idle_topstack;
 
-  syslog(LOG_INFO,
-         "stm32n6: kernel SRAM heap base=0x%08" PRIx32
-         " size=0x%08" PRIx32 " end=0x%08" PRIx32 "\n",
-         (uint32_t)g_idle_topstack, (uint32_t)*heap_size,
-         (uint32_t)STM32N6570_KERNEL_HEAP_END);
+  finfo("kernel SRAM heap base=0x%08" PRIx32
+        " size=0x%08" PRIx32 " end=0x%08" PRIx32 "\n",
+        (uint32_t)g_idle_topstack, (uint32_t)*heap_size,
+        (uint32_t)STM32N6570_KERNEL_HEAP_END);
 }
 #endif
 
@@ -158,13 +168,13 @@ void arm_addregion(void)
       return;
     }
 
+  stm32n6_mpu_uheap(STM32N6570_PSRAM_HEAP_BASE,
+                    STM32N6570_PSRAM_HEAP_SIZE);
   kumm_addregion((FAR void *)STM32N6570_PSRAM_HEAP_BASE,
                  STM32N6570_PSRAM_HEAP_SIZE);
-  syslog(LOG_INFO,
-         "stm32n6: added PSRAM heap base=0x%08" PRIx32
-         " size=0x%08" PRIx32 "\n",
-         (uint32_t)STM32N6570_PSRAM_HEAP_BASE,
-         (uint32_t)STM32N6570_PSRAM_HEAP_SIZE);
+  finfo("added PSRAM heap base=0x%08" PRIx32 " size=0x%08" PRIx32 "\n",
+        (uint32_t)STM32N6570_PSRAM_HEAP_BASE,
+        (uint32_t)STM32N6570_PSRAM_HEAP_SIZE);
 #endif
 }
 #endif

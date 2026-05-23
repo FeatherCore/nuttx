@@ -45,33 +45,8 @@
 #define STM32N6_SMPS_PIN_INDEX    4u
 
 /****************************************************************************
- * Private Data
- ****************************************************************************/
-
-static int g_pwr_status = -ENODEV;
-static int g_clock_status = -ENODEV;
-static uint32_t g_pwr_svmcr3;
-static uint32_t g_pwr_cr1;
-static uint32_t g_pwr_voscr;
-static uint32_t g_rcc_sr;
-static uint32_t g_rcc_hsicfgr;
-static uint32_t g_rcc_cfgr1;
-static uint32_t g_rcc_cfgr2;
-static uint32_t g_rcc_divenr;
-
-/****************************************************************************
  * Private Functions
  ****************************************************************************/
-
-static void stm32n6_clock_capture(int status)
-{
-  g_clock_status = status;
-  g_rcc_sr       = getreg32(STM32N6_RCC_SR);
-  g_rcc_hsicfgr  = getreg32(STM32N6_RCC_HSICFGR);
-  g_rcc_cfgr1    = getreg32(STM32N6_RCC_CFGR1);
-  g_rcc_cfgr2    = getreg32(STM32N6_RCC_CFGR2);
-  g_rcc_divenr   = getreg32(STM32N6_RCC_DIVENR);
-}
 
 static bool stm32n6_clock_ready(void)
 {
@@ -202,17 +177,12 @@ void stm32n6_power_config(void)
   ret = OK;
 
 out:
-  g_pwr_status = ret;
-  g_pwr_cr1    = getreg32(STM32N6_PWR_CR1);
-  g_pwr_voscr  = getreg32(STM32N6_PWR_VOSCR);
-  g_pwr_svmcr3 = getreg32(STM32N6_PWR_SVMCR3);
+  (void)ret;
 }
 
 void stm32n6_clockconfig(void)
 {
   int ret;
-
-  g_clock_status = -EINPROGRESS;
 
   if (stm32n6_clock_ready())
     {
@@ -224,7 +194,6 @@ void stm32n6_clockconfig(void)
                STM32N6_RCC_APB4ENSR2);
       modifyreg32(STM32N6_RCC_CCIPR13, RCC_CCIPR13_USART1SEL_MASK,
                   RCC_CCIPR13_USART1SEL_PCLK2);
-      stm32n6_clock_capture(OK);
       return;
     }
 
@@ -243,7 +212,6 @@ void stm32n6_clockconfig(void)
                          "HSI ready");
   if (ret < 0)
     {
-      g_clock_status = ret;
       return;
     }
 
@@ -259,7 +227,6 @@ void stm32n6_clockconfig(void)
                          "HSI switch");
   if (ret < 0)
     {
-      g_clock_status = ret;
       return;
     }
 
@@ -268,7 +235,6 @@ void stm32n6_clockconfig(void)
                          "PLL1 off");
   if (ret < 0)
     {
-      g_clock_status = ret;
       return;
     }
 
@@ -292,7 +258,6 @@ void stm32n6_clockconfig(void)
                          "PLL1 ready");
   if (ret < 0)
     {
-      g_clock_status = ret;
       return;
     }
 
@@ -315,7 +280,6 @@ void stm32n6_clockconfig(void)
                          "IC dividers enable");
   if (ret < 0)
     {
-      g_clock_status = ret;
       return;
     }
 
@@ -327,30 +291,8 @@ void stm32n6_clockconfig(void)
                          RCC_CFGR1_CPUSWS_IC1 |
                          RCC_CFGR1_SYSSWS_IC2_IC6_IC11,
                          "PLL1 switch");
-  stm32n6_clock_capture(ret);
-
-  if (ret == OK)
+  if (ret < 0)
     {
-      syslog(LOG_INFO,
-             "stm32n6: clock CPU=800MHz SYS=400MHz HCLK/PCLK=200MHz\n");
+      return;
     }
-}
-
-void stm32n6_clock_bootlog(void)
-{
-  syslog(LOG_INFO,
-         "stm32n6: PWR status=%d CR1=%08" PRIx32
-         " VOSCR=%08" PRIx32 " SVMCR3=%08" PRIx32 "\n",
-         g_pwr_status, g_pwr_cr1, g_pwr_voscr, g_pwr_svmcr3);
-  syslog(LOG_INFO,
-         "stm32n6: clock status=%d SR=%08" PRIx32
-         " HSICFGR=%08" PRIx32 " CFGR1=%08" PRIx32
-         " CFGR2=%08" PRIx32 " DIVENR=%08" PRIx32 "\n",
-         g_clock_status, g_rcc_sr, g_rcc_hsicfgr, g_rcc_cfgr1,
-         g_rcc_cfgr2, g_rcc_divenr);
-  syslog(LOG_INFO,
-         "stm32n6: clock CPU=%lu SYS=%lu HCLK=%lu PCLK1=%lu PCLK2=%lu\n",
-         STM32N6_CPUCLK_FREQUENCY, STM32N6_SYSCLK_FREQUENCY,
-         STM32N6_HCLK_FREQUENCY, STM32N6_PCLK1_FREQUENCY,
-         STM32N6_PCLK2_FREQUENCY);
 }

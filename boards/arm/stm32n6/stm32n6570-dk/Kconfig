@@ -55,14 +55,17 @@ config STM32N6_PSRAM_HEAP
 
 config STM32N6_PSRAM_HEAP_OFFSET
 	hex "XSPI1 PSRAM heap offset"
+	default 0x00200000 if STM32N6570_DK_LCD
 	default 0x0 if BUILD_PROTECTED
 	default 0x00200000
 	depends on STM32N6_PSRAM_HEAP
 	---help---
 		Offset from 0x90000000 where the app-side PSRAM heap begins.
-		The protected KNSh configuration uses offset 0 so all PSRAM
-		becomes the user heap.  The flat NSH default keeps the first
-		2 MiB free for a future framebuffer or early bring-up region.
+		LCD-enabled configurations keep the first 2 MiB free for the
+		double-buffered framebuffer.  Non-LCD protected KNSh configurations
+		use offset 0 when PSRAM is added as the secondary user heap region.
+		LCD-enabled flat and protected configurations keep the first 2 MiB
+		free for the framebuffer or early bring-up region.
 
 config STM32N6_PROTECTED_USRAM_BASE
 	hex "Protected build user SRAM base"
@@ -82,6 +85,60 @@ config STM32N6_PROTECTED_USRAM_SIZE
 		.data/.bss.  STM32N6570-DK currently gives the top 128 KiB of the
 		2 MiB app SRAM window to user static data and leaves the rest of
 		internal SRAM for kernel sections and kernel heap.
+
+config STM32N6_PROTECTED_UHEAP_SIZE
+	hex "Protected build bootstrap user heap size"
+	default 0x2000 if STM32N6_PSRAM_HEAP && MM_KERNEL_HEAP
+	default 0x0
+	depends on BUILD_PROTECTED
+	---help---
+		Size of the initial protected user heap reserved inside the
+		internal user SRAM window.  STM32N6570-DK protected builds keep
+		the allocator control structure and earliest user allocations in
+		internal SRAM, then add XSPI1 PSRAM later as an extra user heap
+		region.  LCD/LVGL validation builds may raise this value to keep
+		more hot UI allocations internal before the PSRAM heap is used.
+
+config STM32N6570_DK_LCD
+	bool "RK050HR18 RGB LCD framebuffer"
+	default n
+	depends on STM32N6_XSPI
+	select DRIVERS_VIDEO
+	select VIDEO_FB
+	select FB_UPDATE
+	select FB_SYNC
+	select STM32N6_GPIO
+	select STM32N6_DISPLAY
+	select STM32N6_LTDC_FB_DOUBLE_BUFFER
+	---help---
+		Enable the STM32N6570-DK 800x480 RK050HR18 RGB panel through
+		the LTDC block and expose it as /dev/fb0.  The double-buffered
+		RGB565 framebuffer is placed at the start of XSPI1 PSRAM.
+
+config STM32N6570_DK_GT911
+	bool "GT911 touchscreen"
+	default n
+	depends on STM32N6570_DK_LCD
+	select INPUT
+	select INPUT_GT911
+	select STM32N6_GPIO
+	select STM32N6_I2C
+	select STM32N6_I2C2
+	---help---
+		Enable the Goodix GT911 touchscreen on /dev/input0.  The DK
+		wires GT911 to the LCD connector I2C2 pins (PD14 SCL, PD4 SDA)
+		and PE1/PQ4 for reset/interrupt, matching the STM32CubeN6 DK BSP.
+
+config STM32N6570_DK_GT911_POLL_MS
+	int "GT911 poll interval in milliseconds"
+	default 30
+	depends on STM32N6570_DK_GT911
+
+config STM32N6570_DK_GT911_DEBUG
+	bool "GT911 touchscreen bring-up logs"
+	default n
+	depends on STM32N6570_DK_GT911
+	select INPUT_GT911_DEBUG
 
 if STM32N6_EXTNOR_OTA_PARTITION
 
@@ -118,6 +175,6 @@ endif # STM32N6_EXTNOR_OTA_PARTITION
 config STM32N6570_DK_LCD_COLORBAR
 	bool "Show LCD colorbar during bring-up"
 	default n
-	depends on STM32N6_DISPLAY
+	depends on STM32N6570_DK_LCD
 
 endif # ARCH_BOARD_STM32N6570_DK

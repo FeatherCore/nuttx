@@ -15,6 +15,14 @@ if(CONFIG_BOARDCTL_BOOT_IMAGE)
   list(APPEND SRCS stm32n6_boot_image.c)
 endif()
 
+if(CONFIG_STM32N6570_DK_LCD)
+  list(APPEND SRCS stm32n6570_lcd.c)
+endif()
+
+if(CONFIG_STM32N6570_DK_GT911)
+  list(APPEND SRCS stm32n6570_touch.c)
+endif()
+
 target_sources(board PRIVATE ${SRCS})
 
 if(CONFIG_BUILD_PROTECTED)

@@ -405,6 +405,7 @@
 #define RCC_AHB1ENR_DMA2DEN               (1 << 18) /* Bit 18: DMA2D clock enable */
 #define RCC_AHB1ENR_GFXMMUEN              (1 << 19) /* Bit 19: GFXMMU clock enable */
 #define RCC_AHB1ENR_GPU2DEN               (1 << 20) /* Bit 20: GPU2D clock enable */
+#define RCC_AHB1ENR_DCACHE2EN             (1 << 21) /* Bit 21: DCACHE2 clock enable */
 #define RCC_AHB1ENR_GTZC1EN               (1 << 24) /* Bit 24: GTZC1 clock enable */
 #define RCC_AHB1ENR_BKPSRAMEN             (1 << 31) /* Bit 31: BKPUPSRAM clock enable */
 #define RCC_AHB1ENR_DCACHE1EN             (1 << 30) /* Bit 30: DCACHE1 clock enable */
@@ -831,6 +832,8 @@
 #define RCC_AHB1RSTR_FLASHRST            (1 << 8)  /* Bit 8:  Flash memory interface reset */
 #define RCC_AHB1RSTR_CRCRST              (1 << 12) /* Bit 12: CRC reset */
 #define RCC_AHB1RSTR_TSCRST              (1 << 16) /* Bit 16: Touch Sensing Controller reset */
+#define RCC_AHB1RSTR_GFXMMURST           (1 << 19) /* Bit 19: GFXMMU reset */
+#define RCC_AHB1RSTR_GPU2DRST            (1 << 20) /* Bit 20: GPU2D reset */
 
 /* AHB2 peripheral reset register */
 

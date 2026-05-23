@@ -14,9 +14,8 @@
  *   0x70180400..            user blob, begins with struct userspace_s
  *
  * Internal AXI SRAM keeps kernel state at the bottom and reserves a small
- * top window for user .data/.bss plus the protected user heap bootstrap
- * control block.  The runtime user heap bulk storage is provided by the
- * whole XSPI1 PSRAM window from board-specific heap allocation code.
+ * top window for user .data/.bss.  The runtime user heap is provided by
+ * XSPI1 PSRAM from board-specific heap allocation code.
  */
 
 #if CONFIG_STM32N6_OTA_PRIMARY_SLOT_OFFSET != 0x00100000
@@ -35,19 +34,15 @@
 #  error "CONFIG_NUTTX_USERSPACE must be 0x70180400 to match memory.ld"
 #endif
 
-#if CONFIG_STM32N6_PROTECTED_USRAM_BASE != 0x341e0000
-#  error "CONFIG_STM32N6_PROTECTED_USRAM_BASE must be 0x341e0000"
-#endif
-
-#if CONFIG_STM32N6_PROTECTED_USRAM_SIZE != 0x20000
-#  error "CONFIG_STM32N6_PROTECTED_USRAM_SIZE must be 0x20000"
+#if CONFIG_RAM_START != 0x34000000
+#  error "CONFIG_RAM_START must be 0x34000000"
 #endif
 
 MEMORY
 {
   kflash (rx)  : ORIGIN = 0x70100400, LENGTH =   512K
   uflash (rx)  : ORIGIN = 0x70180400, LENGTH = 32255K
-  ksram  (rwx) : ORIGIN = 0x34000000, LENGTH =  1920K
-  usram  (rwx) : ORIGIN = 0x341e0000, LENGTH =   128K
+  ksram  (rwx) : ORIGIN = CONFIG_RAM_START, LENGTH = CONFIG_RAM_SIZE
+  usram  (rwx) : ORIGIN = CONFIG_STM32N6_PROTECTED_USRAM_BASE, LENGTH = CONFIG_STM32N6_PROTECTED_USRAM_SIZE
   psram  (rwx) : ORIGIN = 0x90000000, LENGTH =    32M
 }

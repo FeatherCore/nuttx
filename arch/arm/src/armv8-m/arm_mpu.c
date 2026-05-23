@@ -176,7 +176,14 @@ void mpu_control(bool enable, bool hfnmiena, bool privdefena)
            (MPU_MAIR_WRITE_THROUGH  << 24),
            MPU_MAIR0);
 
-  putreg32((MPU_MAIR_WRITE_BACK     <<  0),
+  /* MAIR1 slots 1 and 2 are the read-allocate/no-write-allocate variants.
+   * STM32N6 uses these for cacheable XSPI PSRAM so CPU heap/stack traffic can
+   * avoid the write-allocate linefill path.
+   */
+
+  putreg32((MPU_MAIR_WRITE_BACK         <<  0) |
+           (MPU_MAIR_WRITE_THROUGH_NWA <<  8) |
+           (MPU_MAIR_WRITE_BACK_NWA    << 16),
            MPU_MAIR1);
 
   if (enable)

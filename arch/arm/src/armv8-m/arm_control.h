@@ -66,6 +66,23 @@ static inline uint32_t arm_control_set_mode(uint32_t control,
 {
   control = arm_control_sync_stack(control, excreturn);
 
+#  ifdef CONFIG_ARMV8M_LAZYFPU
+  /* Keep CONTROL.FPCA consistent with the frame the processor will unstack.
+   * With lazy FPU enabled, integer-only threads should return with FPCA clear
+   * and a basic frame; threads with an extended frame must return with FPCA
+   * set so later exceptions preserve the active FP state correctly.
+   */
+
+  if ((excreturn & EXC_RETURN_STD_CONTEXT) != 0)
+    {
+      control &= ~(CONTROL_FPCA | CONTROL_SFPA);
+    }
+  else
+    {
+      control |= CONTROL_FPCA;
+    }
+#  endif
+
   if (unprivileged)
     {
       control |= CONTROL_NPRIV;

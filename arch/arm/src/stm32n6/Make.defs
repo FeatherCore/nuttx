@@ -23,3 +23,15 @@ endif
 ifeq ($(CONFIG_STM32N6_XSPI),y)
 CHIP_CSRCS += stm32n6_xspi.c
 endif
+
+ifeq ($(CONFIG_STM32N6_GPIO),y)
+CHIP_CSRCS += stm32n6_gpio.c
+endif
+
+ifeq ($(CONFIG_STM32N6_DISPLAY),y)
+CHIP_CSRCS += stm32n6_ltdc.c
+endif
+
+ifeq ($(CONFIG_STM32N6_I2C),y)
+CHIP_CSRCS += stm32n6_i2c.c
+endif

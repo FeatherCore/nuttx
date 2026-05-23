@@ -15,5 +15,6 @@
 int stm32h7rs_extmem_initialize(void);
 int stm32h7s78_xspi2_nor_initialize(void);
 int stm32h7s78_xspi1_psram_initialize(void);
+int stm32h7s78_touch_setup(void);
 
 #endif /* __BOARDS_ARM_STM32H7RS_STM32H7S78_DK_SRC_STM32H7S78_DK_H */

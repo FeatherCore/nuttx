@@ -39,6 +39,25 @@
 
 #if CONFIG_RR_INTERVAL > 0
 
+/****************************************************************************
+ * Private Functions
+ ****************************************************************************/
+
+static bool nxsched_rr_defer_timeslice(FAR struct tcb_s *tcb)
+{
+#if defined(CONFIG_LIB_SYSCALL) && defined(CONFIG_ARMV8M_SYSCALL_KERNEL_STACK)
+  /* The ARMv8-M protected syscall kstack path can have both the running task
+   * and the same-priority waiter parked inside unfinished syscall dispatch.
+   * Let the current syscall return to user mode before round-robin rotates to
+   * an equal-priority task.
+   */
+
+  return (tcb->flags & TCB_FLAG_SYSCALL) != 0;
+#else
+  return false;
+#endif
+}
+
 #ifdef CONFIG_SMP
 
 /****************************************************************************
@@ -149,7 +168,12 @@ clock_t nxsched_process_roundrobin(FAR struct tcb_s *tcb, clock_t ticks,
   /* Did decrementing the timeslice counter cause the timeslice to expire? */
 
   ret = tcb->timeslice;
-  if (tcb->timeslice <= 0 && !nxsched_islocked_tcb(tcb))
+  if (tcb->timeslice <= 0 && nxsched_rr_defer_timeslice(tcb))
+    {
+      tcb->timeslice = MSEC2TICK(CONFIG_RR_INTERVAL);
+      ret = tcb->timeslice;
+    }
+  else if (tcb->timeslice <= 0 && !nxsched_islocked_tcb(tcb))
     {
       /* We will also suppress context switches if we were called via one
        * of the unusual cases handled by nxsched_reassess_timer().  In that

@@ -78,7 +78,14 @@
 arm_dispatch_syscall:
 	.cfi_sections	.debug_frame
 	.cfi_startproc
-	sub	sp, sp, #32
+	/* This dispatcher is entered from unprivileged user code but calls a
+	 * privileged kernel stub before returning through SYS_syscall_return.
+	 * Preserve the full callee-saved set owned by the user context, including
+	 * r8-r11, so a syscall cannot corrupt high registers when the user frame
+	 * later resumes from PSRAM or another external stack.
+	 */
+
+	sub	sp, sp, #40
 	.cfi_def_cfa sp, 0
 	str	r4, [sp, #0]
 	.cfi_offset r4, 0
@@ -86,15 +93,33 @@ arm_dispatch_syscall:
 	.cfi_offset r5, 4
 	str	r6, [sp, #8]
 	.cfi_offset r6, 8
-	str	lr, [sp, #12]
-	.cfi_offset lr, 12
-	str	ip, [sp, #16]
-	.cfi_offset pc, 16
+	str	r7, [sp, #12]
+	.cfi_offset r7, 12
+	str	r8, [sp, #16]
+	.cfi_offset r8, 16
+	str	r9, [sp, #20]
+	.cfi_offset r9, 20
+	str	r10, [sp, #24]
+	.cfi_offset r10, 24
+	str	r11, [sp, #28]
+	.cfi_offset r11, 28
+	str	lr, [sp, #32]
+	.cfi_offset lr, 32
+	str	ip, [sp, #36]
+	.cfi_offset pc, 36
 	ldr	ip, =g_stublookup
 	ldr	ip, [ip, r0, lsl #2]
 	blx	ip
-	ldr	lr, [sp, #12]
-	add	sp, sp, #32
+	ldr	r4, [sp, #0]
+	ldr	r5, [sp, #4]
+	ldr	r6, [sp, #8]
+	ldr	r7, [sp, #12]
+	ldr	r8, [sp, #16]
+	ldr	r9, [sp, #20]
+	ldr	r10, [sp, #24]
+	ldr	r11, [sp, #28]
+	ldr	lr, [sp, #32]
+	add	sp, sp, #40
 	mov	r2, r0
 	mov	r0, SYS_syscall_return
 	svc	SYS_syscall

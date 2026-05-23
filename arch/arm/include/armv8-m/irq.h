@@ -250,6 +250,17 @@ struct xcptcontext
   uint8_t nsyscalls;
   struct xcpt_syscall_s syscall[CONFIG_SYS_NNEST];
 
+#ifdef CONFIG_ARMV8M_SYSCALL_KERNEL_STACK
+  /* Original user SVC frame and per-thread internal stack used while a
+   * protected-mode syscall runs privileged kernel code.  This lets user
+   * process stacks live in slower or external memory without running blocking
+   * kernel paths directly on that user PSP.
+   */
+
+  uint32_t *ustkptr;
+  uint32_t *kstack;
+#endif
+
 #endif
 
   /* Register save area with XCPTCONTEXT_SIZE, only valid when:
@@ -338,6 +349,14 @@ static always_inline_function void setbasepri(uint32_t basepri)
   __asm__ __volatile__
     (
       "\tmsr basepri, %0\n"
+#ifdef CONFIG_ARMV8M_BASEPRI_ISB
+      /* Some syscall and scheduler return paths immediately depend on the
+       * lowered interrupt mask.  Pair the BASEPRI write with ISB so the new
+       * mask is observed before subsequent instructions.
+       */
+
+      "\tisb sy\n"
+#endif
       :
       : "r" (basepri)
       : "memory");

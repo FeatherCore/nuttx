@@ -54,9 +54,9 @@ Bring-up status, 2026-05-15:
   NXboot keeps the conservative 50 MHz mapping instead of burning OTP or
   forcing an unsafe high-speed mode.
 - In protected `knsh`, internal SRAM below the protected user SRAM window is
-  used as the kernel heap.  User space starts with a small bootstrap heap in
-  user SRAM, then adds the full 32 MiB PSRAM window at `0x90000000` as user
-  heap.
+  used as the kernel heap.  A small protected user heap is reserved in
+  internal SRAM for allocator bootstrap state, then XSPI1 PSRAM is added as
+  the large secondary user heap.
 - The protected KNSh path reached the `NuttShell (NSH)` prompt with the 50 MHz
   PSRAM mapping.  The 800 MHz CPU / 200 MHz PSRAM profile is the current target
   and should be stress-tested on hardware.
@@ -72,7 +72,8 @@ XSPI1 PSRAM MR00000000 initial 08 write 30 readback 30
 XSPI1 PSRAM optional prescaler=0 effective=200000000Hz refresh=396
 XSPI1 PSRAM self-test passed
 Boot vector msp=0x34003400 reset=0x70101861 vtor=0x70100400
-stm32n6: added PSRAM heap base=0x90000000 size=0x02000000
+XSPI1 PSRAM already memory-mapped refresh=396
+XSPI1 PSRAM self-test passed
 NuttShell (NSH)
 nsh>
 ```

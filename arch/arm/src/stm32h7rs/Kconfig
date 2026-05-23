@@ -69,6 +69,34 @@ config STM32H7RS_XSPI
 		Enable STM32H7RS XSPI support once the memory-mapped external
 		flash/PSRAM path is ported.
 
+config STM32H7RS_I2C
+	bool "I2C"
+	default n
+	---help---
+		Enable the STM32H7RS polling I2C master lower-half.
+
+config STM32H7RS_I2C1
+	bool "I2C1"
+	default n
+	depends on STM32H7RS_I2C
+	---help---
+		Enable I2C1.  The STM32H7S78-DK routes GT911 touch through PB6
+		SCL and PB9 SDA.
+
+config STM32H7RS_DISPLAY
+	bool "LTDC display"
+	default n
+	---help---
+		Enable the STM32H7RS LTDC framebuffer lower-half.
+
+config STM32H7RS_LTDC_FB_DOUBLE_BUFFER
+	bool "LTDC double framebuffer"
+	default n
+	depends on STM32H7RS_DISPLAY
+	---help---
+		Expose two vertically stacked framebuffer pages so LVGL's NuttX
+		fbdev driver can use DIRECT render mode and FBIOPAN_DISPLAY.
+
 endmenu # STM32H7RS Peripheral Selection
 
 endif # ARCH_CHIP_STM32H7RS

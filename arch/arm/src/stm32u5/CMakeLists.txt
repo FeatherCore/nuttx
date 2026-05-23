@@ -77,6 +77,10 @@ if(CONFIG_STM32U5_GFXMMU)
   list(APPEND SRCS stm32_gfxmmu.c)
 endif()
 
+if(CONFIG_STM32U5_GPU2D)
+  list(APPEND SRCS stm32_gpu2d.c)
+endif()
+
 if(CONFIG_STM32U5_DMA2D)
   list(APPEND SRCS stm32_dma2d.c)
 endif()

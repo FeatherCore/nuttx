@@ -30,6 +30,7 @@
 #include <nuttx/debug.h>
 
 #include <nuttx/arch.h>
+#include <nuttx/irq.h>
 #include <nuttx/kmalloc.h>
 
 #include "arm_internal.h"
@@ -37,6 +38,53 @@
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
+
+#if defined(CONFIG_LIB_SYSCALL) && defined(CONFIG_ARMV8M_SYSCALL_KERNEL_STACK)
+static FAR void *g_armv8m_pending_kstacks;
+
+void armv8m_syscall_kstack_defer(FAR void *kstack)
+{
+  irqstate_t flags;
+
+  if (kstack == NULL)
+    {
+      return;
+    }
+
+  flags = up_irq_save();
+
+  /* Reuse the first word of the stack block as a tiny pending-free list node.
+   * The memory is no longer a live stack once it reaches this path.
+   */
+
+  *(FAR void **)kstack = g_armv8m_pending_kstacks;
+  g_armv8m_pending_kstacks = kstack;
+  up_irq_restore(flags);
+}
+
+void armv8m_syscall_kstack_drain(void)
+{
+  FAR void *kstack;
+  FAR void *next;
+  irqstate_t flags;
+
+  flags = up_irq_save();
+  kstack = g_armv8m_pending_kstacks;
+  g_armv8m_pending_kstacks = NULL;
+  up_irq_restore(flags);
+
+  /* Drain from an SVC entry that is known to run on the exception stack.  That
+   * avoids freeing a per-task syscall stack while it is still the active PSP.
+   */
+
+  while (kstack != NULL)
+    {
+      next = *(FAR void **)kstack;
+      kmm_free(kstack);
+      kstack = next;
+    }
+}
+#endif
 
 /****************************************************************************
  * Name: up_release_stack
@@ -71,6 +119,20 @@
 
 void up_release_stack(struct tcb_s *dtcb, uint8_t ttype)
 {
+#if defined(CONFIG_LIB_SYSCALL) && defined(CONFIG_ARMV8M_SYSCALL_KERNEL_STACK)
+  if (dtcb->xcp.kstack)
+    {
+      /* A protected task may exit while still running on this per-task
+       * syscall stack.  Defer the actual free until a later SVC entry that
+       * is running from the exception stack, not from the defunct task stack.
+       */
+
+      armv8m_syscall_kstack_defer(dtcb->xcp.kstack);
+      dtcb->xcp.kstack = NULL;
+      dtcb->xcp.ustkptr = NULL;
+    }
+#endif
+
   /* Is there a stack allocated? */
 
   if (dtcb->stack_alloc_ptr && (dtcb->flags & TCB_FLAG_FREE_STACK))

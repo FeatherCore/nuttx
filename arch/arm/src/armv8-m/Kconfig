@@ -30,6 +30,110 @@ config ARMV8M_DCACHE_WRITETHROUGH
 	default n
 	depends on ARMV8M_DCACHE
 
+config ARMV8M_LAZYFPU
+	bool "Use lazy FPU exception frames"
+	default n
+	depends on ARCH_FPU
+	---help---
+		Keep CONTROL.FPCA clear for threads that have not executed FP
+		instructions, and let the hardware set FPCA automatically when FP
+		state is used.  This avoids the extended FP exception frame on
+		integer-only threads.
+
+config ARMV8M_SYSCALL_BARRIER
+	bool "Issue barriers before returning from SVC"
+	default n
+	depends on BUILD_PROTECTED
+	---help---
+		Issue DSB/ISB before returning from the ARMv8-M SVC handler.  This
+		is useful when validating protected-mode system calls on external
+		cacheable process stacks, where both the user stack frame and the
+		SVC exception frame can live outside internal SRAM.
+
+config ARMV8M_BASEPRI_ISB
+	bool "Issue ISB after BASEPRI writes"
+	default n
+	---help---
+		Issue an ISB after writing BASEPRI in the Armv8-M IRQ save and
+		restore path.  This is useful on cores where code immediately
+		depends on interrupts being unmasked after lowering the BASEPRI
+		priority boost.
+
+config ARMV8M_SYSCALL_RETURN_CURRENT_FRAME
+	bool "Preserve the active SVC frame shape on syscall return"
+	default n
+	depends on BUILD_PROTECTED && LIB_SYSCALL
+	---help---
+		Preserve the standard/extended FP frame bit from the active
+		SYS_syscall_return SVC frame instead of blindly restoring the bit
+		from the original user SVC.  This avoids a lazy-FPU protected-mode
+		syscall return path changing frame shape while exception return is
+		decoding the active stack frame.
+
+config ARMV8M_SYSCALL_RETURN_USER_BASEPRI0
+	bool "Clear BASEPRI before returning from syscall to user mode"
+	default n
+	depends on BUILD_PROTECTED && LIB_SYSCALL
+	---help---
+		Clear the saved BASEPRI field in the active SVC frame before
+		SYS_syscall_return returns to unprivileged thread mode.  This is
+		useful for protected-mode blocking syscalls that must not resume a
+		user task with an interrupt priority mask inherited from a kernel
+		critical section.
+
+config ARMV8M_SYSCALL_DISPATCH_BASEPRI0
+	bool "Clear BASEPRI before entering syscall dispatcher"
+	default n
+	depends on BUILD_PROTECTED && LIB_SYSCALL
+	---help---
+		Clear the saved BASEPRI field in the SVC frame before returning
+		to the privileged syscall dispatcher.  This prevents a stale user
+		BASEPRI value from being inherited by kernel syscall code such as
+		serial write paths that depend on interrupts.
+
+config ARMV8M_SYSCALL_KERNEL_STACK
+	bool "Run protected syscall dispatcher on a kernel stack"
+	default n
+	depends on BUILD_PROTECTED && LIB_SYSCALL
+	depends on ARCH_INTERRUPTSTACK > 7
+	---help---
+		Return from the user SVC frame to the privileged syscall dispatcher
+		using a per-thread kernel stack instead of the process stack.  This
+		keeps blocking kernel syscall paths off external user stacks while
+		still allowing ordinary user task and pthread stacks to live in
+		external RAM.  This requires a real interrupt stack because the
+		SVC handler must not free or reuse the syscall stack it is running
+		on.
+
+config ARMV8M_SYSCALL_KERNEL_STACKSIZE
+	int "Protected syscall kernel stack size"
+	default 4096
+	depends on ARMV8M_SYSCALL_KERNEL_STACK
+	---help---
+		Size, in bytes, of the per-thread internal stack used while running
+		protected-mode syscall dispatcher and kernel syscall code.
+
+config ARMV8M_SYSCALL_KERNEL_STACK_BASIC_FRAME
+	bool "Use a basic FP frame for syscall kernel-stack dispatch"
+	default n
+	depends on ARMV8M_SYSCALL_KERNEL_STACK && ARMV8M_LAZYFPU
+	---help---
+		Return from the user SVC to the privileged syscall dispatcher with
+		a basic integer-only exception frame on the internal syscall stack.
+		The original user PSP frame is still restored on SYS_syscall_return.
+		This is useful for lazy-FPU protected syscalls when the dispatcher
+		does not need the user's volatile FP frame on its internal stack.
+
+config ARMV8M_SYSCALL_KERNEL_STACK_PSP
+	bool "Run syscall kernel-stack dispatch through PSP"
+	default n
+	depends on ARMV8M_SYSCALL_KERNEL_STACK
+	---help---
+		Use PSP, not MSP, while running the privileged syscall dispatcher on
+		the per-thread internal kernel stack.  This keeps handler-mode MSP on
+		the normal interrupt stack after SYS_syscall_return restores the
+		original user PSP frame.
+
 config ARMV8M_HAVE_ITCM
 	bool
 	default n

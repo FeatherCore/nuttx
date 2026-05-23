@@ -7,6 +7,8 @@
 
 /* NOTE: This depends on memory.ld having been included first. */
 
+#include <nuttx/config.h>
+
 OUTPUT_ARCH(arm)
 SECTIONS
 {
@@ -71,13 +73,15 @@ SECTIONS
         *(COMMON)
         . = ALIGN(8);
 
-        /* Bootstrap user heap for protected KNSh.  The allocator control
-         * structure must live in user-accessible internal SRAM; PSRAM is
-         * added later as a second heap region.
+        /* Protected-user bootstrap heap.  STM32N6570-DK keeps the initial
+         * protected user heap in internal SRAM so early allocator metadata
+         * and locks are not placed in memory-mapped PSRAM during nx_start().
+         * Board bring-up later appends PSRAM as an additional user heap
+         * region.
          */
 
         _s_uheap_boot = ABSOLUTE(.);
-        . += 0x2000;
+        . += CONFIG_STM32N6_PROTECTED_UHEAP_SIZE;
         . = ALIGN(8);
         _e_uheap_boot = ABSOLUTE(.);
 

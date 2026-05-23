@@ -39,6 +39,7 @@ config STM32H7RS_PSRAM_HEAP
 
 config STM32H7RS_PSRAM_HEAP_OFFSET
 	hex "XSPI1 PSRAM heap offset"
+	default 0x00200000 if STM32H7S78_DK_LCD
 	default 0x0
 	depends on STM32H7RS_PSRAM_HEAP
 	---help---
@@ -66,6 +67,46 @@ config STM32H7RS_PROTECTED_USRAM_SIZE
 		.data/.bss.  STM32H7S78-DK has 456 KiB AXI SRAM, so the default
 		0x24060000..0x24071fff reserves 72 KiB for user static data and
 		leaves the rest of internal SRAM for kernel state and kernel heap.
+
+config STM32H7S78_DK_LCD
+	bool "RK050HR18 RGB LCD framebuffer"
+	default n
+	depends on STM32H7RS_XSPI
+	select DRIVERS_VIDEO
+	select VIDEO_FB
+	select FB_UPDATE
+	select FB_SYNC
+	select STM32H7RS_GPIO
+	select STM32H7RS_DISPLAY
+	select STM32H7RS_LTDC_FB_DOUBLE_BUFFER
+	---help---
+		Enable the STM32H7S78-DK 800x480 RK050HR18 RGB LCD through LTDC
+		and expose the double-buffered RGB565 framebuffer as /dev/fb0.
+		The framebuffer is placed at the start of XSPI1 PSRAM.
+
+config STM32H7S78_DK_GT911
+	bool "GT911 touchscreen"
+	default n
+	depends on STM32H7S78_DK_LCD
+	select INPUT
+	select INPUT_GT911
+	select STM32H7RS_I2C
+	select STM32H7RS_I2C1
+	---help---
+		Enable the Goodix GT911 touchscreen on /dev/input0.  The
+		STM32H7S78-DK routes the touch controller through I2C1
+		(PB6/PB9), matching the STM32CubeH7RS DK BSP.
+
+config STM32H7S78_DK_GT911_POLL_MS
+	int "GT911 poll interval in milliseconds"
+	default 30
+	depends on STM32H7S78_DK_GT911
+
+config STM32H7S78_DK_GT911_DEBUG
+	bool "GT911 touchscreen bring-up logs"
+	default n
+	depends on STM32H7S78_DK_GT911
+	select INPUT_GT911_DEBUG
 
 if STM32H7RS_EXTNOR_OTA_PARTITION
 

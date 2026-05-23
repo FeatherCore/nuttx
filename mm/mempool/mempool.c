@@ -320,7 +320,8 @@ int mempool_init(FAR struct mempool_s *pool, FAR const char *name)
       nxsem_init(&pool->waitsem, 0, 0);
     }
 
-#if defined(CONFIG_FS_PROCFS) && !defined(CONFIG_FS_PROCFS_EXCLUDE_MEMPOOL)
+#if defined(CONFIG_FS_PROCFS) && CONFIG_MM_HEAP_MEMPOOL_THRESHOLD > 0 && \
+    !defined(CONFIG_FS_PROCFS_EXCLUDE_MEMPOOL)
   mempool_procfs_register(&pool->procfs, name);
 #  ifdef CONFIG_MM_BACKTRACE_DEFAULT
   pool->procfs.backtrace = true;
@@ -643,7 +644,8 @@ int mempool_deinit(FAR struct mempool_s *pool)
         }
     }
 
-#if defined(CONFIG_FS_PROCFS) && !defined(CONFIG_FS_PROCFS_EXCLUDE_MEMPOOL)
+#if defined(CONFIG_FS_PROCFS) && CONFIG_MM_HEAP_MEMPOOL_THRESHOLD > 0 && \
+    !defined(CONFIG_FS_PROCFS_EXCLUDE_MEMPOOL)
   mempool_procfs_unregister(&pool->procfs);
 #endif
 

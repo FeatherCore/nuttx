@@ -24,6 +24,8 @@
  * Included Files
  ****************************************************************************/
 
+#include <arch/barriers.h>
+
 #include "nvic.h"
 #include "arm_internal.h"
 
@@ -60,6 +62,26 @@ void arm_fpuconfig(void)
 {
   uint32_t regval;
 
+#ifdef CONFIG_ARMV8M_LAZYFPU
+  /* Start integer-only threads with the basic exception frame.  ASPEN lets
+   * the core mark FPCA after FP use; LSPEN defers volatile FP state writes
+   * until the handler actually needs that state.
+   */
+
+  regval = getcontrol();
+  regval &= ~(CONTROL_FPCA | CONTROL_SFPA);
+  setcontrol(regval);
+
+  /* CONTROL affects the exception-return and stacking model, so synchronize
+   * before enabling automatic FP context handling.
+   */
+
+  UP_ISB();
+
+  regval = getreg32(NVIC_FPCCR);
+  regval |= NVIC_FPCCR_ASPEN | NVIC_FPCCR_LSPEN;
+  putreg32(regval, NVIC_FPCCR);
+#else
   /* Set CONTROL.FPCA so that we always get the extended context frame
    * with the volatile FP registers stacked above the basic context.
    */
@@ -67,6 +89,12 @@ void arm_fpuconfig(void)
   regval = getcontrol();
   regval |= CONTROL_FPCA;
   setcontrol(regval);
+
+  /* Ensure the always-extended-frame policy is visible before CPACR/FPCCR
+   * setup continues.
+   */
+
+  UP_ISB();
 
   /* Ensure that FPCCR.LSPEN is disabled, so that we don't have to contend
    * with the lazy FP context save behavior.  Clear FPCCR.ASPEN since we
@@ -76,10 +104,18 @@ void arm_fpuconfig(void)
   regval = getreg32(NVIC_FPCCR);
   regval &= ~(NVIC_FPCCR_ASPEN | NVIC_FPCCR_LSPEN);
   putreg32(regval, NVIC_FPCCR);
+#endif
 
   /* Enable full access to CP10 and CP11 */
 
   regval = getreg32(NVIC_CPACR);
   regval |= NVIC_CPACR_CP_FULL(10) | NVIC_CPACR_CP_FULL(11);
   putreg32(regval, NVIC_CPACR);
+
+  /* CPACR changes are context-affecting system register writes.  Complete
+   * outstanding memory activity and refetch after enabling CP10/CP11.
+   */
+
+  UP_DSB();
+  UP_ISB();
 }

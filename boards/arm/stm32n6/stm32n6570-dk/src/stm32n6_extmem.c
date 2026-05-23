@@ -291,11 +291,10 @@ static int stm32n6_register_ota_partitions(FAR struct mtd_dev_s *mtd)
           continue;
         }
 
-      syslog(LOG_INFO,
-             "stm32n6: registered %s offset=0x%08" PRIx32
-             " size=0x%08" PRIx32 "%s\n",
-             part->devpath, part->offset, part->size,
-             ret == -EEXIST ? " (already exists)" : "");
+      finfo("registered %s offset=0x%08" PRIx32
+            " size=0x%08" PRIx32 "%s\n",
+            part->devpath, part->offset, part->size,
+            ret == -EEXIST ? " (already exists)" : "");
     }
 
   return ret;

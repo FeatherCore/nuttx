@@ -40,6 +40,28 @@
 
 #define STM32H7RS_UART4_BAUD        115200ul
 
+#define STM32H7S78_LCD_WIDTH        800
+#define STM32H7S78_LCD_HEIGHT       480
+
+#define BOARD_LTDC_WIDTH            STM32H7S78_LCD_WIDTH
+#define BOARD_LTDC_HEIGHT           STM32H7S78_LCD_HEIGHT
+#define BOARD_LTDC_BPP              16
+#define BOARD_LTDC_STRIDE           ((BOARD_LTDC_WIDTH * BOARD_LTDC_BPP) / 8)
+#define BOARD_LTDC_FRAME_SIZE       (BOARD_LTDC_STRIDE * BOARD_LTDC_HEIGHT)
+#define BOARD_LTDC_FB_COUNT         2
+#define BOARD_LTDC_FB_SIZE          (BOARD_LTDC_FRAME_SIZE * \
+                                     BOARD_LTDC_FB_COUNT)
+#define BOARD_LTDC_FB_BASE          0x90000000ul
+
+/* RK050HR18 timing, matching STM32CubeH7RS STM32H7S78-DK BSP. */
+
+#define BOARD_LTDC_HSYNC            4
+#define BOARD_LTDC_HBP              8
+#define BOARD_LTDC_HFP              8
+#define BOARD_LTDC_VSYNC            4
+#define BOARD_LTDC_VBP              8
+#define BOARD_LTDC_VFP              8
+
 #define LED_STARTED        0
 #define LED_HEAPALLOCATE   1
 #define LED_IRQSENABLED    2

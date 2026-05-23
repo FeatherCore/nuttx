@@ -24,6 +24,12 @@
 #include "hardware/stm32n6_usart.h"
 
 /****************************************************************************
+ * Pre-processor Definitions
+ ****************************************************************************/
+
+#define STM32N6_USART1_TXDONE_TIMEOUT 1000000u
+
+/****************************************************************************
  * Private Data
  ****************************************************************************/
 
@@ -52,12 +58,14 @@ static void stm32n6_usart1_gpio_config(void)
 
   regval = getreg32(STM32N6_GPIO_OSPEEDR(STM32N6_GPIOE_BASE));
   regval &= ~(GPIO_SPEED_MASK(5) | GPIO_SPEED_MASK(6));
-  regval |= (GPIO_SPEED_LOW << GPIO_SPEED_SHIFT(5)) |
-            (GPIO_SPEED_LOW << GPIO_SPEED_SHIFT(6));
+  regval |= (GPIO_SPEED_HIGH << GPIO_SPEED_SHIFT(5)) |
+            (GPIO_SPEED_HIGH << GPIO_SPEED_SHIFT(6));
   putreg32(regval, STM32N6_GPIO_OSPEEDR(STM32N6_GPIOE_BASE));
 
   regval = getreg32(STM32N6_GPIO_PUPDR(STM32N6_GPIOE_BASE));
   regval &= ~(GPIO_PUPD_MASK(5) | GPIO_PUPD_MASK(6));
+  regval |= (GPIO_PULLUP << GPIO_PUPD_SHIFT(5)) |
+            (GPIO_PULLUP << GPIO_PUPD_SHIFT(6));
   putreg32(regval, STM32N6_GPIO_PUPDR(STM32N6_GPIOE_BASE));
 
   regval = getreg32(STM32N6_GPIO_AFRL(STM32N6_GPIOE_BASE));
@@ -65,6 +73,19 @@ static void stm32n6_usart1_gpio_config(void)
   regval |= (GPIO_AF_USART1 << GPIO_AFR_SHIFT(5)) |
             (GPIO_AF_USART1 << GPIO_AFR_SHIFT(6));
   putreg32(regval, STM32N6_GPIO_AFRL(STM32N6_GPIOE_BASE));
+}
+
+static void stm32n6_usart1_flush_rx(void)
+{
+  uint32_t timeout = 256;
+
+  while ((getreg32(STM32N6_USART1_ISR) & USART_ISR_RXNE_RXFNE) != 0 &&
+         timeout-- > 0)
+    {
+      (void)getreg32(STM32N6_USART1_RDR);
+    }
+
+  putreg32(USART_ICR_ERROR_MASK, STM32N6_USART1_ICR);
 }
 
 /****************************************************************************
@@ -76,7 +97,11 @@ void stm32n6_lowsetup(void)
   uint32_t brr;
   uint32_t timeout;
 
+  stm32n6_usart1_wait_txcomplete();
   stm32n6_usart1_gpio_config();
+
+  modifyreg32(STM32N6_RCC_CCIPR13, RCC_CCIPR13_USART1SEL_MASK,
+              RCC_CCIPR13_USART1SEL_PCLK2);
 
   putreg32(RCC_APB2ENSR_USART1ENS, STM32N6_RCC_APB2ENSR);
   (void)getreg32(STM32N6_RCC_APB2ENR);
@@ -88,14 +113,13 @@ void stm32n6_lowsetup(void)
   putreg32(0, STM32N6_USART1_CR2);
   putreg32(0, STM32N6_USART1_CR3);
   putreg32(0, STM32N6_USART1_PRESC);
-  putreg32(USART_ICR_TCCF, STM32N6_USART1_ICR);
+  putreg32(USART_ICR_ERROR_MASK | USART_ICR_TCCF, STM32N6_USART1_ICR);
 
   brr = (STM32N6_PCLK2_FREQUENCY + (STM32N6_USART1_BAUD / 2)) /
         STM32N6_USART1_BAUD;
   putreg32(brr & USART_BRR_MASK, STM32N6_USART1_BRR);
 
-  putreg32(USART_CR1_UE | USART_CR1_TE | USART_CR1_RE,
-           STM32N6_USART1_CR1);
+  putreg32(USART_CR1_UE | USART_CR1_TE | USART_CR1_RE, STM32N6_USART1_CR1);
 
   timeout = 1000000u;
   while ((getreg32(STM32N6_USART1_ISR) &
@@ -109,6 +133,64 @@ void stm32n6_lowsetup(void)
     }
 
   g_usart1_initialized = true;
+  stm32n6_usart1_flush_rx();
+}
+
+void stm32n6_usart1_wait_txcomplete(void)
+{
+  uint32_t timeout = STM32N6_USART1_TXDONE_TIMEOUT;
+
+  if ((getreg32(STM32N6_RCC_APB2ENR) & RCC_APB2ENR_USART1EN) == 0)
+    {
+      return;
+    }
+
+  if ((getreg32(STM32N6_USART1_CR1) & (USART_CR1_UE | USART_CR1_TE)) !=
+      (USART_CR1_UE | USART_CR1_TE))
+    {
+      return;
+    }
+
+  while ((getreg32(STM32N6_USART1_ISR) & USART_ISR_TC) == 0 &&
+         timeout-- > 0)
+    {
+    }
+}
+
+void stm32n6_earlyputc(char ch)
+{
+  uint32_t timeout = STM32N6_USART1_TXDONE_TIMEOUT;
+
+  if ((getreg32(STM32N6_RCC_APB2ENR) & RCC_APB2ENR_USART1EN) == 0)
+    {
+      return;
+    }
+
+  if ((getreg32(STM32N6_USART1_CR1) & (USART_CR1_UE | USART_CR1_TE)) !=
+      (USART_CR1_UE | USART_CR1_TE))
+    {
+      return;
+    }
+
+  while ((getreg32(STM32N6_USART1_ISR) & USART_ISR_TXE_TXFNF) == 0)
+    {
+      if (timeout-- == 0)
+        {
+          return;
+        }
+    }
+
+  putreg32((uint32_t)ch, STM32N6_USART1_TDR);
+}
+
+void stm32n6_earlyputs(const char *str)
+{
+  while (*str != '\0')
+    {
+      stm32n6_earlyputc(*str++);
+    }
+
+  stm32n6_usart1_wait_txcomplete();
 }
 
 void arm_lowputc(char ch)

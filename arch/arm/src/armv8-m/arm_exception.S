@@ -133,8 +133,21 @@ exception_common:
 	isb		sy
 2:
 	mov		r2, r1					/* R2=Copy of the main/process stack pointer */
-	add		r2, #HW_XCPT_SIZE			/* R2=MSP/PSP before the interrupt was taken */
-								/* (ignoring the xPSR[9] alignment bit) */
+#ifdef CONFIG_ARCH_FPU
+	/* Stack-limit bookkeeping needs the pre-exception SP.  On Armv8-M the
+	 * hardware frame is larger when EXC_RETURN reports an extended FP frame,
+	 * so do not assume the basic integer frame size.
+	 */
+
+	tst		r14, #EXC_RETURN_STD_CONTEXT
+	ite		ne
+	addne		r2, #(4*HW_INT_REGS)
+	addeq		r2, #HW_XCPT_SIZE
+#else
+	add		r2, #HW_XCPT_SIZE
+#endif
+									/* R2=MSP/PSP before the interrupt was taken */
+									/* (ignoring the xPSR[9] alignment bit) */
 #ifdef CONFIG_ARMV8M_STACKCHECK_HARDWARE
 	mov		r3, #0x0
 
@@ -169,12 +182,24 @@ exception_common:
 	vstmdbeq	r1!, {s16-s31}			/* Save the non-volatile FP context */
 	subne		r1, #(4*SW_FPU_REGS)
 
-	/* the FPSCR[18:16] LTPSIZE field must be set to 0b100 for
-	 * "Tail predication not applied" as it's reset value.
-	 */
+#ifdef CONFIG_ARMV8M_LAZYFPU
+		/* Avoid touching FPSCR when the interrupted context uses a basic
+		 * frame.  With FPCCR.ASPEN set, executing an FP instruction here
+		 * would create a floating-point context for an integer-only thread.
+		 */
 
-	mov		r0, #ARMV8M_FPSCR_LTPSIZE_NONE
-	vmsr		fpscr, r0
+		tst		r14, #EXC_RETURN_STD_CONTEXT
+		bne		4f
+#endif
+		/* the FPSCR[18:16] LTPSIZE field must be set to 0b100 for
+		 * "Tail predication not applied" as it's reset value.
+		 */
+
+		mov		r0, #ARMV8M_FPSCR_LTPSIZE_NONE
+		vmsr		fpscr, r0
+#ifdef CONFIG_ARMV8M_LAZYFPU
+	4:
+#endif
 #endif
 
 	stmdb		r1!, {r2-r12,r14}		/* Save the remaining registers plus the SP/PRIMASK values */
@@ -256,6 +281,16 @@ exception_common:
 	msr		basepri, r3				/* Restore interrupts priority masking */
 
 	msr		control, r12
+
+#ifdef CONFIG_ARMV8M_SYSCALL_BARRIER
+	/* Optional SVC-return fence used while validating syscall returns through
+	 * external cacheable process stacks.  The architectural frame fixes should
+	 * make this unnecessary for normal builds.
+	 */
+
+	dsb		sy
+	isb		sy
+#endif
 
 	/* Always return with R14 containing the special value that will: (1)
 	 * return to thread mode, and (2) select the correct stack.

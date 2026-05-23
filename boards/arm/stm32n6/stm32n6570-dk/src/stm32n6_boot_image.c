@@ -33,6 +33,7 @@
 #endif
 #include "hardware/stm32n6_memorymap.h"
 #include "nvic.h"
+#include "stm32n6.h"
 
 /****************************************************************************
  * Private Types
@@ -159,6 +160,7 @@ int board_boot_image(FAR const char *path, uint32_t hdr_size)
   syslog(LOG_INFO, "Boot vector msp=0x%08" PRIx32
          " reset=0x%08" PRIx32 " vtor=0x%08" PRIxPTR "\n",
          vt.spr, vt.reset, vtor);
+  stm32n6_usart1_wait_txcomplete();
 
   if (!stm32n6_valid_stack(vt.spr) || !stm32n6_valid_reset(vt.reset, vtor))
     {
@@ -183,9 +185,11 @@ int board_boot_image(FAR const char *path, uint32_t hdr_size)
   UP_DSB();
   UP_ISB();
 
-  __asm__ __volatile__("\tmsr msplim, %0\n"
+  __asm__ __volatile__("\tmsr psplim, %0\n"
+                       "\tmsr msplim, %0\n"
                        "\tmsr basepri, %0\n"
                        "\tmsr faultmask, %0\n"
+                       "\tmsr psp, %1\n"
                        "\tmsr msp, %1\n"
                        "\tmsr control, %2\n"
                        "\tisb\n"

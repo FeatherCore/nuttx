@@ -28,21 +28,118 @@
 
 #include <inttypes.h>
 #include <stdint.h>
-#include <string.h>
 #include <assert.h>
 #include <nuttx/debug.h>
 #include <syscall.h>
 
 #include <arch/irq.h>
+#include <arch/barriers.h>
 #include <nuttx/macro.h>
 #include <nuttx/sched.h>
 #include <nuttx/userspace.h>
+#ifdef CONFIG_ARMV8M_SYSCALL_KERNEL_STACK
+#  include <nuttx/kmalloc.h>
+#endif
 
 #include "sched/sched.h"
 #include "signal/signal.h"
 #include "exc_return.h"
 #include "arm_control.h"
 #include "arm_internal.h"
+
+/****************************************************************************
+ * Private Functions
+ ****************************************************************************/
+
+#if defined(CONFIG_LIB_SYSCALL) && defined(CONFIG_ARMV8M_SYSCALL_KERNEL_STACK)
+static void arm_syscall_copy_frame(FAR uint32_t *dest, FAR const uint32_t *src,
+                                   size_t nwords)
+{
+  FAR volatile uint32_t *vdest = dest;
+  FAR volatile const uint32_t *vsrc = src;
+
+  /* Keep this copy as a plain word loop.  The optimized libc memcpy path can
+   * use MVE/FP instructions on Armv8-M, which would create lazy-FPU state
+   * while the SVC handler is still arranging the exception frame.
+   */
+
+  while (nwords-- > 0)
+    {
+      *vdest++ = *vsrc++;
+    }
+}
+
+static size_t arm_syscall_hw_frame_size(uint32_t excreturn)
+{
+#ifdef CONFIG_ARCH_FPU
+  /* EXC_RETURN_STD_CONTEXT clear means hardware stacked the extended FP
+   * frame.  The copied frame must match the exact active stack layout or the
+   * exception return will unstack from the wrong address.
+   */
+
+  if ((excreturn & EXC_RETURN_STD_CONTEXT) == 0)
+    {
+      return HW_XCPT_SIZE;
+    }
+#endif
+
+  return HW_INT_REGS * sizeof(uint32_t);
+}
+
+static uint32_t *arm_syscall_kstack_frame(FAR struct tcb_s *rtcb,
+                                          FAR uint32_t *regs,
+                                          uint32_t excreturn)
+{
+  size_t hwsize = arm_syscall_hw_frame_size(excreturn);
+  size_t framesize = SW_XCPT_SIZE + hwsize;
+  uintptr_t top;
+  FAR uint32_t *kregs;
+
+  /* Free any stacks retired by previous task exits before possibly allocating
+   * another one.  They cannot be freed from up_release_stack() because the
+   * exiting task can still be unwinding on its syscall stack.
+   */
+
+  armv8m_syscall_kstack_drain();
+
+  if (rtcb->xcp.kstack == NULL)
+    {
+      rtcb->xcp.kstack =
+        kmm_memalign(8, CONFIG_ARMV8M_SYSCALL_KERNEL_STACKSIZE);
+      if (rtcb->xcp.kstack == NULL)
+        {
+          return regs;
+        }
+    }
+
+  top = (uintptr_t)rtcb->xcp.kstack +
+        CONFIG_ARMV8M_SYSCALL_KERNEL_STACKSIZE;
+  top &= ~(uintptr_t)7;
+
+  kregs = (FAR uint32_t *)(top - framesize);
+  arm_syscall_copy_frame(kregs, regs, framesize / sizeof(uint32_t));
+
+  /* The copied context is now going to run privileged syscall code on the
+   * internal stack.  Keep the original user PSP frame in ustkptr so
+   * SYS_syscall_return can restore it after the kernel stub finishes.
+   */
+
+#ifdef CONFIG_ARMV8M_STACKCHECK_HARDWARE
+  /* Hardware stack-limit checking follows the active PSP/MSP, so the copied
+   * frame needs the syscall stack bounds rather than the original user stack
+   * bounds.
+   */
+
+  kregs[REG_SPLIM] = (uint32_t)(uintptr_t)rtcb->xcp.kstack;
+#endif
+
+  kregs[REG_SP] = (uint32_t)top;
+  rtcb->xcp.ustkptr = regs;
+  rtcb->xcp.regs = kregs;
+
+  return kregs;
+}
+#endif
 
 /****************************************************************************
  * Public Functions
@@ -118,25 +215,80 @@ int arm_svcall(int irq, void *context, void *arg)
         {
           struct tcb_s *rtcb = this_task();
           int index = (int)rtcb->xcp.nsyscalls - 1;
+          uint32_t *retregs = regs;
+          uint32_t excreturn;
+          uint32_t control;
+          uint32_t ret0;
+          uint32_t ret1;
 
           /* Make sure that there is a saved syscall return address. */
 
           DEBUGASSERT(index >= 0);
 
+          excreturn = rtcb->xcp.syscall[index].excreturn;
+          control   = rtcb->xcp.syscall[index].ctrlreturn;
+          ret0      = regs[REG_R2];
+          ret1      = regs[REG_R1];
+
+#ifdef CONFIG_ARMV8M_SYSCALL_RETURN_CURRENT_FRAME
+#  ifdef CONFIG_ARMV8M_SYSCALL_KERNEL_STACK
+          if (!(index == 0 && rtcb->xcp.ustkptr != NULL))
+#  endif
+          {
+            /* Preserve the frame shape of the active SVC-return frame.  Under
+             * lazy FPU, restoring an old EXC_RETURN FType bit into the current
+             * frame can make hardware unstack a basic frame as extended, or
+             * the reverse.
+             */
+
+            excreturn = (excreturn & ~EXC_RETURN_STD_CONTEXT) |
+                        (regs[REG_EXC_RETURN] & EXC_RETURN_STD_CONTEXT);
+          }
+#endif
+
+          control   = arm_control_set_mode(control, excreturn,
+                                           (control & CONTROL_NPRIV) != 0);
+
+#ifdef CONFIG_ARMV8M_SYSCALL_KERNEL_STACK
+          if (index == 0 && rtcb->xcp.ustkptr != NULL)
+            {
+              /* The privileged dispatcher ran on the internal syscall stack.
+               * Return the syscall result through the saved user PSP frame
+               * and make that frame the task's live register context again.
+               */
+
+              retregs = rtcb->xcp.ustkptr;
+              rtcb->xcp.ustkptr = NULL;
+              rtcb->xcp.regs = retregs;
+            }
+#endif
+
           /* Setup to return to the saved syscall return address in
            * the original mode.
            */
 
-          regs[REG_PC]         = rtcb->xcp.syscall[index].sysreturn;
-          regs[REG_EXC_RETURN] = rtcb->xcp.syscall[index].excreturn;
-          regs[REG_CONTROL]    = rtcb->xcp.syscall[index].ctrlreturn;
+          retregs[REG_PC]         = rtcb->xcp.syscall[index].sysreturn;
+          retregs[REG_EXC_RETURN] = excreturn;
+          retregs[REG_CONTROL]    = control;
+#ifdef CONFIG_ARMV8M_SYSCALL_RETURN_USER_BASEPRI0
+          if ((control & CONTROL_NPRIV) != 0)
+            {
+              /* User code must not resume with a BASEPRI mask inherited from
+               * a kernel critical section or a blocking syscall wakeup path.
+               */
+
+              retregs[REG_BASEPRI] = 0;
+            }
+#endif
           rtcb->xcp.nsyscalls  = index;
 
           /* The return value must be in R0-R1.  arm_dispatch_syscall()
            * temporarily moved the value for R0 into R2.
            */
 
-          regs[REG_R0]         = regs[REG_R2];
+          retregs[REG_R0]      = ret0;
+          retregs[REG_R1]      = ret1;
+          regs                 = retregs;
 
           /* Handle any signal actions that were deferred while processing
            * the system call.
@@ -317,6 +469,7 @@ int arm_svcall(int irq, void *context, void *arg)
 #ifdef CONFIG_LIB_SYSCALL
           struct tcb_s *rtcb = this_task();
           int index = rtcb->xcp.nsyscalls;
+          uint32_t dispatch_excreturn = EXC_RETURN_THREAD;
 
           /* Verify that the SYS call number is within range */
 
@@ -341,14 +494,80 @@ int arm_svcall(int irq, void *context, void *arg)
           rtcb->xcp.syscall[index].ctrlreturn = regs[REG_CONTROL];
           rtcb->xcp.nsyscalls  = index + 1;
 
+#  ifdef CONFIG_ARMV8M_LAZYFPU
+          /* Keep the syscall dispatcher's exception frame shape compatible
+           * with the saved user frame.  SYS_syscall_return restores the saved
+           * EXC_RETURN into the current SVC frame; changing between basic and
+           * extended FP frames here would make exception return decode the
+           * wrong stack layout.
+           */
+
+          if ((regs[REG_EXC_RETURN] & EXC_RETURN_STD_CONTEXT) == 0)
+            {
+              dispatch_excreturn &= ~EXC_RETURN_STD_CONTEXT;
+            }
+#  endif
+
+#  ifdef CONFIG_ARMV8M_SYSCALL_KERNEL_STACK
+          if (index == 0 &&
+              (regs[REG_EXC_RETURN] & EXC_RETURN_PROCESS_STACK) != 0)
+            {
+              uint32_t kstack_excreturn = dispatch_excreturn;
+              FAR uint32_t *kregs;
+
+              /* Run only the outermost user syscall on the internal stack.
+               * Nested syscalls are already in privileged kernel context and
+               * should keep using the current kernel-side frame.
+               */
+
+#    ifdef CONFIG_ARMV8M_SYSCALL_KERNEL_STACK_BASIC_FRAME
+              /* Diagnostic/optimization mode: the dispatcher itself does not
+               * need the caller's volatile FP frame, so use a basic frame on
+               * the syscall stack while preserving the original user frame for
+               * SYS_syscall_return.
+               */
+
+              kstack_excreturn |= EXC_RETURN_STD_CONTEXT;
+#    endif
+
+              kregs = arm_syscall_kstack_frame(rtcb, regs,
+                                                kstack_excreturn);
+
+              if (kregs != regs)
+                {
+                  regs = kregs;
+#    ifdef CONFIG_ARMV8M_SYSCALL_KERNEL_STACK_PSP
+                  /* Keep the dispatcher in thread mode on PSP, but point PSP
+                   * at the internal syscall stack.  MSP remains the exception
+                   * stack, which is important when the syscall stack is later
+                   * deferred for release.
+                   */
+
+                  dispatch_excreturn = kstack_excreturn;
+#    else
+                  dispatch_excreturn =
+                    kstack_excreturn & ~EXC_RETURN_PROCESS_STACK;
+#    endif
+                }
+            }
+#  endif
+
+          regs[REG_EXC_RETURN] = dispatch_excreturn;
           regs[REG_PC]         = (uint32_t)arm_dispatch_syscall & ~1;
-          regs[REG_EXC_RETURN] = EXC_RETURN_THREAD;
 
           /* Return privileged mode */
 
           regs[REG_CONTROL]    =
             arm_control_set_mode(regs[REG_CONTROL], regs[REG_EXC_RETURN],
                                  false);
+#  ifdef CONFIG_ARMV8M_SYSCALL_DISPATCH_BASEPRI0
+          /* The dispatcher and serial/semaphore wake paths rely on ordinary
+           * maskable interrupts.  Do not inherit a user BASEPRI value into
+           * privileged syscall execution.
+           */
+
+          regs[REG_BASEPRI]    = 0;
+#  endif
 
           /* Offset R0 to account for the reserved values */
 
@@ -363,6 +582,16 @@ int arm_svcall(int irq, void *context, void *arg)
         }
         break;
     }
+
+#ifdef CONFIG_ARMV8M_SYSCALL_BARRIER
+  /* Optional bring-up fence for external cacheable SVC/user frames.  Normal
+   * builds can leave this off once the frame-shape and BASEPRI handoff are
+   * correct.
+   */
+
+  UP_DSB();
+  UP_ISB();
+#endif
 
   /* Report what happened.  That might difficult in the case of a context
    * switch.

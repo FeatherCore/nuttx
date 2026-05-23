@@ -95,7 +95,8 @@
 #define APS256_MR8_ADDR                  0x00000008u
 #define APS256_MR0_VALUE                 0x30u
 #define APS256_MR4_VALUE                 0x20u
-#define APS256_MR8_VALUE                 0x40u
+#define APS256_MR8_VALUE                 0x4bu
+#define APS256_MR8_MASK                  0xffu
 #define APS256_REG_DUMMY                 4u
 #define APS256_HEXA_DUMMY                6u
 #define APS256_DEVSIZE                   24u
@@ -109,9 +110,18 @@
 #  define STM32N6570_RAMFUNC
 #endif
 
+#ifdef CONFIG_STM32N6570_DK_PSRAM_SELFTEST_DEBUG
+#  define psramtestinfo(fmt, ...) \
+     syslog(LOG_INFO, "XSPI1 PSRAM self-test: " fmt, ##__VA_ARGS__)
+#else
+#  define psramtestinfo(fmt, ...)
+#endif
+
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
+
+static bool g_psram_selftest_done;
 
 static void stm32n6570_nor_invalidate_cache(uint32_t offset, size_t nbytes)
 {
@@ -414,14 +424,6 @@ static STM32N6570_RAMFUNC int stm32n6570_xspi2_enter_memory_mapped(void)
       return ret;
     }
 
-#ifdef CONFIG_NXBOOT_BOOTLOADER
-  syslog(LOG_INFO, "XSPI2 NOR optional prescaler=%" PRIu32
-         " effective=%" PRIu32 "Hz\n", prescaler,
-         stm32n6_xspi_effective_hz(source_hz, prescaler));
-#else
-  UNUSED(source_hz);
-#endif
-
   ccr = XSPI_CCR_IMODE_8_LINES | XSPI_CCR_IDTR | XSPI_CCR_ISIZE_16 |
         XSPI_CCR_ADMODE_8_LINES | XSPI_CCR_ADDTR |
         XSPI_CCR_ADSIZE_32 | XSPI_CCR_DMODE_8_LINES |
@@ -461,11 +463,6 @@ static int stm32n6570_xspi1_enter_memory_mapped(void)
 
   putreg32(stm32n6570_psram_refresh(source_hz, prescaler),
            STM32N6_XSPI_DCR4(base));
-
-  syslog(LOG_INFO, "XSPI1 PSRAM optional prescaler=%" PRIu32
-         " effective=%" PRIu32 "Hz refresh=%" PRIu32 "\n",
-         prescaler, stm32n6_xspi_effective_hz(source_hz, prescaler),
-         getreg32(STM32N6_XSPI_DCR4(base)));
 
   ccr = XSPI_CCR_IMODE_8_LINES | XSPI_CCR_ADMODE_8_LINES |
         XSPI_CCR_ADDTR | XSPI_CCR_ADSIZE_32 | XSPI_CCR_DMODE_16_LINES |
@@ -562,13 +559,76 @@ static void stm32n6570_psram_dcache_flush(FAR const volatile void *addr,
   uintptr_t start = (uintptr_t)addr;
   uintptr_t end = start + size;
 
+  psramtestinfo("dcache flush start=%08" PRIxPTR " size=%zu\n",
+                start, size);
   up_flush_dcache(start, end);
+  psramtestinfo("dcache invalidate start=%08" PRIxPTR " size=%zu\n",
+                start, size);
   up_invalidate_dcache(start, end);
+  psramtestinfo("dcache done start=%08" PRIxPTR " size=%zu\n",
+                start, size);
 }
 
-static int stm32n6570_psram_selftest(void)
+static int stm32n6570_psram_test_pattern(uintptr_t base, uint32_t offset,
+                                         FAR const uint32_t *pattern)
 {
-  volatile uint32_t *mem = (volatile uint32_t *)STM32N6_XSPI1_MEM_BASE;
+  volatile uint32_t *ptr = (volatile uint32_t *)(base + offset);
+  uint32_t saved[8];
+  int i;
+
+  psramtestinfo("pattern offset=%08" PRIx32 " ptr=%p begin\n",
+                offset, ptr);
+
+  for (i = 0; i < nitems(saved); i++)
+    {
+      saved[i] = ptr[i];
+    }
+
+  psramtestinfo("pattern offset=%08" PRIx32 " saved\n", offset);
+
+  for (i = 0; i < nitems(saved); i++)
+    {
+      ptr[i] = pattern[i];
+    }
+
+  psramtestinfo("pattern offset=%08" PRIx32 " written\n", offset);
+  stm32n6570_psram_dcache_flush(ptr, sizeof(saved));
+  psramtestinfo("pattern offset=%08" PRIx32 " flushed\n", offset);
+
+  for (i = 0; i < nitems(saved); i++)
+    {
+      if (ptr[i] != pattern[i])
+        {
+          ferr("ERROR: PSRAM self-test[0x%08" PRIx32 "+%d] got %08"
+               PRIx32 " expected %08" PRIx32 "\n",
+               offset, i * 4, ptr[i], pattern[i]);
+
+          for (i = 0; i < nitems(saved); i++)
+            {
+              ptr[i] = saved[i];
+            }
+
+          stm32n6570_psram_dcache_flush(ptr, sizeof(saved));
+          return -EIO;
+        }
+    }
+
+  psramtestinfo("pattern offset=%08" PRIx32 " verified\n", offset);
+
+  for (i = 0; i < nitems(saved); i++)
+    {
+      ptr[i] = saved[i];
+    }
+
+  psramtestinfo("pattern offset=%08" PRIx32 " restored\n", offset);
+  stm32n6570_psram_dcache_flush(ptr, sizeof(saved));
+  psramtestinfo("pattern offset=%08" PRIx32 " done\n", offset);
+  return OK;
+}
+
+static int stm32n6570_psram_selftest_range(uintptr_t base, size_t size,
+                                           FAR const char *label)
+{
   const uint32_t offsets[] =
     {
       0x00000000u,
@@ -577,8 +637,7 @@ static int stm32n6570_psram_selftest(void)
       0x00001040u,
       0x00100000u,
       0x00ffffc0u,
-      0x01ffffc0u,
-      STM32N6_XSPI1_PSRAM_SIZE - 0x20u
+      0x01ffffc0u
     };
 
   const uint32_t alias_offsets[] =
@@ -593,76 +652,91 @@ static int stm32n6570_psram_selftest(void)
       0x000002c0u
     };
 
-  uint32_t saved[8];
-  uint32_t alias_saved[sizeof(alias_offsets) / sizeof(alias_offsets[0])];
   uint32_t pattern[8] =
     {
       0x55aa55aau, 0xaa55aa55u, 0x01234567u, 0x89abcdefu,
       0xf0f00f0fu, 0x0f0ff0f0u, 0x13579bdfu, 0x2468ace0u
     };
+  uint32_t alias_saved[sizeof(alias_offsets) / sizeof(alias_offsets[0])];
   size_t alias;
+  size_t end_offset;
   size_t region;
   size_t restore;
-  int i;
+  uint32_t last_offset = UINT32_MAX;
+  int ret;
+
+  psramtestinfo("range base=%08" PRIxPTR " size=%zu label=%s begin\n",
+                base, size, label);
+
+  if (base < STM32N6_XSPI1_MEM_BASE ||
+      base > STM32N6_XSPI1_MEM_BASE + STM32N6_XSPI1_PSRAM_SIZE ||
+      size < sizeof(pattern) ||
+      size > STM32N6_XSPI1_MEM_BASE + STM32N6_XSPI1_PSRAM_SIZE - base)
+    {
+      ferr("ERROR: PSRAM self-test range invalid base=0x%08" PRIx32
+           " size=0x%08" PRIx32 "\n", (uint32_t)base, (uint32_t)size);
+      return -EINVAL;
+    }
 
   for (region = 0; region < nitems(offsets); region++)
     {
-      volatile uint32_t *ptr =
-        (volatile uint32_t *)((uintptr_t)mem + offsets[region]);
-
-      for (i = 0; i < 8; i++)
+      if (offsets[region] + sizeof(pattern) <= size)
         {
-          saved[i] = ptr[i];
-        }
-
-      for (i = 0; i < 8; i++)
-        {
-          ptr[i] = pattern[i];
-        }
-
-      stm32n6570_psram_dcache_flush(ptr, sizeof(pattern));
-
-      for (i = 0; i < 8; i++)
-        {
-          if (ptr[i] != pattern[i])
+          psramtestinfo("range pattern region=%zu offset=%08" PRIx32 "\n",
+                        region, offsets[region]);
+          ret = stm32n6570_psram_test_pattern(base, offsets[region],
+                                              pattern);
+          if (ret < 0)
             {
-              ferr("ERROR: PSRAM self-test[0x%08" PRIx32 "+%d] got %08"
-                   PRIx32 " expected %08" PRIx32 "\n",
-                   offsets[region], i * 4, ptr[i], pattern[i]);
-              for (i = 0; i < 8; i++)
-                {
-                  ptr[i] = saved[i];
-                }
-
-              stm32n6570_psram_dcache_flush(ptr, sizeof(saved));
-              return -EIO;
+              return ret;
             }
-        }
 
-      for (i = 0; i < 8; i++)
-        {
-          ptr[i] = saved[i];
+          last_offset = offsets[region];
         }
-
-      stm32n6570_psram_dcache_flush(ptr, sizeof(saved));
     }
 
+  end_offset = size - sizeof(pattern);
+  if (end_offset != last_offset)
+    {
+      psramtestinfo("range end-pattern offset=%08" PRIx32 "\n",
+                    (uint32_t)end_offset);
+      ret = stm32n6570_psram_test_pattern(base, end_offset, pattern);
+      if (ret < 0)
+        {
+          return ret;
+        }
+    }
+
+  psramtestinfo("alias save/write begin\n");
   for (alias = 0; alias < nitems(alias_offsets); alias++)
     {
       volatile uint32_t *ptr =
-        (volatile uint32_t *)((uintptr_t)mem + alias_offsets[alias]);
+        (volatile uint32_t *)(base + alias_offsets[alias]);
+
+      if (alias_offsets[alias] + sizeof(uint32_t) > size)
+        {
+          continue;
+        }
 
       alias_saved[alias] = *ptr;
-      *ptr = STM32N6_XSPI1_MEM_BASE + alias_offsets[alias];
+      *ptr = base + alias_offsets[alias];
     }
 
-  stm32n6570_psram_dcache_flush(mem, 0x300);
+  psramtestinfo("alias save/write done\n");
+  stm32n6570_psram_dcache_flush((FAR const void *)base, MIN(size, 0x300));
+  psramtestinfo("alias flushed\n");
 
+  psramtestinfo("alias verify begin\n");
   for (alias = 0; alias < nitems(alias_offsets); alias++)
     {
       volatile uint32_t *ptr =
-        (volatile uint32_t *)((uintptr_t)mem + alias_offsets[alias]);
-      uint32_t expected = STM32N6_XSPI1_MEM_BASE + alias_offsets[alias];
+        (volatile uint32_t *)(base + alias_offsets[alias]);
+      uint32_t expected = base + alias_offsets[alias];
+
+      if (alias_offsets[alias] + sizeof(uint32_t) > size)
+        {
+          continue;
+        }
 
       if (*ptr != expected)
         {
@@ -671,28 +745,82 @@ static int stm32n6570_psram_selftest(void)
                alias_offsets[alias], *ptr, expected);
           for (restore = 0; restore < nitems(alias_offsets); restore++)
             {
-              ptr = (volatile uint32_t *)((uintptr_t)mem +
-                                          alias_offsets[restore]);
+              ptr = (volatile uint32_t *)(base + alias_offsets[restore]);
+              if (alias_offsets[restore] + sizeof(uint32_t) > size)
+                {
+                  continue;
+                }
+
               *ptr = alias_saved[restore];
             }
 
-          stm32n6570_psram_dcache_flush(mem, 0x300);
+          stm32n6570_psram_dcache_flush((FAR const void *)base,
+                                        MIN(size, 0x300));
           return -EIO;
         }
     }
 
+  psramtestinfo("alias verify done\n");
+
   for (alias = 0; alias < nitems(alias_offsets); alias++)
     {
       volatile uint32_t *ptr =
-        (volatile uint32_t *)((uintptr_t)mem + alias_offsets[alias]);
+        (volatile uint32_t *)(base + alias_offsets[alias]);
+
+      if (alias_offsets[alias] + sizeof(uint32_t) > size)
+        {
+          continue;
+        }
 
       *ptr = alias_saved[alias];
     }
 
-  stm32n6570_psram_dcache_flush(mem, 0x300);
+  psramtestinfo("alias restore done\n");
+  stm32n6570_psram_dcache_flush((FAR const void *)base, MIN(size, 0x300));
+  psramtestinfo("range done\n");
 
-  syslog(LOG_INFO, "XSPI1 PSRAM self-test passed\n");
+  if (label[0] != '\0')
+    {
+      syslog(LOG_INFO, "XSPI1 PSRAM %s self-test passed\n", label);
+    }
+  else
+    {
+      syslog(LOG_INFO, "XSPI1 PSRAM self-test passed\n");
+    }
+
   return OK;
+}
+
+static int stm32n6570_psram_selftest(void)
+{
+  return stm32n6570_psram_selftest_range(STM32N6_XSPI1_MEM_BASE,
+                                         STM32N6_XSPI1_PSRAM_SIZE,
+                                         "");
+}
+
+static int stm32n6570_psram_verify_once(void)
+{
+  int ret;
+
+  if (g_psram_selftest_done)
+    {
+      psramtestinfo("verify skipped\n");
+      return OK;
+    }
+
+  psramtestinfo("verify begin\n");
+  ret = stm32n6570_psram_selftest();
+  if (ret >= 0)
+    {
+      g_psram_selftest_done = true;
+      psramtestinfo("verify passed\n");
+    }
+  else
+    {
+      psramtestinfo("verify failed ret=%d\n", ret);
+    }
+
+  return ret;
 }
 
 static STM32N6570_RAMFUNC uint32_t stm32n6570_nor_octal_command_ccr(void)
@@ -764,8 +892,6 @@ int stm32n6570_xspi2_nor_initialize(void)
   uint8_t id[3] = {0};
   int ret;
 
-  syslog(LOG_INFO, "XSPI2 NOR init begin\n");
-
   stm32n6570_xspi_enable_clocks();
 
   if (stm32n6_xspi_is_mapped(STM32N6_XSPI2_BASE))
@@ -785,10 +911,6 @@ int stm32n6570_xspi2_nor_initialize(void)
   source_hz = stm32n6_xspi_get_source_hz(STM32N6_XSPI2_BASE);
   startup_prescaler =
     stm32n6_xspi_prescaler(source_hz, STM32N6570_XSPI_50MHZ);
-
-  syslog(LOG_INFO, "XSPI2 NOR startup prescaler=%" PRIu32
-         " effective=%" PRIu32 "Hz\n", startup_prescaler,
-         stm32n6_xspi_effective_hz(source_hz, startup_prescaler));
 
   stm32n6570_xspi2_gpio_config();
 
@@ -1135,23 +1257,28 @@ STM32N6570_RAMFUNC ssize_t stm32n6570_xspi2_nor_write(
   return (ssize_t)written;
 }
 
-int stm32n6570_xspi1_psram_initialize(void)
+static int stm32n6570_xspi1_psram_map_internal(bool verify)
 {
   struct stm32n6_xspi_config_s psram_config;
   uint32_t startup_prescaler;
   uint32_t source_hz;
   int ret;
 
-  syslog(LOG_INFO, "XSPI1 PSRAM init begin\n");
-
   stm32n6570_xspi_enable_clocks();
 
   if (stm32n6_xspi_is_mapped(STM32N6_XSPI1_BASE))
     {
-      syslog(LOG_INFO, "XSPI1 PSRAM already memory-mapped\n");
-      return stm32n6570_psram_selftest();
+      if (verify)
+        {
+          syslog(LOG_INFO, "XSPI1 PSRAM already memory-mapped refresh=%"
+                 PRIu32 "\n",
+                 getreg32(STM32N6_XSPI_DCR4(STM32N6_XSPI1_BASE)));
+        }
+
+      return verify ? stm32n6570_psram_verify_once() : OK;
     }
 
+#ifdef CONFIG_NXBOOT_BOOTLOADER
   ret = stm32n6_xspi_common_setup();
   if (ret < 0)
     {
@@ -1159,16 +1286,11 @@ int stm32n6570_xspi1_psram_initialize(void)
       syslog(LOG_ERR, "XSPI1 PSRAM common setup failed: %d\n", ret);
       return ret;
     }
+#endif
 
   source_hz = stm32n6_xspi_get_source_hz(STM32N6_XSPI1_BASE);
   startup_prescaler =
     stm32n6_xspi_prescaler(source_hz, STM32N6570_XSPI_50MHZ);
-
-  syslog(LOG_INFO, "XSPI1 PSRAM startup prescaler=%" PRIu32
-         " effective=%" PRIu32 "Hz refresh=%" PRIu32 "\n",
-         startup_prescaler,
-         stm32n6_xspi_effective_hz(source_hz, startup_prescaler),
-         stm32n6570_psram_refresh(source_hz, startup_prescaler));
 
   stm32n6570_xspi1_gpio_config();
 
@@ -1215,7 +1337,8 @@ int stm32n6570_xspi1_psram_initialize(void)
       return ret;
     }
 
-  ret = stm32n6570_psram_config_reg(APS256_MR8_ADDR, APS256_MR8_VALUE, 0x40);
+  ret = stm32n6570_psram_config_reg(APS256_MR8_ADDR, APS256_MR8_VALUE,
+                                    APS256_MR8_MASK);
   if (ret < 0)
     {
       ferr("ERROR: XSPI1 PSRAM MR8 config failed: %d\n", ret);
@@ -1231,13 +1354,40 @@ int stm32n6570_xspi1_psram_initialize(void)
       return ret;
     }
 
-  ret = stm32n6570_psram_selftest();
-  if (ret < 0)
+  if (verify)
     {
-      return ret;
+      ret = stm32n6570_psram_verify_once();
+      if (ret < 0)
+        {
+          return ret;
+        }
     }
 
-  syslog(LOG_INFO, "XSPI1 PSRAM mapped at 0x%08x\n",
-         STM32N6_XSPI1_MEM_BASE);
+  syslog(LOG_INFO, "XSPI1 PSRAM mapped at 0x%08x refresh=%" PRIu32 "\n",
+         STM32N6_XSPI1_MEM_BASE,
+         getreg32(STM32N6_XSPI_DCR4(STM32N6_XSPI1_BASE)));
   return OK;
+}
+
+int stm32n6570_xspi1_psram_map(void)
+{
+  return stm32n6570_xspi1_psram_map_internal(false);
+}
+
+int stm32n6570_xspi1_psram_test(uintptr_t base, size_t size)
+{
+  int ret;
+
+  ret = stm32n6570_psram_selftest_range(base, size, "heap");
+  if (ret >= 0)
+    {
+      g_psram_selftest_done = true;
+    }
+
+  return ret;
+}
+
+int stm32n6570_xspi1_psram_initialize(void)
+{
+  return stm32n6570_xspi1_psram_map_internal(true);
 }

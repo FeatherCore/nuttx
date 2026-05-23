@@ -128,9 +128,22 @@ void up_irqinitialize(void)
   int num_priority_registers;
   int i;
 
+  /* The STM32N6 app can be entered from nxboot with core/external interrupt
+   * state inherited from the bootloader.  Start from a quiet NVIC state before
+   * installing vectors and enabling global interrupts.
+   */
+
+  putreg32(0, NVIC_SYSTICK_CTRL);
+  putreg32(NVIC_SYSTICK_RELOAD_MASK, NVIC_SYSTICK_RELOAD);
+  putreg32(0, NVIC_SYSTICK_CURRENT);
+
+  putreg32(NVIC_INTCTRL_PENDSTCLR | NVIC_INTCTRL_PENDSVCLR,
+           NVIC_INTCTRL);
+
   for (i = 0; i < STM32_IRQ_NEXTINTS; i += 32)
     {
       putreg32(0xffffffff, NVIC_IRQ_CLEAR(i));
+      putreg32(0xffffffff, NVIC_IRQ_CLRPEND(i));
     }
 
   putreg32((uint32_t)_vectors, NVIC_VECTAB);

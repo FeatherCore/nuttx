@@ -138,6 +138,9 @@
 #define MPU_RLAR_NONCACHEABLE   (2 << MPU_RLAR_INDX_SHIFT)
 #define MPU_RLAR_WRITE_THROUGH  (3 << MPU_RLAR_INDX_SHIFT)
 #define MPU_RLAR_WRITE_BACK     (4 << MPU_RLAR_INDX_SHIFT)
+#define MPU_RLAR_WRITE_THROUGH_NWA \
+                                (5 << MPU_RLAR_INDX_SHIFT)
+#define MPU_RLAR_WRITE_BACK_NWA (6 << MPU_RLAR_INDX_SHIFT)
 #define MPU_RLAR_PXN            (1 << 4)                    /* Bit 4: Privileged execute never */
 #define MPU_RLAR_LIMIT_MASK     0xffffffe0                  /* Bits 5-31: Region limit address */
 
@@ -170,6 +173,19 @@
                                  MPU_MAIR_OUTER_RA | MPU_MAIR_OUTER_WA | \
                                  MPU_MAIR_INNER_NT | MPU_MAIR_INNER_WB | \
                                  MPU_MAIR_INNER_RA | MPU_MAIR_INNER_WA)
+
+/* Read-allocate/no-write-allocate encodings are used for external
+ * CPU-owned memory such as STM32N6 XSPI PSRAM.  They keep read locality
+ * cacheable without forcing write misses through the linefill/write-allocate
+ * path that is expensive on memory-mapped PSRAM.
+ */
+
+#define MPU_MAIR_WRITE_THROUGH_NWA \
+                                (MPU_MAIR_OUTER_NT | MPU_MAIR_OUTER_RA | \
+                                 MPU_MAIR_INNER_NT | MPU_MAIR_INNER_RA)
+#define MPU_MAIR_WRITE_BACK_NWA (MPU_MAIR_OUTER_NT | MPU_MAIR_OUTER_WB | \
+                                 MPU_MAIR_OUTER_RA | MPU_MAIR_INNER_NT | \
+                                 MPU_MAIR_INNER_WB | MPU_MAIR_INNER_RA)
 struct mpu_region_s
 {
   /* Region Base Address */

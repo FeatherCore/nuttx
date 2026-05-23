@@ -15,6 +15,7 @@
 #include <sys/mount.h>
 
 #include <debug.h>
+#include <nuttx/video/fb.h>
 
 #include "stm32h7s78-dk.h"
 
@@ -49,6 +50,30 @@ void board_late_initialize(void)
     }
 #else
   UNUSED(ret);
+#endif
+
+#ifdef CONFIG_STM32H7S78_DK_LCD
+  ret = up_fbinitialize(0);
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "up_fbinitialize failed: %d\n", ret);
+    }
+  else
+    {
+      ret = fb_register(0, 0);
+      if (ret < 0)
+        {
+          syslog(LOG_ERR, "fb_register failed: %d\n", ret);
+        }
+    }
+#endif
+
+#ifdef CONFIG_STM32H7S78_DK_GT911
+  ret = stm32h7s78_touch_setup();
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "stm32h7s78_touch_setup failed: %d\n", ret);
+    }
 #endif
 
 #ifdef CONFIG_FS_PROCFS

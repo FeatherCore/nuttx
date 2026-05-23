@@ -24,10 +24,13 @@
 
 int stm32n6570_xspi2_nor_initialize(void);
 int stm32n6570_xspi1_psram_initialize(void);
+int stm32n6570_xspi1_psram_map(void);
+int stm32n6570_xspi1_psram_test(uintptr_t base, size_t size);
 int stm32n6570_xspi2_nor_erase(uint32_t offset, size_t nbytes);
 ssize_t stm32n6570_xspi2_nor_write(uint32_t offset,
                                    FAR const uint8_t *buffer,
                                    size_t nbytes);
 int stm32n6_extmem_initialize(void);
+int stm32n6570_touch_setup(void);
 
 #endif /* __BOARDS_ARM_STM32N6_STM32N6570_DK_SRC_STM32N6570_DK_H */

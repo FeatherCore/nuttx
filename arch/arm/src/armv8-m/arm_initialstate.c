@@ -59,10 +59,21 @@
 void up_initial_state(struct tcb_s *tcb)
 {
   struct xcptcontext *xcp = &tcb->xcp;
+#if defined(CONFIG_LIB_SYSCALL) && defined(CONFIG_ARMV8M_SYSCALL_KERNEL_STACK)
+  uint32_t *kstack = xcp->kstack;
+#endif
 
   /* Initialize the initial exception register context structure */
 
   memset(xcp, 0, sizeof(struct xcptcontext));
+#if defined(CONFIG_LIB_SYSCALL) && defined(CONFIG_ARMV8M_SYSCALL_KERNEL_STACK)
+  /* Reinitializing a task's architectural context must not leak the per-task
+   * syscall stack allocation.  Preserve it here; release is handled by
+   * up_release_stack() through the deferred free path.
+   */
+
+  xcp->kstack = kstack;
+#endif
 
   /* Initialize the idle thread stack */
 

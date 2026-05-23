@@ -41,3 +41,11 @@ endif
 ifeq ($(CONFIG_STM32H7RS_XSPI),y)
 CHIP_CSRCS += stm32h7rs_xspi.c
 endif
+
+ifeq ($(CONFIG_STM32H7RS_I2C),y)
+CHIP_CSRCS += stm32h7rs_i2c.c
+endif
+
+ifeq ($(CONFIG_STM32H7RS_DISPLAY),y)
+CHIP_CSRCS += stm32h7rs_ltdc.c
+endif

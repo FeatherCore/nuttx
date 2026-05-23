@@ -196,6 +196,11 @@ extern "C"
 
 EXTERN const uintptr_t g_idle_topstack;
 
+#if defined(CONFIG_LIB_SYSCALL) && defined(CONFIG_ARMV8M_SYSCALL_KERNEL_STACK)
+void armv8m_syscall_kstack_defer(FAR void *kstack);
+void armv8m_syscall_kstack_drain(void);
+#endif
+
 /* Address of the saved user stack pointer */
 
 #if CONFIG_ARCH_INTERRUPTSTACK > 3

@@ -54,6 +54,7 @@
  ****************************************************************************/
 
 static bool g_xspi_common_done;
+static bool g_xspi_clock_state_valid;
 static bool g_vddio2_hslv;
 static bool g_vddio3_hslv;
 static uint32_t g_xspi1_source_hz = STM32N6_HCLK_FREQUENCY;
@@ -139,11 +140,6 @@ static void stm32n6_xspi_read_hslv_otp(void)
   g_vddio3_hslv = (fuse & STM32N6_BSEC_HSLV_VDDIO3) != 0;
   g_vddio2_hslv = (fuse & STM32N6_BSEC_HSLV_VDDIO2) != 0;
 
-  syslog(LOG_INFO, "stm32n6: HSLV OTP124=0x%08" PRIx32
-         " VDDIO2=%s VDDIO3=%s\n",
-         fuse, g_vddio2_hslv ? "enabled" : "disabled",
-         g_vddio3_hslv ? "enabled" : "disabled");
-
   g_xspi1_source_hz = STM32N6_HCLK_FREQUENCY;
   g_xspi2_source_hz = g_vddio3_hslv ? STM32N6_XSPI_200MHZ :
                                       STM32N6_XSPI_50MHZ;
@@ -159,6 +155,16 @@ static void stm32n6_xspi_read_hslv_otp(void)
       syslog(LOG_WARNING,
              "stm32n6: VDDIO3 HSLV fuse disabled, XSPI2 limited to 50MHz\n");
     }
+
+  g_xspi_clock_state_valid = true;
+}
+
+static void stm32n6_xspi_probe_clock_state(void)
+{
+  if (!g_xspi_clock_state_valid)
+    {
+      stm32n6_xspi_read_hslv_otp();
+    }
 }
 
 static void stm32n6_xspi_config_ic3(void)
@@ -168,9 +174,6 @@ static void stm32n6_xspi_config_ic3(void)
 
   putreg32(RCC_ICCFGR(RCC_ICCFGR_SEL_PLL1, div), STM32N6_RCC_IC3CFGR);
   putreg32(RCC_DIVENSR_IC3ENS, STM32N6_RCC_DIVENSR);
-
-  syslog(LOG_INFO, "stm32n6: XSPI2 IC3 divider=%" PRIu32
-         " source=%" PRIu32 "Hz\n", div, g_xspi2_source_hz);
 }
 
 /****************************************************************************
@@ -208,12 +211,16 @@ bool stm32n6_xspi_common_ready(void)
 
 uint32_t stm32n6_xspi_get_source_hz(uintptr_t base)
 {
+  stm32n6_xspi_probe_clock_state();
+
   return base == STM32N6_XSPI2_BASE ? g_xspi2_source_hz :
                                       g_xspi1_source_hz;
 }
 
 bool stm32n6_xspi_hslv_enabled(uintptr_t base)
 {
+  stm32n6_xspi_probe_clock_state();
+
   return base == STM32N6_XSPI2_BASE ? g_vddio3_hslv : g_vddio2_hslv;
 }
 
@@ -308,10 +315,8 @@ int stm32n6_xspi_common_setup(void)
       return OK;
     }
 
-  syslog(LOG_INFO, "stm32n6: XSPI common setup begin\n");
-
   stm32n6_power_config();
-  stm32n6_xspi_read_hslv_otp();
+  stm32n6_xspi_probe_clock_state();
   stm32n6_xspi_config_ic3();
 
   putreg32(RCC_MISCENSR_XSPIPHYCOMPENS, STM32N6_RCC_MISCENSR);
@@ -329,11 +334,6 @@ int stm32n6_xspi_common_setup(void)
 
   putreg32(XSPIM_CR_CSSEL_OVR_EN | XSPIM_CR_REQ2ACK_TIME(1),
            STM32N6_XSPIM_CR);
-
-  syslog(LOG_INFO, "stm32n6: XSPI1 source=%" PRIu32
-         "Hz XSPI2 source=%" PRIu32 "Hz XSPIM_CR=%08" PRIx32 "\n",
-         g_xspi1_source_hz, g_xspi2_source_hz,
-         getreg32(STM32N6_XSPIM_CR));
 
   g_xspi_common_done = true;
   return OK;

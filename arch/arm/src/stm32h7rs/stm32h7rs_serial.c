@@ -17,6 +17,7 @@
 
 #include <debug.h>
 
+#include <nuttx/arch.h>
 #include <nuttx/irq.h>
 #include <nuttx/serial/serial.h>
 
@@ -135,26 +136,34 @@ static int stm32h7rs_uart4_interrupt(int irq, FAR void *context,
   FAR struct stm32h7rs_serial_s *priv =
     (FAR struct stm32h7rs_serial_s *)arg;
   uint32_t isr;
-  uint32_t cr1;
+  int passes;
+  bool handled;
 
-  isr = getreg32(STM32H7RS_UART4_ISR);
-  cr1 = getreg32(STM32H7RS_UART4_CR1);
+  DEBUGASSERT(priv != NULL);
 
-  if ((isr & USART_ISR_ERROR_MASK) != 0)
+  handled = true;
+  for (passes = 0; passes < 256 && handled; passes++)
     {
-      putreg32(USART_ICR_ERROR_MASK, STM32H7RS_UART4_ICR);
-    }
+      handled = false;
+      isr = getreg32(STM32H7RS_UART4_ISR);
 
-  if ((isr & USART_ISR_RXNE_RXFNE) != 0 &&
-      (cr1 & USART_CR1_RXNEIE_RXFNEIE) != 0)
-    {
-      uart_recvchars(&priv->dev);
-    }
+      if ((isr & USART_ISR_RXNE_RXFNE) != 0 &&
+          (priv->ie & USART_CR1_RXNEIE_RXFNEIE) != 0)
+        {
+          uart_recvchars(&priv->dev);
+          handled = true;
+        }
+      else if ((isr & USART_ISR_ERROR_MASK) != 0)
+        {
+          putreg32(USART_ICR_ERROR_MASK, STM32H7RS_UART4_ICR);
+        }
 
-  if ((isr & USART_ISR_TXE_TXFNF) != 0 &&
-      (cr1 & USART_CR1_TXEIE_TXFNFIE) != 0)
-    {
-      uart_xmitchars(&priv->dev);
+      if ((isr & USART_ISR_TXE_TXFNF) != 0 &&
+          (priv->ie & USART_CR1_TXEIE_TXFNFIE) != 0)
+        {
+          uart_xmitchars(&priv->dev);
+          handled = true;
+        }
     }
 
   return OK;
@@ -235,7 +244,9 @@ static void stm32h7rs_uart4_rxint(FAR struct uart_dev_s *dev, bool enable)
 {
   FAR struct stm32h7rs_serial_s *priv =
     (FAR struct stm32h7rs_serial_s *)dev->priv;
+  irqstate_t flags;
 
+  flags = enter_critical_section();
   if (enable)
     {
       priv->ie |= USART_CR1_RXNEIE_RXFNEIE;
@@ -246,6 +257,7 @@ static void stm32h7rs_uart4_rxint(FAR struct uart_dev_s *dev, bool enable)
     }
 
   stm32h7rs_uart4_restoreints(priv);
+  leave_critical_section(flags);
 }
 
 static bool stm32h7rs_uart4_rxavailable(FAR struct uart_dev_s *dev)
@@ -262,7 +274,9 @@ static void stm32h7rs_uart4_txint(FAR struct uart_dev_s *dev, bool enable)
 {
   FAR struct stm32h7rs_serial_s *priv =
     (FAR struct stm32h7rs_serial_s *)dev->priv;
+  irqstate_t flags;
 
+  flags = enter_critical_section();
   if (enable)
     {
       priv->ie |= USART_CR1_TXEIE_TXFNFIE;
@@ -274,6 +288,8 @@ static void stm32h7rs_uart4_txint(FAR struct uart_dev_s *dev, bool enable)
       priv->ie &= ~USART_CR1_TXEIE_TXFNFIE;
       stm32h7rs_uart4_restoreints(priv);
     }
+
+  leave_critical_section(flags);
 }
 
 static bool stm32h7rs_uart4_txready(FAR struct uart_dev_s *dev)

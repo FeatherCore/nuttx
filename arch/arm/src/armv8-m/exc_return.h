@@ -106,9 +106,13 @@
 #define EXC_RETURN_HANDLER       (EXC_RETURN_BASE | EXC_RETURN_DEF_STACKING | \
                                   EXC_RETURN_STD_CONTEXT)
 
-#ifdef CONFIG_ARCH_FPU
+#if defined(CONFIG_ARCH_FPU) && !defined(CONFIG_ARMV8M_LAZYFPU)
 #  define EXC_RETURN_FPU         0
 #else
+/* Lazy-FPU builds start new threads with a basic integer frame.  Hardware
+ * flips to an extended frame only after the thread actually uses FP/MVE state.
+ */
+
 #  define EXC_RETURN_FPU         EXC_RETURN_STD_CONTEXT
 #endif
 
