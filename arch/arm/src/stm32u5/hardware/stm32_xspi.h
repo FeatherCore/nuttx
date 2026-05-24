@@ -40,6 +40,7 @@
 #define STM32_XSPI_WIR_OFFSET               0x0190
 
 #define STM32_XSPIM_CR_OFFSET               0x0000
+#define STM32_XSPIM_PCR_OFFSET(n)           (0x0004 + ((n) << 2))
 
 /* Register Addresses *******************************************************/
 
@@ -62,6 +63,8 @@
 
 #define STM32_XSPIM_CR                      (STM32_OCTOSPIM_BASE + \
                                              STM32_XSPIM_CR_OFFSET)
+#define STM32_XSPIM_PCR(n)                  (STM32_OCTOSPIM_BASE + \
+                                             STM32_XSPIM_PCR_OFFSET(n))
 
 /* Register Bitfield Definitions ********************************************/
 
@@ -76,9 +79,12 @@
 #define XSPI_DCR1_CSHT_SHIFT                8
 #define XSPI_DCR1_CSHT(n)                   ((uint32_t)((n) - 1) << \
                                              XSPI_DCR1_CSHT_SHIFT)
+#define XSPI_DCR1_FRCK                      (1 << 1)
+#define XSPI_DCR1_DLYBYP                    (1 << 3)
 #define XSPI_DCR1_DEVSIZE_SHIFT             16
 #define XSPI_DCR1_DEVSIZE(n)                ((uint32_t)(n) << \
                                              XSPI_DCR1_DEVSIZE_SHIFT)
+#define XSPI_DCR1_MTYP_MASK                 (7 << 24)
 #define XSPI_DCR1_MTYP_MICRON              0
 #define XSPI_DCR1_MTYP_MACRONIX             (1 << 24)
 #define XSPI_DCR1_MTYP_APMEM_16BIT          ((4 | 2) << 24)
@@ -109,6 +115,7 @@
 #define XSPI_CCR_IMODE_8_LINES              (4 << 0)
 #define XSPI_CCR_IDTR                       (1 << 3)
 #define XSPI_CCR_ISIZE_16                   (1 << 4)
+#define XSPI_CCR_ADMODE_MASK                (7 << 8)
 #define XSPI_CCR_ADMODE_1_LINE              (1 << 8)
 #define XSPI_CCR_ADMODE_8_LINES             (4 << 8)
 #define XSPI_CCR_ADDTR                      (1 << 11)
@@ -121,9 +128,29 @@
 #define XSPI_CCR_DQSE                       (1 << 29)
 
 #define XSPI_TCR_DCYC(n)                    ((uint32_t)(n) & 0x1f)
+#define XSPI_TCR_DHQC                       (1 << 28)
+#define XSPI_TCR_SSHIFT                     (1 << 30)
 
+#define XSPIM_PORT_MAX                      8u
+#define XSPIM_CR_REQ2ACK_TIME_MASK          (0xff << 16)
 #define XSPIM_CR_REQ2ACK_TIME_SHIFT         16
 #define XSPIM_CR_REQ2ACK_TIME(n)            ((uint32_t)((n) - 1) << \
                                              XSPIM_CR_REQ2ACK_TIME_SHIFT)
+#define XSPIM_PCR_CLKEN                     (1 << 0)
+#define XSPIM_PCR_CLKSRC_SHIFT              1
+#define XSPIM_PCR_CLKSRC_MASK               (1 << XSPIM_PCR_CLKSRC_SHIFT)
+#define XSPIM_PCR_DQSEN                     (1 << 4)
+#define XSPIM_PCR_DQSSRC_SHIFT              5
+#define XSPIM_PCR_DQSSRC_MASK               (1 << XSPIM_PCR_DQSSRC_SHIFT)
+#define XSPIM_PCR_NCSEN                     (1 << 8)
+#define XSPIM_PCR_NCSSRC_SHIFT              9
+#define XSPIM_PCR_NCSSRC_MASK               (1 << XSPIM_PCR_NCSSRC_SHIFT)
+#define XSPIM_PCR_IOLEN                     (1 << 16)
+#define XSPIM_PCR_IOLSRC_SHIFT              17
+#define XSPIM_PCR_IOLSRC_MASK               (3 << XSPIM_PCR_IOLSRC_SHIFT)
+#define XSPIM_PCR_IOHEN                     (1 << 24)
+#define XSPIM_PCR_IOHSRC_SHIFT              25
+#define XSPIM_PCR_IOHSRC_MASK               (3 << XSPIM_PCR_IOHSRC_SHIFT)
+#define XSPIM_PCR_IOHSRC_0                  (1 << XSPIM_PCR_IOHSRC_SHIFT)
 
 #endif /* __ARCH_ARM_SRC_STM32U5_HARDWARE_STM32_XSPI_H */

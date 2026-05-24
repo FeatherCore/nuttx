@@ -144,8 +144,8 @@
  * When streaming data, the generic serial layer will be called
  * every time the FIFO receives half this number of bytes.
  *
- * If there ever is a STM32U5 with D-cache, the buffer size
- * should be an even multiple of ARMV7M_DCACHE_LINESIZE, so that it
+ * If STM32U5 D-cache is enabled, the buffer size should be an even
+ * multiple of STM32U5_DCACHE_LINESIZE, so that it
  * can be individually invalidated.
  */
 

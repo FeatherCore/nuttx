@@ -38,6 +38,14 @@ CHIP_CSRCS += stm32_serial.c stm32_start.c stm32_waste.c stm32_uid.c
 CHIP_CSRCS += stm32_spi.c stm32_lse.c stm32_lsi.c stm32u5xx_rcc.c
 CHIP_CSRCS += stm32_pwr.c stm32_tim.c stm32_flash.c stm32_timerisr.c
 
+ifeq ($(CONFIG_STM32U5_ICACHE),y)
+CHIP_CSRCS += stm32_icache.c
+endif
+
+ifeq ($(CONFIG_STM32U5_DCACHE1),y)
+CHIP_CSRCS += stm32_dcache.c
+endif
+
 ifneq ($(CONFIG_STM32U5_OCTOSPI1)$(CONFIG_STM32U5_OCTOSPI2)$(CONFIG_STM32U5_HSPI1),)
 CHIP_CSRCS += stm32_xspi.c
 endif

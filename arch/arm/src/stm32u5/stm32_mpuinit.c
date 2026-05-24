@@ -27,14 +27,74 @@
 #include <nuttx/config.h>
 
 #include <assert.h>
+#include <stdbool.h>
+#include <stdint.h>
 #include <sys/param.h>
 
 #include <nuttx/userspace.h>
 
 #include "mpu.h"
 #include "stm32_mpuinit.h"
+#include "hardware/stm32_memorymap.h"
 
 #if defined(CONFIG_BUILD_PROTECTED) && defined(CONFIG_ARM_MPU)
+
+/****************************************************************************
+ * Pre-processor Definitions
+ ****************************************************************************/
+
+#define STM32U5_INTSRAM_BASE        ((uintptr_t)0x20000000)
+#define STM32U5_INTSRAM_LIMIT       ((uintptr_t)0x30000000)
+
+#ifdef CONFIG_STM32U5_PSRAM_MPU_SHARE_NONE
+#  define STM32U5_USER_EXTSRAM_SHARE MPU_RBAR_SH_NO
+#else
+#  define STM32U5_USER_EXTSRAM_SHARE MPU_RBAR_SH_OUTER
+#endif
+
+#ifdef CONFIG_STM32U5_PSRAM_MPU_NONCACHEABLE
+#  define STM32U5_USER_EXTSRAM_ATTR MPU_RLAR_NONCACHEABLE
+#elif defined(CONFIG_STM32U5_PSRAM_MPU_WRITE_THROUGH)
+#  ifdef CONFIG_STM32U5_PSRAM_MPU_NO_WRITE_ALLOCATE
+#    define STM32U5_USER_EXTSRAM_ATTR MPU_RLAR_WRITE_THROUGH_NWA
+#  else
+#    define STM32U5_USER_EXTSRAM_ATTR MPU_RLAR_WRITE_THROUGH
+#  endif
+#else
+#  ifdef CONFIG_STM32U5_PSRAM_MPU_NO_WRITE_ALLOCATE
+#    define STM32U5_USER_EXTSRAM_ATTR MPU_RLAR_WRITE_BACK_NWA
+#  else
+#    define STM32U5_USER_EXTSRAM_ATTR MPU_RLAR_WRITE_BACK
+#  endif
+#endif
+
+#define STM32U5_USER_EXTSRAM \
+  (MPU_RBAR_AP_RWRW | STM32U5_USER_EXTSRAM_SHARE | MPU_RBAR_XN)
+
+#define STM32U5_USER_EXTSRAM_RLAR \
+  (STM32U5_USER_EXTSRAM_ATTR | MPU_RLAR_PXN)
+
+/****************************************************************************
+ * Private Functions
+ ****************************************************************************/
+
+static bool stm32_mpu_is_internal_sram(uintptr_t start, size_t size)
+{
+  uintptr_t end;
+
+  if (size == 0)
+    {
+      return false;
+    }
+
+  end = start + size - 1;
+  if (end < start)
+    {
+      return false;
+    }
+
+  return start >= STM32U5_INTSRAM_BASE && end < STM32U5_INTSRAM_LIMIT;
+}
 
 /****************************************************************************
  * Public Functions
@@ -85,7 +145,36 @@ void stm32_mpuinitialize(void)
 
 void stm32_mpu_uheap(uintptr_t start, size_t size)
 {
-  mpu_user_intsram(start, size);
+  if (stm32_mpu_is_internal_sram(start, size))
+    {
+      mpu_user_intsram(start, size);
+    }
+  else
+    {
+      mpu_configure_region(start, size, STM32U5_USER_EXTSRAM,
+                           STM32U5_USER_EXTSRAM_RLAR);
+    }
+}
+
+/****************************************************************************
+ * Name: stm32_mpu_ufbmem
+ *
+ * Description:
+ *  Map a framebuffer region for user-space fbdev clients.
+ *
+ ****************************************************************************/
+
+void stm32_mpu_ufbmem(uintptr_t start, size_t size)
+{
+  if (stm32_mpu_is_internal_sram(start, size))
+    {
+      mpu_user_intsram(start, size);
+    }
+  else
+    {
+      mpu_configure_region(start, size, STM32U5_USER_EXTSRAM,
+                           STM32U5_USER_EXTSRAM_RLAR);
+    }
 }
 
 #endif /* CONFIG_BUILD_PROTECTED && CONFIG_ARM_MPU */

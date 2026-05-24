@@ -13,6 +13,8 @@
 
 #include <errno.h>
 #include <sys/mount.h>
+#include <sys/utsname.h>
+#include <syslog.h>
 
 #include <debug.h>
 #include <nuttx/video/fb.h>
@@ -26,6 +28,34 @@
 #if defined(CONFIG_FS_PROCFS) && !defined(CONFIG_NSH_PROC_MOUNTPOINT)
 #  define CONFIG_NSH_PROC_MOUNTPOINT "/proc"
 #endif
+
+#ifdef CONFIG_NXBOOT_BOOTLOADER
+#  define STM32H7S78_IMAGE_ROLE "nxboot"
+#else
+#  define STM32H7S78_IMAGE_ROLE "app"
+#endif
+
+/****************************************************************************
+ * Private Functions
+ ****************************************************************************/
+
+static void stm32h7s78_build_log(void)
+{
+  struct utsname name;
+
+  if (uname(&name) < 0)
+    {
+      syslog(LOG_WARNING,
+             "stm32h7s78-dk: image=%s build unavailable errno=%d\n",
+             STM32H7S78_IMAGE_ROLE, errno);
+      return;
+    }
+
+  syslog(LOG_INFO,
+         "stm32h7s78-dk: image=%s version=%s %s %s %s\n",
+         STM32H7S78_IMAGE_ROLE, name.sysname, name.release, name.version,
+         name.machine);
+}
 
 /****************************************************************************
  * Public Functions
@@ -41,6 +71,7 @@ void board_late_initialize(void)
   int ret;
 
   syslog(LOG_INFO, "STM32H7S78-DK bring-up skeleton\n");
+  stm32h7s78_build_log();
 
 #ifdef CONFIG_STM32H7RS_XSPI
   ret = stm32h7rs_extmem_initialize();

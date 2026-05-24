@@ -147,8 +147,8 @@
 #  error "Callback support requires CONFIG_SCHED_WORKQUEUE and CONFIG_SCHED_HPWORK"
 #endif
 
-#ifndef ARMV7M_DCACHE_LINESIZE
-#  define ARMV7M_DCACHE_LINESIZE 32
+#ifndef STM32U5_DCACHE_LINESIZE
+#  define STM32U5_DCACHE_LINESIZE 32
 #endif
 
 #undef HAVE_SDMMC_SDIO_MODE
@@ -386,14 +386,14 @@ struct stm32_dev_s
   struct work_s      cbfifo;          /* Monitor for Lame FIFO */
 #endif
   uint8_t            rxfifo[FIFO_SIZE_IN_BYTES] /* To offload with IDMA and support un-alinged buffers */
-                     aligned_data(ARMV7M_DCACHE_LINESIZE);
+                     aligned_data(STM32U5_DCACHE_LINESIZE);
   bool               unaligned_rx; /* read buffer is not cache-line or 32 bit aligned */
 
   /* DMA bounce buffer for unaligned or IDMA-inaccessible transfers */
 
 #if defined(CONFIG_STM32U5_SDMMC_IDMA)
   uint8_t sdmmc_rxbuffer[SDMMC_MAX_BLOCK_SIZE]
-          aligned_data(ARMV7M_DCACHE_LINESIZE);
+          aligned_data(STM32U5_DCACHE_LINESIZE);
 #endif
 };
 
@@ -1098,9 +1098,9 @@ static bool stm32_idma_needs_bounce(struct stm32_dev_s *priv,
     }
 #endif
 
-#if defined(CONFIG_ARMV7M_DCACHE) && !defined(CONFIG_ARMV7M_DCACHE_WRITETHROUGH)
-  if (((uintptr_t)buffer & (ARMV7M_DCACHE_LINESIZE - 1)) != 0 ||
-      ((uintptr_t)(buffer + buflen) & (ARMV7M_DCACHE_LINESIZE - 1)) != 0)
+#if defined(CONFIG_ARCH_DCACHE)
+  if (((uintptr_t)buffer & (STM32U5_DCACHE_LINESIZE - 1)) != 0 ||
+      ((uintptr_t)(buffer + buflen) & (STM32U5_DCACHE_LINESIZE - 1)) != 0)
     {
       return true;
     }
@@ -3215,7 +3215,7 @@ static int stm32_dmarecvsetup(struct sdio_dev_s *dev,
       return -EFAULT;
     }
 
-#if defined(CONFIG_ARMV7M_DCACHE)
+#if defined(CONFIG_ARCH_DCACHE)
   if (priv->unaligned_rx)
     {
       up_invalidate_dcache((uintptr_t)dmabuffer,
@@ -3330,8 +3330,7 @@ static int stm32_dmasendsetup(struct sdio_dev_s *dev,
   stm32_sampleinit();
   stm32_sample(priv, SAMPLENDX_BEFORE_SETUP);
 
-#if defined(CONFIG_ARMV7M_DCACHE) && \
-      !defined(CONFIG_ARMV7M_DCACHE_WRITETHROUGH)
+#if defined(CONFIG_ARCH_DCACHE)
   if (bounce)
     {
       up_clean_dcache((uintptr_t)dmabuffer,

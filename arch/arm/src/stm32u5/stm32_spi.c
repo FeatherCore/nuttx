@@ -122,14 +122,14 @@
 #  define SPI_TXDMA16NULL_CONFIG    (SPI_DMA_PRIO|DMA_SCR_MSIZE_8BITS |DMA_SCR_PSIZE_16BITS             |DMA_SCR_DIR_M2P)
 #  define SPI_TXDMA8NULL_CONFIG     (SPI_DMA_PRIO|DMA_SCR_MSIZE_8BITS |DMA_SCR_PSIZE_8BITS              |DMA_SCR_DIR_M2P)
 
-/* If built with CONFIG_ARMV7M_DCACHE Buffers need to be aligned and
- * multiples of ARMV7M_DCACHE_LINESIZE
+/* If built with CONFIG_ARCH_DCACHE buffers need to be aligned and
+ * multiples of STM32U5_DCACHE_LINESIZE.
  */
 
-#  if defined(CONFIG_ARMV7M_DCACHE)
-#    define SPIDMA_BUFFER_MASK   (ARMV7M_DCACHE_LINESIZE - 1)
+#  if defined(CONFIG_ARCH_DCACHE)
+#    define SPIDMA_BUFFER_MASK   (STM32U5_DCACHE_LINESIZE - 1)
 #    define SPIDMA_SIZE(b) (((b) + SPIDMA_BUFFER_MASK) & ~SPIDMA_BUFFER_MASK)
-#    define SPIDMA_BUF_ALIGN   aligned_data(ARMV7M_DCACHE_LINESIZE)
+#    define SPIDMA_BUF_ALIGN   aligned_data(STM32U5_DCACHE_LINESIZE)
 #  else
 #    define SPIDMA_SIZE(b)  (b)
 #    define SPIDMA_BUF_ALIGN
@@ -1785,8 +1785,8 @@ static void spi_exchange(struct spi_dev_s *dev, const void *txbuffer,
   struct stm32_spidev_s *priv = (struct stm32_spidev_s *)dev;
   stm32_dmacfg_t rxdmacfg;
   stm32_dmacfg_t txdmacfg;
-  static uint8_t rxdummy[ARMV7M_DCACHE_LINESIZE]
-    aligned_data(ARMV7M_DCACHE_LINESIZE);
+  static uint8_t rxdummy[STM32U5_DCACHE_LINESIZE]
+    aligned_data(STM32U5_DCACHE_LINESIZE);
   static const uint16_t txdummy = 0xffff;
   void *orig_rxbuffer = rxbuffer;
 

@@ -608,6 +608,25 @@ config INPUT_GT9XX_I2C_FREQUENCY
 
 endif # INPUT_GT9XX
 
+config INPUT_SITRONIX
+	bool "Sitronix touchscreen driver"
+	default n
+	select INPUT_TOUCHSCREEN
+	select SCHED_LPWORK
+	---help---
+		Enable support for Sitronix I2C touch controllers through the
+		standard touchscreen upper half.
+
+if INPUT_SITRONIX
+
+config INPUT_SITRONIX_NBUFFER
+	int "Number of touchscreen sample buffers"
+	default 1
+	---help---
+		Number of touchscreen samples buffered by the upper half.
+
+endif # INPUT_SITRONIX
+
 config INPUT_BUTTONS
 	bool "Button Inputs"
 	default n

@@ -180,6 +180,10 @@
 #define PWR_VOSR_VOS_RANGE1      (3 << PWR_VOSR_VOS_SHIFT) /* 11: Range 1 (highest frequency) */
 #define PWR_VOSR_BOOSTEN         (1 << 18)                 /* Bit 18: EPOD booster enable */
 
+/* PWR supply voltage monitoring control register */
+
+#define PWR_SVMCR_IO2SV          (1 << 29)                 /* Bit 29: V_DDIO2 I/Os supply valid */
+
 /* PWR Disable backup domain register */
 
 #define PWR_DBPR_DBP             (1 <<  0)                 /* Bit  0: Disable Backup domain write protection. */

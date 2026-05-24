@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/src/stm32u5/chip.h
+ * arch/arm/src/stm32u5/stm32_dcache.h
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -20,8 +20,8 @@
  *
  ****************************************************************************/
 
-#ifndef __ARCH_ARM_SRC_STM32U5_CHIP_H
-#define __ARCH_ARM_SRC_STM32U5_CHIP_H
+#ifndef __ARCH_ARM_SRC_STM32U5_STM32_DCACHE_H
+#define __ARCH_ARM_SRC_STM32U5_STM32_DCACHE_H
 
 /****************************************************************************
  * Included Files
@@ -29,32 +29,20 @@
 
 #include <nuttx/config.h>
 
-/* Include the memory map and the chip definitions file.  Other chip hardware
- * files should then include this file for the proper setup.
- */
-
-#include <arch/irq.h>
-#include <arch/stm32u5/chip.h>
-#include "hardware/stm32_pinmap.h"
-#include "hardware/stm32_memorymap.h"
+#include <sys/types.h>
+#include <stdint.h>
 
 /****************************************************************************
- * Pre-processor Definitions
+ * Public Function Prototypes
  ****************************************************************************/
 
-/* If the common ARMv8-M vector handling logic is used, then it expects the
- * following definition in this file that provides the number of supported
- * external interrupts which, for this architecture, is provided in the
- * arch/stm32u5/chip.h header file.
- */
+size_t stm32_get_dcache_linesize(void);
+size_t stm32_get_dcache_size(void);
+void stm32_enable_dcache(void);
+void stm32_disable_dcache(void);
+void stm32_invalidate_dcache(uintptr_t start, uintptr_t end);
+void stm32_invalidate_dcache_all(void);
+void stm32_clean_dcache(uintptr_t start, uintptr_t end);
+void stm32_flush_dcache(uintptr_t start, uintptr_t end);
 
-#define ARMV8M_PERIPHERAL_INTERRUPTS STM32_IRQ_NEXTINTS
-
-/* STM32U5 uses ST-designed ICACHE/DCACHE peripherals rather than the
- * ARMv8-M architected cache maintenance registers.
- */
-
-#define STM32U5_ICACHE_LINESIZE       16
-#define STM32U5_DCACHE_LINESIZE       32
-
-#endif /* __ARCH_ARM_SRC_STM32U5_CHIP_H */
+#endif /* __ARCH_ARM_SRC_STM32U5_STM32_DCACHE_H */

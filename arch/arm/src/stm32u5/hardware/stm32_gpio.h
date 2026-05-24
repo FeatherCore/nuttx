@@ -47,6 +47,7 @@
 #define STM32_GPIO_AFRL_OFFSET     0x0020 /* GPIO alternate function low register */
 #define STM32_GPIO_AFRH_OFFSET     0x0024 /* GPIO alternate function high register */
 #define STM32_GPIO_BRR_OFFSET      0x0028 /* GPIO port bit reset register */
+#define STM32_GPIO_HSLVR_OFFSET    0x002c /* GPIO high-speed low-voltage register */
 #define STM32_GPIO_SECCFGR_OFFSET  0x0030 /* GPIO secure configuration register */
 
 /* Register Addresses *******************************************************/

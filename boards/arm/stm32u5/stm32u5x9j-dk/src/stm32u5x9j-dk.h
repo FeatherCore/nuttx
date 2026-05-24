@@ -90,8 +90,11 @@
 
 #define GPIO_LCD_DSI_POWER (GPIO_OUTPUT | GPIO_PUSHPULL | GPIO_SPEED_2MHZ | \
                             GPIO_OUTPUT_SET | GPIO_PORTI | GPIO_PIN5)
-#define GPIO_LCD_RESET     (GPIO_OUTPUT | GPIO_PUSHPULL | GPIO_SPEED_2MHZ | \
-                            GPIO_OUTPUT_SET | GPIO_PORTD | GPIO_PIN5)
+#define GPIO_LCD_RESET     (GPIO_OUTPUT | GPIO_PUSHPULL | GPIO_PULLDOWN | \
+                            GPIO_SPEED_2MHZ | GPIO_OUTPUT_SET | \
+                            GPIO_PORTD | GPIO_PIN5)
+#define GPIO_LCD_BACKLIGHT (GPIO_INPUT | GPIO_PULLUP | GPIO_PORTI | \
+                            GPIO_PIN6)
 
 /* STM32U5x9J-DK external memories. */
 
@@ -100,11 +103,50 @@
 
 #define STM32U5X9J_HSPI1_PSRAM_MEM_BASE      STM32_HSPI1_BANK
 #define STM32U5X9J_HSPI1_PSRAM_SIZE          (64u * 1024u * 1024u)
-#define STM32U5X9J_HSPI1_PSRAM_FB_SIZE       (2u * 1024u * 1024u)
+
+#ifdef CONFIG_STM32U5_LTDC_FB_DOUBLE_BUFFER
+#  define STM32U5X9J_LCD_FB_COUNT            2u
+#else
+#  define STM32U5X9J_LCD_FB_COUNT            1u
+#endif
+
+/* Internal-SRAM framebuffer mode uses the GFXMMU circular layout to reduce
+ * the real SRAM storage consumed by each 480x480 frame.  PSRAM framebuffer
+ * mode intentionally reserves a larger linear window, because the verified
+ * stable path is direct LTDC scanout without GFXMMU translation.
+ */
+
+#ifdef CONFIG_STM32U5X9J_DK_LCD_XRGB8888
+#  define STM32U5X9J_LCD_GFXMMU_FRAME_SIZE   0x000b20c0u
+#  define STM32U5X9J_LCD_PSRAM_FB_RESERVED_SIZE \
+          (2u * 1024u * 1024u)
+#else
+#  define STM32U5X9J_LCD_GFXMMU_FRAME_SIZE   0x00059d80u
+#  define STM32U5X9J_LCD_PSRAM_FB_RESERVED_SIZE \
+          (1u * 1024u * 1024u)
+#endif
+
+#if defined(CONFIG_STM32U5X9J_DK_LCD_FB_PSRAM)
+#  define STM32U5X9J_HSPI1_PSRAM_FB_RESERVED_SIZE \
+          STM32U5X9J_LCD_PSRAM_FB_RESERVED_SIZE
+#else
+#  define STM32U5X9J_HSPI1_PSRAM_FB_RESERVED_SIZE 0u
+#endif
+
+#if defined(CONFIG_STM32U5X9J_DK_LCD_FB_SRAM)
+#  define STM32U5X9J_INTERNAL_SRAM_FB_SIZE   \
+          (STM32U5X9J_LCD_GFXMMU_FRAME_SIZE * STM32U5X9J_LCD_FB_COUNT)
+#  define STM32U5X9J_INTERNAL_SRAM_FB_BASE   \
+          (CONFIG_STM32U5X9J_PROTECTED_USRAM_BASE - \
+           STM32U5X9J_INTERNAL_SRAM_FB_SIZE)
+#endif
+
 #define STM32U5X9J_HSPI1_PSRAM_HEAP_BASE     \
-  (STM32U5X9J_HSPI1_PSRAM_MEM_BASE + STM32U5X9J_HSPI1_PSRAM_FB_SIZE)
+  (STM32U5X9J_HSPI1_PSRAM_MEM_BASE + \
+   STM32U5X9J_HSPI1_PSRAM_FB_RESERVED_SIZE)
 #define STM32U5X9J_HSPI1_PSRAM_HEAP_SIZE     \
-  (STM32U5X9J_HSPI1_PSRAM_SIZE - STM32U5X9J_HSPI1_PSRAM_FB_SIZE)
+  (STM32U5X9J_HSPI1_PSRAM_SIZE - \
+   STM32U5X9J_HSPI1_PSRAM_FB_RESERVED_SIZE)
 
 /****************************************************************************
  * Public Types

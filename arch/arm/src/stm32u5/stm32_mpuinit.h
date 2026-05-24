@@ -62,4 +62,18 @@ void stm32_mpu_uheap(uintptr_t start, size_t size);
 #  define stm32_mpu_uheap(start,size)
 #endif
 
+/****************************************************************************
+ * Name: stm32_mpu_ufbmem
+ *
+ * Description:
+ *  Map a framebuffer region for user-space fbdev clients.
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_BUILD_PROTECTED
+void stm32_mpu_ufbmem(uintptr_t start, size_t size);
+#else
+#  define stm32_mpu_ufbmem(start,size)
+#endif
+
 #endif /* __ARCH_ARM_SRC_STM32U5_STM32_MPUINIT_H */

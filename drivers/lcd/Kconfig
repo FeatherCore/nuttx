@@ -2051,6 +2051,15 @@ config LCD_OTHER
 	bool
 	default n
 
+config LCD_HX8379C
+	bool "Himax HX8379C-compatible DSI panel"
+	default n
+	select LCD_OTHER
+	---help---
+		Enable support for a Himax HX8379C-compatible MIPI DSI command
+		mode initialization sequence. The board supplies the DSI packet
+		write operations.
+
 config LCD_TDA19988
 	bool "TDA19988 HDMI Encoder"
 	default n

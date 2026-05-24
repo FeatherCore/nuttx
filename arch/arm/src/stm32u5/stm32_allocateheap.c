@@ -118,10 +118,24 @@
 #endif
 
 #ifdef CONFIG_STM32U5X9J_DK_HSPI_HEAP
+#  define STM32U5X9J_PSRAM_SIZE  (64 * 1024 * 1024)
+/* On STM32U5x9J-DK, direct PSRAM framebuffer mode owns the start of
+ * memory-mapped PSRAM.  Leave that linear scanout window out of the heap so
+ * flat builds cannot allocate over the active LTDC buffers.
+ */
+#  if defined(CONFIG_STM32U5X9J_DK_LCD_FB_PSRAM)
+#    if defined(CONFIG_STM32U5X9J_DK_LCD_XRGB8888)
+#      define STM32U5X9J_PSRAM_FB_RESERVED_SIZE (2 * 1024 * 1024)
+#    else
+#      define STM32U5X9J_PSRAM_FB_RESERVED_SIZE (1 * 1024 * 1024)
+#    endif
+#  else
+#    define STM32U5X9J_PSRAM_FB_RESERVED_SIZE 0
+#  endif
 #  define STM32U5X9J_PSRAM_HEAP_START \
-     (STM32_HSPI1_BANK + 2 * 1024 * 1024)
+     (STM32_HSPI1_BANK + STM32U5X9J_PSRAM_FB_RESERVED_SIZE)
 #  define STM32U5X9J_PSRAM_HEAP_SIZE \
-     (64 * 1024 * 1024 - 2 * 1024 * 1024)
+     (STM32U5X9J_PSRAM_SIZE - STM32U5X9J_PSRAM_FB_RESERVED_SIZE)
 extern int stm32u5x9j_hspi1_psram_initialize(void);
 #endif
 

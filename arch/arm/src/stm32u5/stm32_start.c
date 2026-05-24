@@ -30,6 +30,7 @@
 #include <assert.h>
 #include <nuttx/debug.h>
 
+#include <nuttx/cache.h>
 #include <nuttx/init.h>
 #include <arch/board/board.h>
 
@@ -213,6 +214,9 @@ void __start(void)
 
   stm32_board_initialize();
   showprogress('F');
+
+  up_enable_icache();
+  up_enable_dcache();
 
   /* Then start NuttX */
 

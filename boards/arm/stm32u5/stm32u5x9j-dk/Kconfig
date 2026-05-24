@@ -100,6 +100,7 @@ config STM32U5X9J_DK_HSPI_RAM
 	bool "HSPI1 APS512xx RAM"
 	default y
 	select STM32U5_HSPI1
+	select STM32U5_PWR
 	---help---
 		Initialize the 64 MiB APS512xx PSRAM through HSPI1 and map it at
 		0xa0000000.
@@ -109,9 +110,34 @@ config STM32U5X9J_DK_HSPI_HEAP
 	default y
 	depends on STM32U5X9J_DK_HSPI_RAM
 	---help---
-		Reserve the first 2 MiB of PSRAM for display/framebuffer bring-up
-		and add the remaining PSRAM region to the NuttX heap in
-		arm_addregion().
+		Reserve the PSRAM framebuffer window for display bring-up and add
+		the remaining PSRAM region to the NuttX heap in arm_addregion().
+
+config STM32U5X9J_PROTECTED_USRAM_BASE
+	hex "Protected build user SRAM base"
+	default 0x20250000
+	depends on BUILD_PROTECTED && MM_KERNEL_HEAP
+	---help---
+		Base of the internal SRAM window reserved for protected user
+		.data/.bss and the bootstrap user heap.  The remaining internal
+		SRAM below this address is used by kernel sections and kernel heap.
+
+config STM32U5X9J_PROTECTED_USRAM_SIZE
+	hex "Protected build user SRAM size"
+	default 0x20000
+	depends on BUILD_PROTECTED && MM_KERNEL_HEAP
+	---help---
+		Size of the protected build internal SRAM window reserved for user
+		.data/.bss and the bootstrap user heap.
+
+config STM32U5X9J_PROTECTED_UHEAP_SIZE
+	hex "Protected build bootstrap user heap size"
+	default 0x2000
+	depends on BUILD_PROTECTED && MM_KERNEL_HEAP
+	---help---
+		Small initial user heap kept in the internal user SRAM window.
+		The HSPI1 PSRAM heap is appended later by arm_addregion(), so early
+		protected allocator metadata is not placed in memory-mapped PSRAM.
 
 config STM32U5X9J_DK_HSPI_DIAG
 	bool "HSPI1 PSRAM diagnostic node"
@@ -156,37 +182,91 @@ config STM32U5X9J_DK_LCD
 	default y
 	select DRIVERS_VIDEO
 	select VIDEO_FB
+	select LCD_HX8379C
+	select FB_UPDATE
+	select FB_SYNC
 	select STM32U5_DMA2D
 	select STM32U5_DSIHOST
-	select STM32U5_GFXMMU
 	select STM32U5_GPU2D
 	select STM32U5_LTDC
+	select STM32U5_LTDC_FB_DOUBLE_BUFFER
 	---help---
-		Register a 480x480 ARGB8888 framebuffer at /dev/fb0 backed by the
-		reserved PSRAM display window.
+		Register a 480x480 double framebuffer at /dev/fb0.
+
+choice
+	prompt "LCD framebuffer pixel format"
+	default STM32U5X9J_DK_LCD_RGB565
+	depends on STM32U5X9J_DK_LCD
+	---help---
+		Select the pixel format exposed by /dev/fb0 when the LCD is
+		enabled. This board choice is the source for the framebuffer,
+		LVGL color depth, LTDC, DSI host, and panel pixel-format
+		configuration.
+
+config STM32U5X9J_DK_LCD_RGB565
+	bool "RGB565"
+
+config STM32U5X9J_DK_LCD_XRGB8888
+	bool "XRGB8888 (32-bit LTDC ARGB8888)"
+	---help---
+		Expose /dev/fb0 as FB_FMT_RGB32/XRGB8888.  The LTDC layer
+		still uses the STM32 ARGB8888 pixel-format packing, but the
+		display layer is configured with constant alpha so LVGL's final
+		framebuffer is treated as fully opaque.
+
+endchoice
+
+choice
+	prompt "LCD framebuffer backing memory"
+	default STM32U5X9J_DK_LCD_FB_PSRAM
+	depends on STM32U5X9J_DK_LCD
+	---help---
+		Select where the display framebuffer storage lives.  This board
+		choice also selects whether the LTDC path should use the GFXMMU.
+
+config STM32U5X9J_DK_LCD_FB_PSRAM
+	bool "HSPI1 PSRAM, direct linear LTDC scanout"
+	select STM32U5X9J_DK_HSPI_RAM
+	---help---
+		Expose the reserved HSPI1 PSRAM framebuffer directly to LTDC and
+		fbdev.  This is the normal LVGL mode: PSRAM has enough capacity,
+		and the direct linear scanout path avoids LTDC FIFO underruns
+		caused by GFXMMU translation latency.
+
+config STM32U5X9J_DK_LCD_FB_SRAM
+	bool "Internal SRAM, GFXMMU-backed circular framebuffer"
+	depends on BUILD_PROTECTED && MM_KERNEL_HEAP
+	select STM32U5_GFXMMU
+	---help---
+		Reserve internal SRAM below the protected user SRAM window for
+		the LCD framebuffer and expose it through the GFXMMU virtual
+		framebuffer windows.  This mode is intended for memory-constrained
+		internal-SRAM experiments; the linker script and board heap code
+		remove the reserved framebuffer storage from the kernel heap.
+
+endchoice
 
 config STM32U5X9J_DK_LCD_COLORBAR
 	bool "Draw LCD color bars during bring-up"
-	default y
+	default n
 	depends on STM32U5X9J_DK_LCD
 	---help---
 		Fill the framebuffer with vertical color bars after LCD bring-up.
 
 config STM32U5X9J_DK_LCD_PATTERN
 	bool "Draw extended LCD static pattern during bring-up"
-	default y
+	default n
 	depends on STM32U5X9J_DK_LCD_COLORBAR
 	---help---
-		Draw a non-interactive framebuffer smoke pattern: solid clear,
-		basic RGB rectangles, then vertical color bars.
+		Draw a non-interactive framebuffer smoke pattern by overlaying
+		basic RGB rectangles on top of the vertical color bars.
 
 config STM32U5X9J_DK_TOUCH
 	bool "Sitronix touchscreen"
 	default y
 	depends on STM32U5X9J_DK_I2C_BUSES
 	select INPUT
-	select INPUT_TOUCHSCREEN
-	select SCHED_LPWORK
+	select INPUT_SITRONIX
 	---help---
 		Register the Sitronix touch controller on I2C5 through the generic
 		NuttX touchscreen upper half at /dev/input0.

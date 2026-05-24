@@ -36,11 +36,6 @@
 #include "stm32_mpuinit.h"
 #include "stm32_userspace.h"
 
-#if defined(CONFIG_ARCH_BOARD_STM32U5X9J_DK) && \
-    defined(CONFIG_STM32U5X9J_DK_HSPI_RAM)
-extern int stm32u5x9j_hspi1_psram_initialize(void);
-#endif
-
 #ifdef CONFIG_BUILD_PROTECTED
 
 /****************************************************************************
@@ -63,22 +58,6 @@ void stm32_userspace(void)
   uint8_t *src;
   uint8_t *dest;
   uint8_t *end;
-
-#if defined(CONFIG_ARCH_BOARD_STM32U5X9J_DK) && \
-    defined(CONFIG_STM32U5X9J_DK_HSPI_RAM)
-  int ret;
-
-  /* U5x9J-DK links user .data/.bss into HSPI1 PSRAM.  The copy/clear below
-   * runs before stm32_board_initialize(), so map PSRAM here first.
-   */
-
-  ret = stm32u5x9j_hspi1_psram_initialize();
-  if (ret < 0)
-    {
-      ferr("ERROR: STM32U5x9J-DK PSRAM userspace init failed: %d\n", ret);
-      PANIC();
-    }
-#endif
 
   /* Clear all of user-space .bss */
 

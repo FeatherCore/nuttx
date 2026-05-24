@@ -45,16 +45,41 @@ struct stm32_xspi_config_s
   uint32_t refresh;
 };
 
+#ifdef CONFIG_STM32U5_OCTOSPIM
+struct stm32_xspim_config_s
+{
+  enum stm32_xspi_port_e port;
+  uint8_t clk_port;
+  uint8_t dqs_port;
+  uint8_t ncs_port;
+  uint8_t iolow_port;
+  uint8_t iohigh_port;
+  uint32_t req2ack_time;
+};
+#endif
+
 /****************************************************************************
  * Public Function Prototypes
  ****************************************************************************/
 
 int stm32_xspi_common_setup(void);
+#ifdef CONFIG_STM32U5_OCTOSPIM
+int stm32_xspim_configure(FAR const struct stm32_xspim_config_s *config);
+#endif
 int stm32_xspi_configure(FAR const struct stm32_xspi_config_s *config);
 bool stm32_xspi_is_mapped(enum stm32_xspi_port_e port);
 int stm32_xspi_set_prescaler(enum stm32_xspi_port_e port,
                              uint32_t prescaler);
+int stm32_xspi_set_memory_type(enum stm32_xspi_port_e port,
+                               uint32_t memory_type);
+int stm32_xspi_dlyb_set(enum stm32_xspi_port_e port, uint32_t phase,
+                        uint32_t units);
+int stm32_xspi_dlyb_configure(enum stm32_xspi_port_e port,
+                              FAR uint32_t *phase, FAR uint32_t *units);
 int stm32_xspi_abort(enum stm32_xspi_port_e port);
+int stm32_xspi_command_tcr(enum stm32_xspi_port_e port,
+                           uint32_t instruction, uint32_t ccr,
+                           uint32_t tcr);
 int stm32_xspi_command(enum stm32_xspi_port_e port, uint32_t instruction,
                        uint32_t ccr);
 int stm32_xspi_command_addr(enum stm32_xspi_port_e port,

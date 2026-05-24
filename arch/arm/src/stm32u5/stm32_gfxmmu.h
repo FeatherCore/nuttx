@@ -27,7 +27,9 @@ struct stm32_gfxmmu_config_s
   uint16_t width;
   uint16_t height;
   uint16_t stride;
+  uint32_t frame_size;
   uint8_t bpp;
+  uint8_t frames;
   bool circular;
 };
 
@@ -38,6 +40,8 @@ struct stm32_gfxmmu_config_s
 #ifdef CONFIG_STM32U5_GFXMMU
 int stm32_gfxmmuinitialize(const struct stm32_gfxmmu_config_s *config);
 uintptr_t stm32_gfxmmu_buffer0(void);
+uintptr_t stm32_gfxmmu_buffer(uint8_t buffer);
+void stm32_gfxmmu_setbuffer(uint8_t buffer, uintptr_t physical);
 #endif
 
 #endif /* __ARCH_ARM_SRC_STM32U5_STM32_GFXMMU_H */

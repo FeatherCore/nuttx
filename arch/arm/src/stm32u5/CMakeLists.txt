@@ -57,6 +57,14 @@ if(CONFIG_DEBUG_FEATURES)
   list(APPEND SRCS stm32_dumpgpio.c)
 endif()
 
+if(CONFIG_STM32U5_ICACHE)
+  list(APPEND SRCS stm32_icache.c)
+endif()
+
+if(CONFIG_STM32U5_DCACHE1)
+  list(APPEND SRCS stm32_dcache.c)
+endif()
+
 if(CONFIG_STM32U5_OCTOSPI1 OR CONFIG_STM32U5_OCTOSPI2 OR CONFIG_STM32U5_HSPI1)
   list(APPEND SRCS stm32_xspi.c)
 endif()

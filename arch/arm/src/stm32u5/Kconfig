@@ -43,6 +43,8 @@ config STM32U5_STM32U5A9XX
 	bool
 	default n
 	select ARCH_HAVE_FPU
+	select STM32U5_HAVE_DCACHE1
+	select STM32U5_HAVE_ICACHE
 	select STM32U5_HAVE_LPUART1
 	select STM32U5_HAVE_USART1
 	select STM32U5_HAVE_USART2
@@ -55,6 +57,8 @@ config STM32U5_STM32U5A5XX
 	bool
 	default n
 	select ARCH_HAVE_FPU
+	select STM32U5_HAVE_DCACHE1
+	select STM32U5_HAVE_ICACHE
 	select STM32U5_HAVE_LPUART1
 	select STM32U5_HAVE_USART1
 	select STM32U5_HAVE_USART2
@@ -67,6 +71,8 @@ config STM32U5_STM32U585XX
 	bool
 	default n
 	select ARCH_HAVE_FPU
+	select STM32U5_HAVE_DCACHE1
+	select STM32U5_HAVE_ICACHE
 	select STM32U5_HAVE_LPUART1
 	select STM32U5_HAVE_USART1
 	select STM32U5_HAVE_USART2
@@ -224,6 +230,14 @@ config STM32U5_HAVE_UART5
 	bool
 	default n
 
+config STM32U5_HAVE_DCACHE1
+	bool
+	default n
+
+config STM32U5_HAVE_ICACHE
+	bool
+	default n
+
 # These "hidden" settings are the OR of individual peripheral selections
 # indicating that the general capability is required.
 
@@ -292,6 +306,16 @@ config STM32U5_LTDC
 	bool "LTDC"
 	default n
 
+config STM32U5_LTDC_FB_DOUBLE_BUFFER
+	bool "LTDC framebuffer double buffering"
+	default n
+	depends on STM32U5_LTDC
+	---help---
+		Expose two screen-sized framebuffer pages through the NuttX
+		framebuffer interface and switch the LTDC scanout buffer with
+		FBIOPAN_DISPLAY.  The two pages may be direct linear framebuffers
+		or separate GFXMMU virtual buffers, depending on board wiring.
+
 config STM32U5_DSIHOST
 	bool "DSIHOST"
 	default n
@@ -304,9 +328,81 @@ config STM32U5_BKPSRAM
 	bool "BKPSRAM"
 	default n
 
+config STM32U5_ICACHE
+	bool "ICACHE"
+	default n
+	depends on STM32U5_HAVE_ICACHE
+	select ARCH_ICACHE
+
+config STM32U5_ICACHE_DIRECT
+	bool "ICACHE 1-way direct mapped mode"
+	default y
+	depends on STM32U5_ICACHE
+	---help---
+		Select the same ICACHE associativity mode used by STM32CubeU5
+		STM32U5x9J-DK examples: HAL_ICACHE_ConfigAssociativityMode(ICACHE_1WAY).
+
 config STM32U5_DCACHE1
 	bool "DCACHE1"
 	default n
+	depends on STM32U5_HAVE_DCACHE1
+	select ARCH_DCACHE
+
+config STM32U5_DCACHE1_READ_BURST_INCR
+	bool "DCACHE1 INCR read burst"
+	default n
+	depends on STM32U5_DCACHE1
+	---help---
+		By default DCACHE1 uses WRAP read bursts, matching the reset value
+		and STM32CubeU5 HAL default.  Select this to configure INCR bursts.
+
+choice
+	prompt "HSPI PSRAM MPU shareability"
+	default STM32U5_PSRAM_MPU_SHARE_NONE
+	depends on ARM_MPU
+	---help---
+		Select the ARMv8-M MPU shareability attribute used for STM32U5
+		memory-mapped PSRAM when it is added as CPU-owned heap or stack
+		memory.  Framebuffer or DMA-shared windows still need explicit
+		cache maintenance or a separate non-cacheable mapping.
+
+config STM32U5_PSRAM_MPU_SHARE_OUTER
+	bool "Outer shareable"
+
+config STM32U5_PSRAM_MPU_SHARE_NONE
+	bool "Non-shareable"
+
+endchoice
+
+choice
+	prompt "HSPI PSRAM MPU cache policy"
+	default STM32U5_PSRAM_MPU_WRITE_BACK
+	depends on ARM_MPU
+	---help---
+		Select the ARMv8-M MAIR cache attribute used for STM32U5
+		memory-mapped PSRAM when it is added as user heap memory.
+
+config STM32U5_PSRAM_MPU_WRITE_BACK
+	bool "Write-back cacheable"
+
+config STM32U5_PSRAM_MPU_WRITE_THROUGH
+	bool "Write-through cacheable"
+
+config STM32U5_PSRAM_MPU_NONCACHEABLE
+	bool "Non-cacheable"
+
+endchoice
+
+config STM32U5_PSRAM_MPU_NO_WRITE_ALLOCATE
+	bool "Use no-write-allocate cacheable MAIR for PSRAM"
+	default y
+	depends on ARM_MPU && !STM32U5_PSRAM_MPU_NONCACHEABLE
+	---help---
+		Use read-allocate, no-write-allocate MAIR encodings for CPU-owned
+		PSRAM heap and stack traffic.  This mirrors the STM32N6 protected
+		KNSh LVGL policy; PSRAM shared with LTDC, DMA, or other bus masters
+		still needs explicit ownership handoff cache maintenance or a
+		dedicated non-cacheable MPU region.
 
 config STM32U5_SRAM1
 	bool "SRAM1"

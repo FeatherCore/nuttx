@@ -26,8 +26,10 @@
 
 #include <nuttx/config.h>
 
+#include <errno.h>
 #include <sys/mount.h>
 #include <sys/types.h>
+#include <sys/utsname.h>
 #include <syslog.h>
 #include <nuttx/debug.h>
 
@@ -46,6 +48,21 @@
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
+
+static void stm32u5x9j_build_log(void)
+{
+  struct utsname name;
+
+  if (uname(&name) < 0)
+    {
+      syslog(LOG_WARNING,
+             "stm32u5x9j-dk: build unavailable errno=%d\n", errno);
+      return;
+    }
+
+  syslog(LOG_INFO, "stm32u5x9j-dk: version=%s %s %s %s\n",
+         name.sysname, name.release, name.version, name.machine);
+}
 
 #ifdef CONFIG_STM32U5X9J_DK_I2C_BUSES
 static FAR struct i2c_master_s *stm32_i2c_register_bus(int bus)
@@ -108,6 +125,8 @@ int stm32_bringup(void)
   FAR struct i2c_master_s *i2c5 = NULL;
 #endif
   int ret = OK;
+
+  stm32u5x9j_build_log();
 
 #ifdef CONFIG_FS_PROCFS
   /* Mount the procfs file system */
