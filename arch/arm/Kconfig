@@ -319,7 +319,6 @@ config ARCH_CHIP_NRF52
 	#select ARM_HAVE_MPU_UNIFIED
 	select ARCH_HAVE_SPI_BITORDER
 	select ARCH_HAVE_FPU
-	select ARCH_HAVE_PWM_MULTICHAN
 	select ARCH_HAVE_SERIAL_TERMIOS
 	select ARCH_DMA_NO_FLASH_TRANSFER
 	---help---
@@ -328,7 +327,6 @@ config ARCH_CHIP_NRF52
 config ARCH_CHIP_NRF53
 	bool "Nordic nRF53"
 	select ARCH_CORTEXM33
-	select ARCH_HAVE_PWM_MULTICHAN
 	select ARCH_DMA_NO_FLASH_TRANSFER
 	depends on EXPERIMENTAL
 	---help---
@@ -337,7 +335,6 @@ config ARCH_CHIP_NRF53
 config ARCH_CHIP_NRF91
 	bool "Nordic nRF91"
 	select ARCH_CORTEXM33
-	select ARCH_HAVE_PWM_MULTICHAN
 	select ARCH_HAVE_TRUSTZONE
 	select ARCH_HAVE_TICKLESS
 	select ARCH_DMA_NO_FLASH_TRANSFER
@@ -382,7 +379,6 @@ config ARCH_CHIP_RP2040
 	select ARCH_HAVE_MULTICPU
 	select ARCH_HAVE_I2CRESET
 	select ARM_HAVE_WFE_SEV
-	select ARCH_HAVE_PWM_MULTICHAN
 	select ARCH_BOARD_COMMON
 	select ARCH_HAVE_CUSTOM_TESTSET
 	---help---
@@ -398,7 +394,6 @@ config ARCH_CHIP_RP23XX
 	select ARM_HAVE_DSP
 	select ARCH_HAVE_FPU
 	select ARCH_HAVE_CUSTOM_TESTSET
-	select ARCH_HAVE_PWM_MULTICHAN
 	select ARCH_BOARD_COMMON
 	---help---
 		Raspberry Pi RP23XX architectures (ARM dual Cortex-M33 or RISC-V).
@@ -609,6 +604,19 @@ config ARCH_CHIP_STM32H5
 	select ARM_HAVE_MPU_UNIFIED
 	---help---
 		STMicro STM32 H5 architectures (ARM Cortex-M33).
+
+config ARCH_CHIP_STM32N6
+	bool "STMicro STM32 N6"
+	select ARCH_CORTEXM55
+	select ARCH_HAVE_FPU
+	select ARCH_HAVE_MPU
+	select ARM_HAVE_DSP
+	select ARM_HAVE_MPU_UNIFIED
+	select ARCH_HAVE_TRUSTZONE
+	select ARCH_HAVE_FETCHADD
+	select ARCH_HAVE_HEAPCHECK
+	---help---
+		STMicro STM32N6 architectures (ARM Cortex-M55).
 
 config ARCH_CHIP_STM32L5
 	bool "STMicro STM32 L5"
@@ -1240,6 +1248,7 @@ config ARCH_CHIP
 	default "stm32h7rs"	if ARCH_CHIP_STM32H7RS
 	default "stm32l4"	if ARCH_CHIP_STM32L4
 	default "stm32h5"	if ARCH_CHIP_STM32H5
+	default "stm32n6"	if ARCH_CHIP_STM32N6
 	default "stm32l5"	if ARCH_CHIP_STM32L5
 	default "stm32u5"	if ARCH_CHIP_STM32U5
 	default "stm32n6"	if ARCH_CHIP_STM32N6
@@ -1756,6 +1765,9 @@ source "arch/arm/src/stm32l4/Kconfig"
 endif
 if ARCH_CHIP_STM32H5
 source "arch/arm/src/stm32h5/Kconfig"
+endif
+if ARCH_CHIP_STM32N6
+source "arch/arm/src/stm32n6/Kconfig"
 endif
 if ARCH_CHIP_STM32L5
 source "arch/arm/src/stm32l5/Kconfig"

@@ -188,6 +188,14 @@ if(CONFIG_CRYPTO_CRYPTODEV_HARDWARE)
   list(APPEND SRCS esp_crypto.c)
 endif()
 
+if(CONFIG_ESPRESSIF_TOUCH)
+  list(APPEND SRCS esp_touch.c)
+endif()
+
+if(CONFIG_COMP)
+  list(APPEND SRCS esp_ana_cmpr.c)
+endif()
+
 if(CONFIG_ESPRESSIF_USE_LP_CORE)
   message(
     WARNING
@@ -213,7 +221,7 @@ if(DEFINED ENV{ESP_HAL_3RDPARTY_VERSION})
       CACHE STRING "ESP HAL 3rdparty version")
 else()
   set(ESP_HAL_3RDPARTY_VERSION
-      c32f1ad13f4ce8312de494e8b79c88fda10fe9ed
+      91d8aa6e82c74cc73eeb3df7e4005739fab8c322
       CACHE STRING "ESP HAL 3rdparty version")
 endif()
 
@@ -345,6 +353,7 @@ add_custom_command(
 add_custom_target(copy_esp3rdparty_headers DEPENDS ${_gpio_sig_map} ${_irq})
 
 add_dependencies(arch copy_esp3rdparty_headers)
+add_dependencies(nuttx_context copy_esp3rdparty_headers)
 
 # ##############################################################################
 # Compiler and Linker Flags

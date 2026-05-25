@@ -37,6 +37,10 @@ etctmp/
 *.pyc
 *.mapfile
 *.SystemMap
+*.ld.tmp
+*.script.tmp
+*.script.dfu.tmp
+*.linkcmd.tmp
 *~
 \#*\#
 .\#*
@@ -80,7 +84,7 @@ uImage
 .idea
 .DS_Store
 tools/gdb/__pycache__
-/build
+/build*
 .ccls-cache
 compile_commands.json
 imx9-sdimage.img

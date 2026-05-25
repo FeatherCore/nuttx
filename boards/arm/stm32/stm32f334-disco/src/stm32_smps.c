@@ -309,8 +309,8 @@ static const uint8_t g_adc1chan[ADC1_NCHANNELS] =
 
 static const uint32_t g_adc1pins[ADC1_NCHANNELS] =
 {
-  GPIO_ADC1_IN2,                /* PA1 - V_IN */
-  GPIO_ADC1_IN4,                /* PA3 - V_OUT */
+  GPIO_ADC1_IN2_0,                /* PA1 - V_IN */
+  GPIO_ADC1_IN4_0,                /* PA3 - V_OUT */
 };
 
 /****************************************************************************
@@ -447,7 +447,7 @@ static int smps_start(struct smps_dev_s *dev)
     {
       pwrerr("ERROR:  Can not achieve tima pwm "
              "freq=%" PRIu32 " if fclk=%" PRIu64 "\n",
-             (uint32_t)TIMA_PWM_FREQ, (uint64_t)fclk);
+             (uint32_t)TIMA_PWM_FREQ, fclk);
       ret = -EINVAL;
       goto errout;
     }
@@ -464,7 +464,7 @@ static int smps_start(struct smps_dev_s *dev)
     {
       pwrerr("ERROR:  Can not achieve timb pwm "
              "freq=%" PRIu32 " if fclk=%" PRIu64 "\n",
-             (uint32_t)TIMB_PWM_FREQ, (uint64_t)fclk);
+             (uint32_t)TIMB_PWM_FREQ, fclk);
       ret = -EINVAL;
       goto errout;
     }

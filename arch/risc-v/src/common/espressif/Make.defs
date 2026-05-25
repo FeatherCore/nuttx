@@ -181,6 +181,10 @@ ifeq ($(CONFIG_ESPRESSIF_ADC),y)
 CHIP_CSRCS += esp_adc.c
 endif
 
+ifeq ($(CONFIG_COMP),y)
+	CHIP_CSRCS += esp_ana_cmpr.c
+endif
+
 ifeq ($(CONFIG_ESPRESSIF_SHA_ACCELERATOR),y)
 	CHIP_CSRCS += esp_sha.c
 endif
@@ -191,6 +195,10 @@ endif
 
 ifeq ($(CONFIG_CRYPTO_CRYPTODEV_HARDWARE),y)
 	CHIP_CSRCS += esp_crypto.c
+endif
+
+ifeq ($(CONFIG_ESPRESSIF_TOUCH),y)
+	CHIP_CSRCS += esp_touch.c
 endif
 
 ifeq ($(CONFIG_ESPRESSIF_USE_LP_CORE),y)
@@ -221,7 +229,7 @@ endif
 
 ESP_HAL_3RDPARTY_REPO   = esp-hal-3rdparty
 ifndef ESP_HAL_3RDPARTY_VERSION
-	ESP_HAL_3RDPARTY_VERSION = c32f1ad13f4ce8312de494e8b79c88fda10fe9ed
+	ESP_HAL_3RDPARTY_VERSION = 91d8aa6e82c74cc73eeb3df7e4005739fab8c322
 endif
 
 ifndef ESP_HAL_3RDPARTY_URL

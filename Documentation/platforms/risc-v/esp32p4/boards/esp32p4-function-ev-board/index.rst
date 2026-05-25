@@ -1,3 +1,5 @@
+.. _esp32p4-function-ev-board:
+
 ==========================
 ESP32-P4-Function-EV-Board
 ==========================
@@ -177,6 +179,40 @@ adc
 Enables the ADC driver. ADC unit(s) are registered (``/dev/adc0`` as ADC1).
 Attenuation, mode, and channel set can be adjusted in ``ADC Configuration``.
 
+analog_cmpr
+-----------
+
+Enables the analog comparator driver. Driver unit is registered as ``/dev/anacmpr0``
+for analog comparator unit0. For each unit, the reference is either internal,
+comparing the source input against a fraction of VDD in 10% steps from 0% to 70%
+(for example, 50% VDD triggers when the source crosses half the supply voltage), or
+external, comparing the source GPIO against the voltage on the external reference
+pin. Reference source and debounce timeout for each unit can be adjusted in
+``Analog Comparator Configuration``.
+
+Comparator GPIOs are fixed by hardware and cannot be remapped. Following table demonstrates
+which pins are dedicated for comparator:
+
+======== =================================================================================
+Pin      Role
+======== =================================================================================
+GPIO52   Input source for unit0
+GPIO51   External reference input (if external reference source is selected for unit0)
+GPIO54   Input source for unit1
+GPIO53   External reference input (if external reference source is selected for unit1)
+======== =================================================================================
+
+The following snippet demonstrates how to read the comparator result:
+
+.. code-block:: C
+
+   int fd;
+   int ret;
+   int res;
+
+   fd = open("/dev/anacmpr0", O_RDONLY);
+   ret = read(fd, &res, sizeof(res));
+
 autopm
 ------
 
@@ -329,6 +365,12 @@ pwm
 ---
 
 Demonstrates PWM via LEDC. The ``pwm`` app toggles output with default frequency/duty.
+
+python
+------
+
+This configuration enables the Python for ESP32-P4.
+Please refer to the :doc:`Python Interpreter </applications/interpreters/python/index>` page.
 
 qencoder
 --------

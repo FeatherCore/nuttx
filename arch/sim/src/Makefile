@@ -106,15 +106,24 @@ else
 endif
 DEPPATH = $(patsubst %,--dep-path %,$(subst :, ,$(VPATH)))
 
+vpath nuttx$(EXEEXT) $(TOPDIR)
+
 CFLAGS += -fvisibility=default
 HOSTCFLAGS = $(ARCHWARNINGS) $(ARCHOPTIMIZATION) \
+   $(ARCHCFLAGS) $(HOSTINCLUDES) $(EXTRAFLAGS) -D__SIM__ \
+   -fvisibility=default
+HOSTMFLAGS = $(ARCHWARNINGS) $(ARCHOPTIMIZATION) \
    $(ARCHCFLAGS) $(HOSTINCLUDES) $(EXTRAFLAGS) -D__SIM__ \
    -fvisibility=default
 
 HOSTCFLAGS += ${INCDIR_PREFIX}$(ARCH_SRCDIR)
 HOSTCFLAGS += ${INCDIR_PREFIX}$(ARCH_SRCDIR)$(DELIM)chip
+
 ifeq ($(CONFIG_HOST_MACOS),y)
   HOSTCFLAGS += -Wno-deprecated-declarations
+ifeq ($(CONFIG_SIM_X11FB),y)
+  HOSTCFLAGS += -I/opt/X11/include
+endif
 endif
 
 ifeq ($(CONFIG_FS_LARGEFILE),y)
@@ -132,19 +141,15 @@ sim_hostfs.c: hostfs.h
 
 STDLIBS += -lpthread
 ifeq ($(CONFIG_HOST_MACOS),y)
-ifeq ($(CONFIG_HAVE_CXXINITIALIZE),y)
-  # Note: sim_macho_init.c is not in CSRCS because it's picky about
-  # the place in the object list for linking. Namely, its constructor
-  # should be the first one in the executable.
-  HEADSRC = sim_macho_init.c
-
-  # sim_macho_init.c is not compatible with chained fixups.
-  # cf. https://github.com/apache/nuttx/issues/15208
-  ifeq ($(shell $(LD) -ld_classic -no_fixup_chains 2>&1 | grep "unknown option"),)
+  ifeq ($(CONFIG_HAVE_CXXINITIALIZE),y)
     LDLINKFLAGS += -ld_classic -no_fixup_chains
     LDFLAGS += -Wl,-ld_classic,-no_fixup_chains
   endif
-endif
+
+  # Keep the simulator executable from exporting NuttX symbols. Otherwise dyld
+  # may resolve host libc references against NuttX's internal libc implementation
+  # during process initialization, which can crash before main() runs.
+  LDFLAGS += -Wl,-exported_symbol,__mh_execute_header
 else
   STDLIBS += -lrt
 endif
@@ -313,6 +318,15 @@ ifeq ($(CONFIG_SIM_CAMERA_V4L2),y)
   STDLIBS += -lv4l2
 endif
 
+ifeq ($(CONFIG_SIM_CAMERA_AVFOUNDATION),y)
+  HOSTMSRCS += sim/macos/sim_host_avfoundation_backend.m
+  CSRCS += sim_camera.c
+ifeq ($(CONFIG_HOST_MACOS),y)
+  STDLIBS += -framework AVFoundation -framework CoreMedia \
+             -framework CoreVideo -framework Foundation
+endif
+endif
+
 ifeq ($(CONFIG_SIM_VIDEO_DECODER),y)
   CSRCS += sim_decoder.c
   CSRCS += sim_openh264dec.c
@@ -325,12 +339,14 @@ ifeq ($(CONFIG_SIM_VIDEO_ENCODER),y)
 endif
 
 COBJS = $(CSRCS:.c=$(OBJEXT))
+HOSTCOBJS = $(HOSTSRCS:.c=$(OBJEXT))
+HOSTMOBJS = $(HOSTMSRCS:.m=$(OBJEXT))
 
 NUTTXOBJS = $(AOBJS) $(COBJS)
-HOSTOBJS = $(HOSTSRCS:.c=$(OBJEXT))
+HOSTOBJS = $(HOSTCOBJS) $(HOSTMOBJS)
 HEADOBJ = $(HEADSRC:.c=$(OBJEXT))
 
-SRCS = $(ASRCS) $(CSRCS) $(HOSTSRCS)
+SRCS = $(ASRCS) $(CSRCS) $(HOSTSRCS) $(HOSTMSRCS)
 OBJS = $(AOBJS) $(COBJS) $(HOSTOBJS)
 
 $(foreach lib,$(notdir $(wildcard $(APPDIR)$(DELIM)staging$(DELIM)*$(LIBEXT))), \
@@ -378,7 +394,7 @@ RELLIBS += -lboard
 
 all: sim_head$(OBJEXT) libarch$(LIBEXT)
 
-.PHONY: export_startup clean distclean cleanrel depend board/libboard$(LIBEXT)
+.PHONY: export_startup clean distclean cleanrel depend FORCE
 
 $(AOBJS): %$(OBJEXT): %.S
 	$(call ASSEMBLE, $<, $@)
@@ -386,9 +402,14 @@ $(AOBJS): %$(OBJEXT): %.S
 $(COBJS) $(LINKOBJS): %$(OBJEXT): %.c
 	$(call COMPILE, $<, $@)
 
-$(HOSTOBJS) $(HEADOBJ): %$(OBJEXT): %.c
+$(HOSTCOBJS) $(HEADOBJ): %$(OBJEXT): %.c
 	$(Q) $(ECHO_BEGIN)"CC:  $<"
 	$(Q) "$(CC)" -c $(HOSTCFLAGS) $< -o $@
+	$(Q) $(ECHO_END)
+
+$(HOSTMOBJS): %$(OBJEXT): %.m
+	$(Q) $(ECHO_BEGIN)"CC:  $<"
+	$(Q) $(HOSTCC) -c $(HOSTMFLAGS) -x objective-c $< -o $@
 	$(Q) $(ECHO_END)
 
 # The architecture-specific library
@@ -400,8 +421,10 @@ libarch$(LIBEXT): $(NUTTXOBJS)
 # the simulation.  However, this is a good place to keep parts of the simulation
 # that are not hardware-related.
 
-board/libboard$(LIBEXT):
+board/libboard$(LIBEXT): FORCE
 	$(Q) $(MAKE) -C board libboard$(LIBEXT) EXTRAFLAGS="$(EXTRAFLAGS)"
+
+FORCE:
 
 # A partially linked object containing only NuttX code (no interface to host OS)
 # Change the names of most symbols that conflict with libc symbols.
@@ -490,6 +513,9 @@ else
 	$(Q) $(call LINK_ALLSYMS_KASAN)
 	$(Q) $(call LINK_ALLSYMS_KASAN)
 endif
+ifeq ($(CONFIG_HOST_MACOS)$(CONFIG_HAVE_CXXINITIALIZE),yy)
+	$(Q) python3 $(ARCH_SRCDIR)/patch_macho_initsection.py $(TOPDIR)/$@
+endif
 	$(Q) $(NM) $(TOPDIR)/$@ | \
 		grep -v '\(compiled\)\|\(\.o$$\)\|\( [aUw] \)\|\(\.\.ng$$\)\|\(LASH[RL]DI\)' | \
 		sort > $(TOPDIR)/System.map
@@ -505,6 +531,9 @@ export_startup: sim_head.o $(HOSTOBJS) nuttx-names.dat
 makedepfile: $(CSRCS:.c=.ddc) $(ASRCS:.S=.dds) $(HOSTSRCS:.c=.ddh)
 	$(call CATFILE, Make.dep, $^)
 	$(call DELFILE, $^)
+
+$(HOSTSRCS:.c=.ddh): %.ddh: %.c
+	$(Q) $(MKDEP) --obj-path $(OBJPATH) --obj-suffix $(OBJEXT) $(DEPPATH) "$(CC)" -- $(HOSTCFLAGS) -- $< > $@
 
 config.h: $(TOPDIR)/include/nuttx/config.h
 	@echo "CP:  $<"

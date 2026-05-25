@@ -62,6 +62,10 @@ volatile bool g_interrupt_context[CONFIG_SMP_NCPUS];
 
 void up_initialize(void)
 {
+#ifdef CONFIG_ARCH_PERF_EVENTS
+  up_perf_init((void *)IFX_CFG_CPU_CLOCK_FREQUENCY);
+#endif
+
   tricore_trapinit();
 
 #ifdef CONFIG_ARCH_ICACHE
@@ -76,5 +80,9 @@ void up_initialize(void)
 
 #ifdef USE_SERIALDRIVER
   tricore_serialinit();
+#endif
+
+#ifdef CONFIG_ARCH_HAVE_DEBUG
+  tricore_init_dbgmonitor();
 #endif
 }

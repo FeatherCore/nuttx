@@ -3373,7 +3373,6 @@ config STM32H5_PWM_MULTICHAN
 	bool "PWM Multiple Output Channels"
 	default n
 	depends on STM32H5_PWM
-	select ARCH_HAVE_PWM_MULTICHAN
 	---help---
 		Specifies that the PWM driver supports multiple output
 		channels per timer.
@@ -5335,6 +5334,17 @@ config STM32H5_ETH_NTXDESC
 	default 4
 	---help---
 		Number of TX DMA descriptors to use.
+
+config STM32H5_ETH_HWCHECKSUM
+	bool "Enable ethernet hardware checksum"
+	default n
+	---help---
+		Enable the IPv4/IPv6 header and TCP/UDP/ICMP payload checksum offload
+		engine in the Ethernet MAC.
+		When enabled, hardware generates checksums for TX and checks RX frames.
+		Be sure to disable software checksums (NET_TCP_CHECKSUMS, NET_UDP_CHECKSUMS,
+		NET_ICMP_CHECKSUMS, NET_IPV4_CHECKSUMS, NET_IPV6_CHECKSUMS) to avoid
+		redundant verification in the network stack.
 
 config STM32H5_ETHFD
 	bool "Full duplex"
