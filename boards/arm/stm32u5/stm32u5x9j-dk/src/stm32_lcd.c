@@ -128,9 +128,9 @@
  ****************************************************************************/
 
 #if STM32U5X9J_LCD_BPP == 16
-typedef uint16_t stm32u5x9j_lcd_pixel_t;
+typedef uint16_t stm32_lcd_pixel_t;
 #else
-typedef uint32_t stm32u5x9j_lcd_pixel_t;
+typedef uint32_t stm32_lcd_pixel_t;
 #endif
 
 static const struct stm32_dsi_video_config_s g_dsi_config =
@@ -151,7 +151,7 @@ static const struct stm32_dsi_video_config_s g_dsi_config =
  * Private Functions
  ****************************************************************************/
 
-static void stm32u5x9j_lcd_prepare_panel(void)
+static void stm32_lcd_prepare_panel(void)
 {
   stm32_configgpio(GPIO_LCD_DSI_POWER);
   stm32_configgpio(GPIO_LCD_RESET);
@@ -161,14 +161,14 @@ static void stm32u5x9j_lcd_prepare_panel(void)
   stm32_gpiowrite(GPIO_LCD_RESET, false);
 }
 
-static void stm32u5x9j_lcd_release_panel(void)
+static void stm32_lcd_release_panel(void)
 {
   up_mdelay(11);
   stm32_gpiowrite(GPIO_LCD_RESET, true);
   up_mdelay(150);
 }
 
-static stm32u5x9j_lcd_pixel_t stm32u5x9j_lcd_color(uint32_t color)
+static stm32_lcd_pixel_t stm32_lcd_color(uint32_t color)
 {
 #if STM32U5X9J_LCD_BPP == 16
   uint32_t r = (color >> 16) & 0xff;
@@ -181,7 +181,7 @@ static stm32u5x9j_lcd_pixel_t stm32u5x9j_lcd_color(uint32_t color)
 #endif
 }
 
-static uintptr_t stm32u5x9j_lcd_fb(uint32_t frame)
+static uintptr_t stm32_lcd_fb(uint32_t frame)
 {
 #ifdef STM32U5X9J_LCD_USE_GFXMMU
   return (uintptr_t)stm32_gfxmmu_buffer(frame);
@@ -191,14 +191,14 @@ static uintptr_t stm32u5x9j_lcd_fb(uint32_t frame)
 #endif
 }
 
-static void stm32u5x9j_lcd_clean_framebuffer(void)
+static void stm32_lcd_clean_framebuffer(void)
 {
   uint32_t i;
 
   for (i = 0; i < STM32U5X9J_LCD_FB_COUNT; i++)
     {
-      up_clean_dcache(stm32u5x9j_lcd_fb(i),
-                      stm32u5x9j_lcd_fb(i) + STM32U5X9J_LCD_VFBLEN);
+      up_clean_dcache(stm32_lcd_fb(i),
+                      stm32_lcd_fb(i) + STM32U5X9J_LCD_VFBLEN);
     }
 
 #ifdef STM32U5X9J_LCD_USE_GFXMMU
@@ -209,11 +209,11 @@ static void stm32u5x9j_lcd_clean_framebuffer(void)
 
 #if defined(CONFIG_STM32U5X9J_DK_LCD_PATTERN) || \
     !defined(CONFIG_STM32U5X9J_DK_LCD_COLORBAR)
-static void stm32u5x9j_lcd_fill_frame(uintptr_t fbaddr, uint32_t color)
+static void stm32_lcd_fill_frame(uintptr_t fbaddr, uint32_t color)
 {
-  FAR stm32u5x9j_lcd_pixel_t *fb =
-    (FAR stm32u5x9j_lcd_pixel_t *)fbaddr;
-  stm32u5x9j_lcd_pixel_t pixel = stm32u5x9j_lcd_color(color);
+  FAR stm32_lcd_pixel_t *fb =
+    (FAR stm32_lcd_pixel_t *)fbaddr;
+  stm32_lcd_pixel_t pixel = stm32_lcd_color(color);
   uint32_t x;
   uint32_t y;
 
@@ -229,35 +229,35 @@ static void stm32u5x9j_lcd_fill_frame(uintptr_t fbaddr, uint32_t color)
 
 #if !defined(CONFIG_STM32U5X9J_DK_LCD_COLORBAR) && \
     !defined(CONFIG_STM32U5X9J_DK_LCD_PATTERN)
-static void stm32u5x9j_lcd_clear_framebuffer(void)
+static void stm32_lcd_clear_framebuffer(void)
 {
   uint32_t i;
 
   for (i = 0; i < STM32U5X9J_LCD_FB_COUNT; i++)
     {
-      stm32u5x9j_lcd_fill_frame(stm32u5x9j_lcd_fb(i),
+      stm32_lcd_fill_frame(stm32_lcd_fb(i),
                                 0xff000000);
     }
 
-  stm32u5x9j_lcd_clean_framebuffer();
+  stm32_lcd_clean_framebuffer();
 }
 #endif
 
 #if defined(CONFIG_STM32U5X9J_DK_LCD_COLORBAR) || \
     defined(CONFIG_STM32U5X9J_DK_LCD_PATTERN)
 #ifdef CONFIG_STM32U5X9J_DK_LCD_PATTERN
-static void stm32u5x9j_lcd_fill_cpu(uint32_t color)
+static void stm32_lcd_fill_cpu(uint32_t color)
 {
-  stm32u5x9j_lcd_fill_frame(STM32U5X9J_LCD_FB, color);
+  stm32_lcd_fill_frame(STM32U5X9J_LCD_FB, color);
 }
 
-static void stm32u5x9j_lcd_rect_cpu(uint32_t x0, uint32_t y0,
+static void stm32_lcd_rect_cpu(uint32_t x0, uint32_t y0,
                                     uint32_t width, uint32_t height,
                                     uint32_t color)
 {
-  FAR stm32u5x9j_lcd_pixel_t *fb =
-    (FAR stm32u5x9j_lcd_pixel_t *)STM32U5X9J_LCD_FB;
-  stm32u5x9j_lcd_pixel_t pixel = stm32u5x9j_lcd_color(color);
+  FAR stm32_lcd_pixel_t *fb =
+    (FAR stm32_lcd_pixel_t *)STM32U5X9J_LCD_FB;
+  stm32_lcd_pixel_t pixel = stm32_lcd_color(color);
   uint32_t x1 = MIN(x0 + width, STM32U5X9J_LCD_XRES);
   uint32_t y1 = MIN(y0 + height, STM32U5X9J_LCD_YRES);
   uint32_t x;
@@ -272,7 +272,7 @@ static void stm32u5x9j_lcd_rect_cpu(uint32_t x0, uint32_t y0,
     }
 }
 
-static void stm32u5x9j_lcd_solidfill(uint32_t color)
+static void stm32_lcd_solidfill(uint32_t color)
 {
 #if STM32U5X9J_LCD_BPP == 32
   int ret;
@@ -282,30 +282,30 @@ static void stm32u5x9j_lcd_solidfill(uint32_t color)
                         STM32U5X9J_LCD_LAYER_PIXELS);
   if (ret < 0)
     {
-      stm32u5x9j_lcd_fill_cpu(color);
+      stm32_lcd_fill_cpu(color);
     }
 #else
-  stm32u5x9j_lcd_fill_cpu(color);
+  stm32_lcd_fill_cpu(color);
 #endif
 }
 
-static void stm32u5x9j_lcd_rgbrect(void)
+static void stm32_lcd_rgbrect(void)
 {
-  stm32u5x9j_lcd_rect_cpu(0, 0, 160, 160, 0xffff0000);
-  stm32u5x9j_lcd_rect_cpu(160, 160, 160, 160, 0xff00ff00);
-  stm32u5x9j_lcd_rect_cpu(320, 320, 160, 160, 0xff0000ff);
+  stm32_lcd_rect_cpu(0, 0, 160, 160, 0xffff0000);
+  stm32_lcd_rect_cpu(160, 160, 160, 160, 0xff00ff00);
+  stm32_lcd_rect_cpu(320, 320, 160, 160, 0xff0000ff);
 }
 #endif
 
-static void stm32u5x9j_lcd_colorbar_frame(uintptr_t fbaddr)
+static void stm32_lcd_colorbar_frame(uintptr_t fbaddr)
 {
   static const uint32_t colors[8] =
     {
       0xffffffff, 0xffffff00, 0xff00ffff, 0xff00ff00,
       0xffff00ff, 0xffff0000, 0xff0000ff, 0xff000000
     };
-  FAR stm32u5x9j_lcd_pixel_t *fb =
-    (FAR stm32u5x9j_lcd_pixel_t *)fbaddr;
+  FAR stm32_lcd_pixel_t *fb =
+    (FAR stm32_lcd_pixel_t *)fbaddr;
   uint32_t x;
   uint32_t y;
 
@@ -314,62 +314,62 @@ static void stm32u5x9j_lcd_colorbar_frame(uintptr_t fbaddr)
       for (x = 0; x < STM32U5X9J_LCD_XRES; x++)
         {
           fb[y * STM32U5X9J_LCD_LAYER_PIXELS + x] =
-            stm32u5x9j_lcd_color(colors[(x * nitems(colors)) /
+            stm32_lcd_color(colors[(x * nitems(colors)) /
                                  STM32U5X9J_LCD_XRES]);
         }
     }
 }
 
-static void stm32u5x9j_lcd_colorbar(void)
+static void stm32_lcd_colorbar(void)
 {
   uint32_t i;
 
   for (i = 0; i < STM32U5X9J_LCD_FB_COUNT; i++)
     {
-      stm32u5x9j_lcd_colorbar_frame(stm32u5x9j_lcd_fb(i));
+      stm32_lcd_colorbar_frame(stm32_lcd_fb(i));
     }
 
   syslog(LOG_INFO, "stm32u5x9j: LCD framebuffer colorbar done\n");
 }
 
 #ifdef CONFIG_STM32U5X9J_DK_LCD_PATTERN
-static void stm32u5x9j_lcd_pattern(void)
+static void stm32_lcd_pattern(void)
 {
-  stm32u5x9j_lcd_solidfill(0xff000000);
-  stm32u5x9j_lcd_colorbar();
-  stm32u5x9j_lcd_rgbrect();
-  stm32u5x9j_lcd_clean_framebuffer();
+  stm32_lcd_solidfill(0xff000000);
+  stm32_lcd_colorbar();
+  stm32_lcd_rgbrect();
+  stm32_lcd_clean_framebuffer();
   syslog(LOG_INFO, "stm32u5x9j: LCD static pattern done\n");
 }
 #endif /* CONFIG_STM32U5X9J_DK_LCD_PATTERN */
 #endif
 
-static int stm32u5x9j_lcd_panel_short_write(uint8_t datatype,
+static int stm32_lcd_panel_short_write(uint8_t datatype,
                                             uint8_t command,
                                             uint8_t param)
 {
   return stm32_dsishortwrite(datatype, command, param);
 }
 
-static int stm32u5x9j_lcd_panel_long_write(uint8_t command,
+static int stm32_lcd_panel_long_write(uint8_t command,
                                            FAR const uint8_t *data,
                                            size_t len)
 {
   return stm32_dsilongwrite(command, data, len);
 }
 
-static void stm32u5x9j_lcd_panel_delay(unsigned int delay_ms)
+static void stm32_lcd_panel_delay(unsigned int delay_ms)
 {
   up_mdelay(delay_ms);
 }
 
-static int stm32u5x9j_lcd_panel_initialize(void)
+static int stm32_lcd_panel_initialize(void)
 {
   static const struct hx8379c_dsi_ops_s ops =
     {
-      .short_write = stm32u5x9j_lcd_panel_short_write,
-      .long_write  = stm32u5x9j_lcd_panel_long_write,
-      .delay_ms    = stm32u5x9j_lcd_panel_delay,
+      .short_write = stm32_lcd_panel_short_write,
+      .long_write  = stm32_lcd_panel_long_write,
+      .delay_ms    = stm32_lcd_panel_delay,
       .pixel_format = STM32U5X9J_LCD_PANEL_COLMOD,
     };
   int ret;
@@ -387,7 +387,7 @@ static int stm32u5x9j_lcd_panel_initialize(void)
  * Public Functions
  ****************************************************************************/
 
-int stm32u5x9j_lcd_initialize(void)
+int stm32_lcd_initialize(void)
 {
 #ifdef STM32U5X9J_LCD_USE_GFXMMU
   struct stm32_gfxmmu_config_s gfxmmu;
@@ -400,7 +400,7 @@ int stm32u5x9j_lcd_initialize(void)
   int ret;
 
 #ifdef CONFIG_STM32U5X9J_DK_HSPI_RAM
-  ret = stm32u5x9j_hspi1_psram_initialize();
+  ret = stm32_hspi1_psram_initialize();
   if (ret < 0)
     {
       return ret;
@@ -411,7 +411,7 @@ int stm32u5x9j_lcd_initialize(void)
 #  endif
 #endif
 
-  stm32u5x9j_lcd_prepare_panel();
+  stm32_lcd_prepare_panel();
 
   syslog(LOG_INFO,
          "stm32u5x9j: LCD fb-map=%s fb-format=%s fb-bpp=%u dsi-format=%s "
@@ -459,7 +459,7 @@ int stm32u5x9j_lcd_initialize(void)
       return ret;
     }
 
-  stm32u5x9j_lcd_release_panel();
+  stm32_lcd_release_panel();
 
   memset(&ltdc, 0, sizeof(ltdc));
   ltdc.fb_base       = STM32U5X9J_LCD_FB;
@@ -495,7 +495,7 @@ int stm32u5x9j_lcd_initialize(void)
 #else
   for (i = 0; i < STM32U5X9J_LCD_FB_COUNT; i++)
     {
-      stm32_mpu_ufbmem(stm32u5x9j_lcd_fb(i), STM32U5X9J_LCD_VFBLEN);
+      stm32_mpu_ufbmem(stm32_lcd_fb(i), STM32U5X9J_LCD_VFBLEN);
     }
 #endif
 
@@ -506,7 +506,7 @@ int stm32u5x9j_lcd_initialize(void)
       return ret;
     }
 
-  ret = stm32u5x9j_lcd_panel_initialize();
+  ret = stm32_lcd_panel_initialize();
   if (ret < 0)
     {
       return ret;
@@ -514,7 +514,7 @@ int stm32u5x9j_lcd_initialize(void)
 
 #if !defined(CONFIG_STM32U5X9J_DK_LCD_COLORBAR) && \
     !defined(CONFIG_STM32U5X9J_DK_LCD_PATTERN)
-  stm32u5x9j_lcd_clear_framebuffer();
+  stm32_lcd_clear_framebuffer();
 #endif
 
   ret = stm32_dsienableltdc();
@@ -539,10 +539,10 @@ int stm32u5x9j_lcd_initialize(void)
     }
 
 #ifdef CONFIG_STM32U5X9J_DK_LCD_PATTERN
-  stm32u5x9j_lcd_pattern();
+  stm32_lcd_pattern();
 #elif defined(CONFIG_STM32U5X9J_DK_LCD_COLORBAR)
-  stm32u5x9j_lcd_colorbar();
-  stm32u5x9j_lcd_clean_framebuffer();
+  stm32_lcd_colorbar();
+  stm32_lcd_clean_framebuffer();
 #endif
 
   syslog(LOG_INFO, "stm32u5x9j: /dev/fb0 framebuffer virt=0x%08" PRIxPTR

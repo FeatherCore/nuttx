@@ -83,12 +83,12 @@ static FAR struct i2c_master_s *g_i2c5;
  * Private Function Prototypes
  ****************************************************************************/
 
-static ssize_t stm32u5x9j_temp_read(FAR struct file *filep,
+static ssize_t stm32_temp_read(FAR struct file *filep,
                                     FAR char *buffer, size_t buflen);
-static ssize_t stm32u5x9j_range_read(FAR struct file *filep,
+static ssize_t stm32_range_read(FAR struct file *filep,
                                      FAR char *buffer, size_t buflen);
 #ifndef CONFIG_STM32U5X9J_DK_TOUCH
-static ssize_t stm32u5x9j_touch_read(FAR struct file *filep,
+static ssize_t stm32_touch_read(FAR struct file *filep,
                                      FAR char *buffer, size_t buflen);
 #endif
 
@@ -100,14 +100,14 @@ static const struct file_operations g_temp_fops =
 {
   NULL,                 /* open */
   NULL,                 /* close */
-  stm32u5x9j_temp_read, /* read */
+  stm32_temp_read, /* read */
 };
 
 static const struct file_operations g_range_fops =
 {
   NULL,                  /* open */
   NULL,                  /* close */
-  stm32u5x9j_range_read, /* read */
+  stm32_range_read, /* read */
 };
 
 #ifndef CONFIG_STM32U5X9J_DK_TOUCH
@@ -115,7 +115,7 @@ static const struct file_operations g_touch_fops =
 {
   NULL,                  /* open */
   NULL,                  /* close */
-  stm32u5x9j_touch_read, /* read */
+  stm32_touch_read, /* read */
 };
 #endif
 
@@ -123,7 +123,7 @@ static const struct file_operations g_touch_fops =
  * Private Functions
  ****************************************************************************/
 
-static int stm32u5x9j_i2c_read(FAR struct i2c_master_s *i2c,
+static int stm32_i2c_read(FAR struct i2c_master_s *i2c,
                                uint8_t addr, FAR const uint8_t *reg,
                                int reglen, FAR uint8_t *buf, int buflen)
 {
@@ -159,7 +159,7 @@ static int stm32u5x9j_i2c_read(FAR struct i2c_master_s *i2c,
   return I2C_TRANSFER(i2c, msg, 1);
 }
 
-static int stm32u5x9j_i2c_write(FAR struct i2c_master_s *i2c,
+static int stm32_i2c_write(FAR struct i2c_master_s *i2c,
                                 uint8_t addr, FAR const uint8_t *reg,
                                 int reglen, FAR const uint8_t *buf,
                                 int buflen)
@@ -189,19 +189,19 @@ static int stm32u5x9j_i2c_write(FAR struct i2c_master_s *i2c,
   return I2C_TRANSFER(i2c, &msg, 1);
 }
 
-static int stm32u5x9j_read_u8(FAR struct i2c_master_s *i2c, uint8_t addr,
+static int stm32_read_u8(FAR struct i2c_master_s *i2c, uint8_t addr,
                               uint8_t reg, FAR uint8_t *val)
 {
-  return stm32u5x9j_i2c_read(i2c, addr, &reg, 1, val, 1);
+  return stm32_i2c_read(i2c, addr, &reg, 1, val, 1);
 }
 
-static int stm32u5x9j_write_u8(FAR struct i2c_master_s *i2c, uint8_t addr,
+static int stm32_write_u8(FAR struct i2c_master_s *i2c, uint8_t addr,
                                uint8_t reg, uint8_t val)
 {
-  return stm32u5x9j_i2c_write(i2c, addr, &reg, 1, &val, 1);
+  return stm32_i2c_write(i2c, addr, &reg, 1, &val, 1);
 }
 
-static int stm32u5x9j_read_u16reg_u8(FAR struct i2c_master_s *i2c,
+static int stm32_read_u16reg_u8(FAR struct i2c_master_s *i2c,
                                       uint8_t addr, uint16_t reg,
                                       FAR uint8_t *val)
 {
@@ -210,10 +210,10 @@ static int stm32u5x9j_read_u16reg_u8(FAR struct i2c_master_s *i2c,
   regbuf[0] = reg >> 8;
   regbuf[1] = reg & 0xff;
 
-  return stm32u5x9j_i2c_read(i2c, addr, regbuf, 2, val, 1);
+  return stm32_i2c_read(i2c, addr, regbuf, 2, val, 1);
 }
 
-static int stm32u5x9j_write_u16reg_u8(FAR struct i2c_master_s *i2c,
+static int stm32_write_u16reg_u8(FAR struct i2c_master_s *i2c,
                                       uint8_t addr, uint16_t reg,
                                       uint8_t val)
 {
@@ -222,17 +222,17 @@ static int stm32u5x9j_write_u16reg_u8(FAR struct i2c_master_s *i2c,
   regbuf[0] = reg >> 8;
   regbuf[1] = reg & 0xff;
 
-  return stm32u5x9j_i2c_write(i2c, addr, regbuf, 2, &val, 1);
+  return stm32_i2c_write(i2c, addr, regbuf, 2, &val, 1);
 }
 
-static int stm32u5x9j_stts22h_configure(void)
+static int stm32_stts22h_configure(void)
 {
   uint8_t ctrl = STTS22H_CTRL_BDU | STTS22H_CTRL_IF_ADD_INC;
 
-  return stm32u5x9j_write_u8(g_i2c3, STTS22H_ADDR, STTS22H_CTRL, ctrl);
+  return stm32_write_u8(g_i2c3, STTS22H_ADDR, STTS22H_CTRL, ctrl);
 }
 
-static int stm32u5x9j_stts22h_oneshot(FAR int16_t *raw)
+static int stm32_stts22h_oneshot(FAR int16_t *raw)
 {
   uint8_t ctrl;
   uint8_t status;
@@ -241,7 +241,7 @@ static int stm32u5x9j_stts22h_oneshot(FAR int16_t *raw)
   int ret;
   int retry;
 
-  ret = stm32u5x9j_read_u8(g_i2c3, STTS22H_ADDR, STTS22H_CTRL, &ctrl);
+  ret = stm32_read_u8(g_i2c3, STTS22H_ADDR, STTS22H_CTRL, &ctrl);
   if (ret < 0)
     {
       return ret;
@@ -250,7 +250,7 @@ static int stm32u5x9j_stts22h_oneshot(FAR int16_t *raw)
   ctrl |= STTS22H_CTRL_BDU | STTS22H_CTRL_IF_ADD_INC |
           STTS22H_CTRL_ONE_SHOT;
 
-  ret = stm32u5x9j_write_u8(g_i2c3, STTS22H_ADDR, STTS22H_CTRL, ctrl);
+  ret = stm32_write_u8(g_i2c3, STTS22H_ADDR, STTS22H_CTRL, ctrl);
   if (ret < 0)
     {
       return ret;
@@ -258,7 +258,7 @@ static int stm32u5x9j_stts22h_oneshot(FAR int16_t *raw)
 
   for (retry = 0; retry < 50; retry++)
     {
-      ret = stm32u5x9j_read_u8(g_i2c3, STTS22H_ADDR, STTS22H_STATUS,
+      ret = stm32_read_u8(g_i2c3, STTS22H_ADDR, STTS22H_STATUS,
                                &status);
       if (ret < 0)
         {
@@ -267,7 +267,7 @@ static int stm32u5x9j_stts22h_oneshot(FAR int16_t *raw)
 
       if ((status & STTS22H_STATUS_BUSY) == 0)
         {
-          ret = stm32u5x9j_i2c_read(g_i2c3, STTS22H_ADDR, &reg, 1,
+          ret = stm32_i2c_read(g_i2c3, STTS22H_ADDR, &reg, 1,
                                     rawbuf, 2);
           if (ret < 0)
             {
@@ -284,7 +284,7 @@ static int stm32u5x9j_stts22h_oneshot(FAR int16_t *raw)
   return -ETIMEDOUT;
 }
 
-static int stm32u5x9j_vl53l5cx_wakeup(void)
+static int stm32_vl53l5cx_wakeup(void)
 {
   stm32_gpiowrite(GPIO_VL53L5CX_LP, false);
   up_mdelay(2);
@@ -294,34 +294,34 @@ static int stm32u5x9j_vl53l5cx_wakeup(void)
   return OK;
 }
 
-static int stm32u5x9j_vl53l5cx_readid(FAR uint16_t *id,
+static int stm32_vl53l5cx_readid(FAR uint16_t *id,
                                       FAR uint8_t *device,
                                       FAR uint8_t *revision)
 {
   int ret;
 
-  ret = stm32u5x9j_write_u16reg_u8(g_i2c3, VL53L5CX_ADDR,
+  ret = stm32_write_u16reg_u8(g_i2c3, VL53L5CX_ADDR,
                                    VL53L5CX_BANK_REG, 0x00);
   if (ret < 0)
     {
       return ret;
     }
 
-  ret = stm32u5x9j_read_u16reg_u8(g_i2c3, VL53L5CX_ADDR,
+  ret = stm32_read_u16reg_u8(g_i2c3, VL53L5CX_ADDR,
                                   VL53L5CX_DEVICE_REG, device);
   if (ret < 0)
     {
       return ret;
     }
 
-  ret = stm32u5x9j_read_u16reg_u8(g_i2c3, VL53L5CX_ADDR,
+  ret = stm32_read_u16reg_u8(g_i2c3, VL53L5CX_ADDR,
                                   VL53L5CX_REVISION_REG, revision);
   if (ret < 0)
     {
       return ret;
     }
 
-  ret = stm32u5x9j_write_u16reg_u8(g_i2c3, VL53L5CX_ADDR,
+  ret = stm32_write_u16reg_u8(g_i2c3, VL53L5CX_ADDR,
                                    VL53L5CX_BANK_REG, 0x02);
   if (ret < 0)
     {
@@ -332,7 +332,7 @@ static int stm32u5x9j_vl53l5cx_readid(FAR uint16_t *id,
   return OK;
 }
 
-static ssize_t stm32u5x9j_copyout(FAR struct file *filep, FAR char *buffer,
+static ssize_t stm32_copyout(FAR struct file *filep, FAR char *buffer,
                                   size_t buflen, FAR const char *line)
 {
   size_t len;
@@ -353,7 +353,7 @@ static ssize_t stm32u5x9j_copyout(FAR struct file *filep, FAR char *buffer,
   return len;
 }
 
-static ssize_t stm32u5x9j_temp_read(FAR struct file *filep,
+static ssize_t stm32_temp_read(FAR struct file *filep,
                                     FAR char *buffer, size_t buflen)
 {
   uint8_t whoami;
@@ -361,7 +361,7 @@ static ssize_t stm32u5x9j_temp_read(FAR struct file *filep,
   int16_t raw;
   int ret;
 
-  ret = stm32u5x9j_read_u8(g_i2c3, STTS22H_ADDR, STTS22H_WHOAMI, &whoami);
+  ret = stm32_read_u8(g_i2c3, STTS22H_ADDR, STTS22H_WHOAMI, &whoami);
   if (ret < 0)
     {
       return ret;
@@ -372,7 +372,7 @@ static ssize_t stm32u5x9j_temp_read(FAR struct file *filep,
       return -ENODEV;
     }
 
-  ret = stm32u5x9j_stts22h_oneshot(&raw);
+  ret = stm32_stts22h_oneshot(&raw);
   if (ret < 0)
     {
       return ret;
@@ -383,10 +383,10 @@ static ssize_t stm32u5x9j_temp_read(FAR struct file *filep,
            " oneshot=ok bdu=1 auto_increment=1\n",
            whoami, raw, (int32_t)raw * 10);
 
-  return stm32u5x9j_copyout(filep, buffer, buflen, line);
+  return stm32_copyout(filep, buffer, buflen, line);
 }
 
-static ssize_t stm32u5x9j_range_read(FAR struct file *filep,
+static ssize_t stm32_range_read(FAR struct file *filep,
                                      FAR char *buffer, size_t buflen)
 {
   uint16_t id;
@@ -395,7 +395,7 @@ static ssize_t stm32u5x9j_range_read(FAR struct file *filep,
   char line[160];
   int ret;
 
-  ret = stm32u5x9j_vl53l5cx_readid(&id, &device, &revision);
+  ret = stm32_vl53l5cx_readid(&id, &device, &revision);
   if (ret < 0)
     {
       return ret;
@@ -407,11 +407,11 @@ static ssize_t stm32u5x9j_range_read(FAR struct file *filep,
            id, device, revision, id == VL53L5CX_ID, VL53L5CX_ZONES,
            VL53L5CX_RANGING_ERR);
 
-  return stm32u5x9j_copyout(filep, buffer, buflen, line);
+  return stm32_copyout(filep, buffer, buflen, line);
 }
 
 #ifndef CONFIG_STM32U5X9J_DK_TOUCH
-static ssize_t stm32u5x9j_touch_read(FAR struct file *filep,
+static ssize_t stm32_touch_read(FAR struct file *filep,
                                      FAR char *buffer, size_t buflen)
 {
   uint8_t buf[SITRONIX_BUFSIZE];
@@ -420,7 +420,7 @@ static ssize_t stm32u5x9j_touch_read(FAR struct file *filep,
   char line[80];
   int ret;
 
-  ret = stm32u5x9j_i2c_read(g_i2c5, SITRONIX_ADDR, NULL, 0,
+  ret = stm32_i2c_read(g_i2c5, SITRONIX_ADDR, NULL, 0,
                             buf, sizeof(buf));
   if (ret < 0)
     {
@@ -433,7 +433,7 @@ static ssize_t stm32u5x9j_touch_read(FAR struct file *filep,
   snprintf(line, sizeof(line), "sitronix id=0x%02x touches=%u x=%lu y=%lu\n",
            buf[0], buf[1], (unsigned long)x, (unsigned long)y);
 
-  return stm32u5x9j_copyout(filep, buffer, buflen, line);
+  return stm32_copyout(filep, buffer, buflen, line);
 }
 #endif
 
@@ -441,7 +441,7 @@ static ssize_t stm32u5x9j_touch_read(FAR struct file *filep,
  * Public Functions
  ****************************************************************************/
 
-int stm32u5x9j_i2c_probes_initialize(FAR struct i2c_master_s *i2c3,
+int stm32_i2c_probes_initialize(FAR struct i2c_master_s *i2c3,
                                      FAR struct i2c_master_s *i2c5)
 {
 #ifdef CONFIG_STM32U5X9J_DK_VL53L5CX
@@ -489,7 +489,7 @@ int stm32u5x9j_i2c_probes_initialize(FAR struct i2c_master_s *i2c3,
 #endif
 
 #ifdef CONFIG_STM32U5X9J_DK_STTS22H
-  ret = stm32u5x9j_read_u8(g_i2c3, STTS22H_ADDR, STTS22H_WHOAMI, &tempid);
+  ret = stm32_read_u8(g_i2c3, STTS22H_ADDR, STTS22H_WHOAMI, &tempid);
   if (ret == OK)
     {
       syslog(LOG_INFO, "stm32u5x9j: STTS22H id=0x%02x\n", tempid);
@@ -501,7 +501,7 @@ int stm32u5x9j_i2c_probes_initialize(FAR struct i2c_master_s *i2c3,
                  tempid, STTS22H_ID);
         }
 
-      ret = stm32u5x9j_stts22h_configure();
+      ret = stm32_stts22h_configure();
       if (ret < 0)
         {
           syslog(LOG_ERR, "ERROR: STTS22H configure failed: %d\n", ret);
@@ -510,13 +510,13 @@ int stm32u5x9j_i2c_probes_initialize(FAR struct i2c_master_s *i2c3,
 #endif
 
 #ifdef CONFIG_STM32U5X9J_DK_VL53L5CX
-  ret = stm32u5x9j_vl53l5cx_wakeup();
+  ret = stm32_vl53l5cx_wakeup();
   if (ret < 0)
     {
       syslog(LOG_ERR, "ERROR: VL53L5CX wakeup failed: %d\n", ret);
     }
 
-  ret = stm32u5x9j_vl53l5cx_readid(&rangeid, &range_device,
+  ret = stm32_vl53l5cx_readid(&rangeid, &range_device,
                                    &range_revision);
   if (ret == OK)
     {
@@ -535,7 +535,7 @@ int stm32u5x9j_i2c_probes_initialize(FAR struct i2c_master_s *i2c3,
 #endif
 
 #ifndef CONFIG_STM32U5X9J_DK_TOUCH
-  ret = stm32u5x9j_i2c_read(g_i2c5, SITRONIX_ADDR, NULL, 0,
+  ret = stm32_i2c_read(g_i2c5, SITRONIX_ADDR, NULL, 0,
                             touchid, sizeof(touchid));
   if (ret == OK)
     {

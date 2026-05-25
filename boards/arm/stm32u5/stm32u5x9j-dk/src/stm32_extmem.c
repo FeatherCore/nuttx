@@ -40,7 +40,7 @@
  ****************************************************************************/
 
 #ifdef CONFIG_STM32U5X9J_DK_OSPI_MTD
-struct stm32u5x9j_xip_mtd_s
+struct stm32_xip_mtd_s
 {
   struct mtd_dev_s mtd;
   uintptr_t        base;
@@ -53,18 +53,18 @@ struct stm32u5x9j_xip_mtd_s
  ****************************************************************************/
 
 #ifdef CONFIG_STM32U5X9J_DK_OSPI_MTD
-static ssize_t stm32u5x9j_xip_bread(FAR struct mtd_dev_s *dev,
+static ssize_t stm32_xip_bread(FAR struct mtd_dev_s *dev,
                                     off_t startblock, size_t nblocks,
                                     FAR uint8_t *buffer);
-static int stm32u5x9j_xip_erase(FAR struct mtd_dev_s *dev,
+static int stm32_xip_erase(FAR struct mtd_dev_s *dev,
                                 off_t startblock, size_t nblocks);
-static ssize_t stm32u5x9j_xip_bwrite(FAR struct mtd_dev_s *dev,
+static ssize_t stm32_xip_bwrite(FAR struct mtd_dev_s *dev,
                                      off_t startblock, size_t nblocks,
                                      FAR const uint8_t *buffer);
-static ssize_t stm32u5x9j_xip_read(FAR struct mtd_dev_s *dev,
+static ssize_t stm32_xip_read(FAR struct mtd_dev_s *dev,
                                   off_t offset, size_t nbytes,
                                   FAR uint8_t *buffer);
-static int stm32u5x9j_xip_ioctl(FAR struct mtd_dev_s *dev,
+static int stm32_xip_ioctl(FAR struct mtd_dev_s *dev,
                                 int cmd, unsigned long arg);
 #endif
 
@@ -73,15 +73,15 @@ static int stm32u5x9j_xip_ioctl(FAR struct mtd_dev_s *dev,
  ****************************************************************************/
 
 #ifdef CONFIG_STM32U5X9J_DK_OSPI_MTD
-static struct stm32u5x9j_xip_mtd_s g_ospi_mtd =
+static struct stm32_xip_mtd_s g_ospi_mtd =
 {
   .mtd =
     {
-      .erase  = stm32u5x9j_xip_erase,
-      .bread  = stm32u5x9j_xip_bread,
-      .bwrite = stm32u5x9j_xip_bwrite,
-      .read   = stm32u5x9j_xip_read,
-      .ioctl  = stm32u5x9j_xip_ioctl,
+      .erase  = stm32_xip_erase,
+      .bread  = stm32_xip_bread,
+      .bwrite = stm32_xip_bwrite,
+      .read   = stm32_xip_read,
+      .ioctl  = stm32_xip_ioctl,
       .name   = "stm32u5x9j-ospi1-nor",
     },
   .base = STM32U5X9J_OSPI1_NOR_MEM_BASE,
@@ -94,34 +94,34 @@ static struct stm32u5x9j_xip_mtd_s g_ospi_mtd =
  ****************************************************************************/
 
 #ifdef CONFIG_STM32U5X9J_DK_OSPI_MTD
-static ssize_t stm32u5x9j_xip_bread(FAR struct mtd_dev_s *dev,
+static ssize_t stm32_xip_bread(FAR struct mtd_dev_s *dev,
                                     off_t startblock, size_t nblocks,
                                     FAR uint8_t *buffer)
 {
-  return stm32u5x9j_xip_read(dev, startblock * MX25UM51245G_BLOCK_SIZE,
+  return stm32_xip_read(dev, startblock * MX25UM51245G_BLOCK_SIZE,
                              nblocks * MX25UM51245G_BLOCK_SIZE, buffer) /
          MX25UM51245G_BLOCK_SIZE;
 }
 
-static int stm32u5x9j_xip_erase(FAR struct mtd_dev_s *dev,
+static int stm32_xip_erase(FAR struct mtd_dev_s *dev,
                                 off_t startblock, size_t nblocks)
 {
   return -EROFS;
 }
 
-static ssize_t stm32u5x9j_xip_bwrite(FAR struct mtd_dev_s *dev,
+static ssize_t stm32_xip_bwrite(FAR struct mtd_dev_s *dev,
                                      off_t startblock, size_t nblocks,
                                      FAR const uint8_t *buffer)
 {
   return -EROFS;
 }
 
-static ssize_t stm32u5x9j_xip_read(FAR struct mtd_dev_s *dev,
+static ssize_t stm32_xip_read(FAR struct mtd_dev_s *dev,
                                   off_t offset, size_t nbytes,
                                   FAR uint8_t *buffer)
 {
-  FAR struct stm32u5x9j_xip_mtd_s *priv =
-    (FAR struct stm32u5x9j_xip_mtd_s *)dev;
+  FAR struct stm32_xip_mtd_s *priv =
+    (FAR struct stm32_xip_mtd_s *)dev;
 
   if (offset < 0 || offset >= priv->size)
     {
@@ -137,11 +137,11 @@ static ssize_t stm32u5x9j_xip_read(FAR struct mtd_dev_s *dev,
   return nbytes;
 }
 
-static int stm32u5x9j_xip_ioctl(FAR struct mtd_dev_s *dev,
+static int stm32_xip_ioctl(FAR struct mtd_dev_s *dev,
                                 int cmd, unsigned long arg)
 {
-  FAR struct stm32u5x9j_xip_mtd_s *priv =
-    (FAR struct stm32u5x9j_xip_mtd_s *)dev;
+  FAR struct stm32_xip_mtd_s *priv =
+    (FAR struct stm32_xip_mtd_s *)dev;
 
   switch (cmd)
     {
@@ -202,12 +202,12 @@ static int stm32u5x9j_xip_ioctl(FAR struct mtd_dev_s *dev,
  * Public Functions
  ****************************************************************************/
 
-int stm32u5x9j_extmem_initialize(void)
+int stm32_extmem_initialize(void)
 {
   int ret;
 
 #ifdef CONFIG_STM32U5X9J_DK_OSPI_NOR
-  ret = stm32u5x9j_ospi1_nor_initialize();
+  ret = stm32_ospi1_nor_initialize();
   if (ret < 0)
     {
       return ret;
@@ -223,7 +223,7 @@ int stm32u5x9j_extmem_initialize(void)
 #endif
 
 #ifdef CONFIG_STM32U5X9J_DK_OSPI_DIAG
-  ret = stm32u5x9j_ospi_diag_initialize();
+  ret = stm32_ospi_diag_initialize();
   if (ret < 0)
     {
       syslog(LOG_ERR, "ERROR: register /dev/ospi0 failed: %d\n", ret);
@@ -233,7 +233,7 @@ int stm32u5x9j_extmem_initialize(void)
 #endif
 
 #ifdef CONFIG_STM32U5X9J_DK_HSPI_RAM
-  ret = stm32u5x9j_hspi1_psram_initialize();
+  ret = stm32_hspi1_psram_initialize();
   if (ret < 0)
     {
       syslog(LOG_ERR, "stm32u5x9j: HSPI1 PSRAM init failed: %d\n", ret);

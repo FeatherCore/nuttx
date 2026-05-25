@@ -31,7 +31,7 @@ ifeq ($(CONFIG_BUILD_PROTECTED),y)
   # The board heap overrides must be linked before libkarch's
   # stm32_allocateheap.o is selected.
 
-  EXTRA_OBJS += board$(DELIM)stm32u5x9j_heap$(OBJEXT)
+  EXTRA_OBJS += board$(DELIM)stm32_heap$(OBJEXT)
 else
   ARCHSCRIPT += $(BOARD_DIR)$(DELIM)scripts$(DELIM)flash.ld
 endif

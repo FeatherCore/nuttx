@@ -5,22 +5,22 @@
 #
 # ##############################################################################
 
-set(SRCS stm32n6_bringup.c stm32n6_autoleds.c stm32n6570_heap.c)
+set(SRCS stm32_bringup.c stm32_autoleds.c stm32_heap.c)
 
 if(CONFIG_STM32N6_XSPI)
-  list(APPEND SRCS stm32n6_extmem.c stm32n6570_xspi.c)
+  list(APPEND SRCS stm32_extmem.c stm32_xspi.c)
 endif()
 
 if(CONFIG_BOARDCTL_BOOT_IMAGE)
-  list(APPEND SRCS stm32n6_boot_image.c)
+  list(APPEND SRCS stm32_boot_image.c)
 endif()
 
 if(CONFIG_STM32N6570_DK_LCD)
-  list(APPEND SRCS stm32n6570_lcd.c)
+  list(APPEND SRCS stm32_lcd.c)
 endif()
 
 if(CONFIG_STM32N6570_DK_GT911)
-  list(APPEND SRCS stm32n6570_touch.c)
+  list(APPEND SRCS stm32_touchscreen.c)
 endif()
 
 target_sources(board PRIVATE ${SRCS})

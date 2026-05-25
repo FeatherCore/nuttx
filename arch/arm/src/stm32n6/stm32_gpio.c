@@ -39,6 +39,7 @@
 #include "arm_internal.h"
 #include "chip.h"
 #include "stm32_gpio.h"
+#include "stm32_rcc.h"
 
 /****************************************************************************
  * Private Data
@@ -69,6 +70,22 @@ const uint32_t g_gpiobase[STM32N6_NPORTS] =
   STM32_GPIOO_BASE,     /* Port O - index 9 */
   STM32_GPIOP_BASE,     /* Port P - index 10 */
   STM32_GPIOQ_BASE,     /* Port Q - index 11 */
+};
+
+static const uint32_t g_gpioclock[STM32N6_NPORTS] =
+{
+  RCC_AHB4ENR_GPIOAEN,  /* Port A - index 0 */
+  RCC_AHB4ENR_GPIOBEN,  /* Port B - index 1 */
+  RCC_AHB4ENR_GPIOCEN,  /* Port C - index 2 */
+  RCC_AHB4ENR_GPIODEN,  /* Port D - index 3 */
+  RCC_AHB4ENR_GPIOEEN,  /* Port E - index 4 */
+  RCC_AHB4ENR_GPIOFEN,  /* Port F - index 5 */
+  RCC_AHB4ENR_GPIOGEN,  /* Port G - index 6 */
+  RCC_AHB4ENR_GPIOHEN,  /* Port H - index 7 */
+  RCC_AHB4ENR_GPIONEN,  /* Port N - index 8 */
+  RCC_AHB4ENR_GPIOOEN,  /* Port O - index 9 */
+  RCC_AHB4ENR_GPIOPEN,  /* Port P - index 10 */
+  RCC_AHB4ENR_GPIOQEN,  /* Port Q - index 11 */
 };
 
 /****************************************************************************
@@ -118,6 +135,14 @@ int stm32_configgpio(uint32_t cfgset)
   /* Get the port base address */
 
   base = g_gpiobase[port];
+
+  /* The common STM32N6 RCC path enables GPIO clocks during boot.  Some
+   * board bring-up paths still enable clocks lazily, so make GPIO
+   * configuration self-contained as well.
+   */
+
+  putreg32(g_gpioclock[port], STM32_RCC_AHB4ENSR);
+  (void)getreg32(STM32_RCC_AHB4ENR);
 
   /* Get the pin number and select the port configuration register for that
    * pin

@@ -177,41 +177,41 @@ int stm32_bringup(void);
 
 #if defined(CONFIG_STM32U5X9J_DK_OSPI_NOR) || \
     defined(CONFIG_STM32U5X9J_DK_HSPI_RAM)
-int stm32u5x9j_extmem_initialize(void);
+int stm32_extmem_initialize(void);
 #endif
 
 #ifdef CONFIG_STM32U5X9J_DK_OSPI_NOR
-int stm32u5x9j_ospi1_nor_initialize(void);
+int stm32_ospi1_nor_initialize(void);
 #ifdef CONFIG_STM32U5X9J_DK_OSPI_DIAG
-int stm32u5x9j_ospi_diag_initialize(void);
+int stm32_ospi_diag_initialize(void);
 #endif
 #endif
 
 #ifdef CONFIG_STM32U5X9J_DK_HSPI_RAM
-int stm32u5x9j_hspi1_psram_initialize(void);
-bool stm32u5x9j_hspi1_psram_is_mapped(void);
+int stm32_hspi1_psram_initialize(void);
+bool stm32_hspi1_psram_is_mapped(void);
 #ifdef CONFIG_STM32U5X9J_DK_HSPI_DIAG
-int stm32u5x9j_hspi_diag_initialize(void);
+int stm32_hspi_diag_initialize(void);
 #endif
 #endif
 
 #ifdef CONFIG_STM32U5X9J_DK_EMMC
-int stm32u5x9j_emmc_initialize(void);
+int stm32_emmc_initialize(void);
 #endif
 
 #ifdef CONFIG_STM32U5X9J_DK_LCD
-int stm32u5x9j_lcd_initialize(void);
+int stm32_lcd_initialize(void);
 #endif
 
 #ifdef HAVE_I2C_PROBES
 struct i2c_master_s;
-int stm32u5x9j_i2c_probes_initialize(FAR struct i2c_master_s *i2c3,
+int stm32_i2c_probes_initialize(FAR struct i2c_master_s *i2c3,
                                      FAR struct i2c_master_s *i2c5);
 #endif
 
 #ifdef CONFIG_STM32U5X9J_DK_TOUCH
 struct i2c_master_s;
-int stm32u5x9j_touch_initialize(FAR struct i2c_master_s *i2c5);
+int stm32_touchscreen_initialize(FAR struct i2c_master_s *i2c5);
 #endif
 
 #endif /* __ASSEMBLY__ */

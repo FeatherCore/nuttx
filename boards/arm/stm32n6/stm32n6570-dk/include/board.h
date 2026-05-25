@@ -61,134 +61,134 @@
 
 /* GPIO pin selections ******************************************************/
 
-#define GPIO_LTDC_PINCFG(p)            (STM32N6_GPIO_ALT | \
-                                        STM32N6_GPIO_AF14 | \
-                                        STM32N6_GPIO_PUSHPULL | \
-                                        STM32N6_GPIO_SPEED_HIGH | \
-                                        STM32N6_GPIO_FLOAT | (p))
+#define GPIO_LTDC_PINCFG(p)            (GPIO_ALT | \
+                                        GPIO_AF14 | \
+                                        GPIO_PUSHPULL | \
+                                        GPIO_SPEED_50MHZ | \
+                                        GPIO_FLOAT | (p))
 
 #define GPIO_LTDC_R0                   GPIO_LTDC_PINCFG( \
-                                        STM32N6_GPIO_PORTG | \
-                                        STM32N6_GPIO_PIN0)
+                                        GPIO_PORTG | \
+                                        GPIO_PIN0)
 #define GPIO_LTDC_R1                   GPIO_LTDC_PINCFG( \
-                                        STM32N6_GPIO_PORTD | \
-                                        STM32N6_GPIO_PIN9)
+                                        GPIO_PORTD | \
+                                        GPIO_PIN9)
 #define GPIO_LTDC_R2                   GPIO_LTDC_PINCFG( \
-                                        STM32N6_GPIO_PORTD | \
-                                        STM32N6_GPIO_PIN15)
+                                        GPIO_PORTD | \
+                                        GPIO_PIN15)
 #define GPIO_LTDC_R3                   GPIO_LTDC_PINCFG( \
-                                        STM32N6_GPIO_PORTB | \
-                                        STM32N6_GPIO_PIN4)
+                                        GPIO_PORTB | \
+                                        GPIO_PIN4)
 #define GPIO_LTDC_R4                   GPIO_LTDC_PINCFG( \
-                                        STM32N6_GPIO_PORTH | \
-                                        STM32N6_GPIO_PIN4)
+                                        GPIO_PORTH | \
+                                        GPIO_PIN4)
 #define GPIO_LTDC_R5                   GPIO_LTDC_PINCFG( \
-                                        STM32N6_GPIO_PORTA | \
-                                        STM32N6_GPIO_PIN15)
+                                        GPIO_PORTA | \
+                                        GPIO_PIN15)
 #define GPIO_LTDC_R6                   GPIO_LTDC_PINCFG( \
-                                        STM32N6_GPIO_PORTG | \
-                                        STM32N6_GPIO_PIN11)
+                                        GPIO_PORTG | \
+                                        GPIO_PIN11)
 #define GPIO_LTDC_R7                   GPIO_LTDC_PINCFG( \
-                                        STM32N6_GPIO_PORTD | \
-                                        STM32N6_GPIO_PIN8)
+                                        GPIO_PORTD | \
+                                        GPIO_PIN8)
 
 #define GPIO_LTDC_G0                   GPIO_LTDC_PINCFG( \
-                                        STM32N6_GPIO_PORTG | \
-                                        STM32N6_GPIO_PIN12)
+                                        GPIO_PORTG | \
+                                        GPIO_PIN12)
 #define GPIO_LTDC_G1                   GPIO_LTDC_PINCFG( \
-                                        STM32N6_GPIO_PORTG | \
-                                        STM32N6_GPIO_PIN1)
+                                        GPIO_PORTG | \
+                                        GPIO_PIN1)
 #define GPIO_LTDC_G2                   GPIO_LTDC_PINCFG( \
-                                        STM32N6_GPIO_PORTA | \
-                                        STM32N6_GPIO_PIN1)
+                                        GPIO_PORTA | \
+                                        GPIO_PIN1)
 #define GPIO_LTDC_G3                   GPIO_LTDC_PINCFG( \
-                                        STM32N6_GPIO_PORTA | \
-                                        STM32N6_GPIO_PIN0)
+                                        GPIO_PORTA | \
+                                        GPIO_PIN0)
 #define GPIO_LTDC_G4                   GPIO_LTDC_PINCFG( \
-                                        STM32N6_GPIO_PORTB | \
-                                        STM32N6_GPIO_PIN15)
+                                        GPIO_PORTB | \
+                                        GPIO_PIN15)
 #define GPIO_LTDC_G5                   GPIO_LTDC_PINCFG( \
-                                        STM32N6_GPIO_PORTB | \
-                                        STM32N6_GPIO_PIN12)
+                                        GPIO_PORTB | \
+                                        GPIO_PIN12)
 #define GPIO_LTDC_G6                   GPIO_LTDC_PINCFG( \
-                                        STM32N6_GPIO_PORTB | \
-                                        STM32N6_GPIO_PIN11)
+                                        GPIO_PORTB | \
+                                        GPIO_PIN11)
 #define GPIO_LTDC_G7                   GPIO_LTDC_PINCFG( \
-                                        STM32N6_GPIO_PORTG | \
-                                        STM32N6_GPIO_PIN8)
+                                        GPIO_PORTG | \
+                                        GPIO_PIN8)
 
 #define GPIO_LTDC_B1                   GPIO_LTDC_PINCFG( \
-                                        STM32N6_GPIO_PORTA | \
-                                        STM32N6_GPIO_PIN7)
+                                        GPIO_PORTA | \
+                                        GPIO_PIN7)
 #define GPIO_LTDC_B2                   GPIO_LTDC_PINCFG( \
-                                        STM32N6_GPIO_PORTB | \
-                                        STM32N6_GPIO_PIN2)
+                                        GPIO_PORTB | \
+                                        GPIO_PIN2)
 #define GPIO_LTDC_B3                   GPIO_LTDC_PINCFG( \
-                                        STM32N6_GPIO_PORTG | \
-                                        STM32N6_GPIO_PIN6)
+                                        GPIO_PORTG | \
+                                        GPIO_PIN6)
 #define GPIO_LTDC_B4                   GPIO_LTDC_PINCFG( \
-                                        STM32N6_GPIO_PORTH | \
-                                        STM32N6_GPIO_PIN3)
+                                        GPIO_PORTH | \
+                                        GPIO_PIN3)
 #define GPIO_LTDC_B5                   GPIO_LTDC_PINCFG( \
-                                        STM32N6_GPIO_PORTH | \
-                                        STM32N6_GPIO_PIN6)
+                                        GPIO_PORTH | \
+                                        GPIO_PIN6)
 #define GPIO_LTDC_B6                   GPIO_LTDC_PINCFG( \
-                                        STM32N6_GPIO_PORTA | \
-                                        STM32N6_GPIO_PIN8)
+                                        GPIO_PORTA | \
+                                        GPIO_PIN8)
 #define GPIO_LTDC_B7                   GPIO_LTDC_PINCFG( \
-                                        STM32N6_GPIO_PORTA | \
-                                        STM32N6_GPIO_PIN2)
+                                        GPIO_PORTA | \
+                                        GPIO_PIN2)
 
 #define GPIO_LTDC_HSYNC                GPIO_LTDC_PINCFG( \
-                                        STM32N6_GPIO_PORTB | \
-                                        STM32N6_GPIO_PIN14)
+                                        GPIO_PORTB | \
+                                        GPIO_PIN14)
 #define GPIO_LTDC_VSYNC                GPIO_LTDC_PINCFG( \
-                                        STM32N6_GPIO_PORTE | \
-                                        STM32N6_GPIO_PIN11)
+                                        GPIO_PORTE | \
+                                        GPIO_PIN11)
 #define GPIO_LTDC_CLK                  GPIO_LTDC_PINCFG( \
-                                        STM32N6_GPIO_PORTB | \
-                                        STM32N6_GPIO_PIN13)
+                                        GPIO_PORTB | \
+                                        GPIO_PIN13)
 
-#define GPIO_LCD_OUTCFG_VALUE(p, v)    (STM32N6_GPIO_OUTPUT | \
-                                        STM32N6_GPIO_PUSHPULL | \
-                                        STM32N6_GPIO_SPEED_HIGH | \
-                                        STM32N6_GPIO_FLOAT | (v) | (p))
+#define GPIO_LCD_OUTCFG_VALUE(p, v)    (GPIO_OUTPUT | \
+                                        GPIO_PUSHPULL | \
+                                        GPIO_SPEED_50MHZ | \
+                                        GPIO_FLOAT | (v) | (p))
 #define GPIO_LCD_OUTCFG(p)             GPIO_LCD_OUTCFG_VALUE( \
-                                        p, STM32N6_GPIO_OUTPUT_SET)
+                                        p, GPIO_OUTPUT_SET)
 #define GPIO_LCD_OUTCFG_OFF(p)         GPIO_LCD_OUTCFG_VALUE( \
-                                        p, STM32N6_GPIO_OUTPUT_CLEAR)
+                                        p, GPIO_OUTPUT_CLEAR)
 
 #define GPIO_LCD_DISP_NRST             GPIO_LCD_OUTCFG( \
-                                        STM32N6_GPIO_PORTE | \
-                                        STM32N6_GPIO_PIN1)
+                                        GPIO_PORTE | \
+                                        GPIO_PIN1)
 #define GPIO_LCD_DISP_ONOFF            GPIO_LCD_OUTCFG( \
-                                        STM32N6_GPIO_PORTQ | \
-                                        STM32N6_GPIO_PIN3)
+                                        GPIO_PORTQ | \
+                                        GPIO_PIN3)
 #define GPIO_LCD_DISP_BL               GPIO_LCD_OUTCFG_OFF( \
-                                        STM32N6_GPIO_PORTQ | \
-                                        STM32N6_GPIO_PIN6)
+                                        GPIO_PORTQ | \
+                                        GPIO_PIN6)
 #define GPIO_LCD_DISP_EN               GPIO_LCD_OUTCFG_OFF( \
-                                        STM32N6_GPIO_PORTG | \
-                                        STM32N6_GPIO_PIN13)
+                                        GPIO_PORTG | \
+                                        GPIO_PIN13)
 
-#define GPIO_I2C2_SCL                  (STM32N6_GPIO_ALT | \
-                                        STM32N6_GPIO_AF4 | \
-                                        STM32N6_GPIO_OPENDRAIN | \
-                                        STM32N6_GPIO_SPEED_HIGH | \
-                                        STM32N6_GPIO_FLOAT | \
-                                        STM32N6_GPIO_PORTD | \
-                                        STM32N6_GPIO_PIN14)
-#define GPIO_I2C2_SDA                  (STM32N6_GPIO_ALT | \
-                                        STM32N6_GPIO_AF4 | \
-                                        STM32N6_GPIO_OPENDRAIN | \
-                                        STM32N6_GPIO_SPEED_HIGH | \
-                                        STM32N6_GPIO_FLOAT | \
-                                        STM32N6_GPIO_PORTD | \
-                                        STM32N6_GPIO_PIN4)
-#define GPIO_GT911_INT                 (STM32N6_GPIO_INPUT | \
-                                        STM32N6_GPIO_FLOAT | \
-                                        STM32N6_GPIO_PORTQ | \
-                                        STM32N6_GPIO_PIN4)
+#define GPIO_I2C2_SCL                  (GPIO_ALT | \
+                                        GPIO_AF4 | \
+                                        GPIO_OPENDRAIN | \
+                                        GPIO_SPEED_50MHZ | \
+                                        GPIO_FLOAT | \
+                                        GPIO_PORTD | \
+                                        GPIO_PIN14)
+#define GPIO_I2C2_SDA                  (GPIO_ALT | \
+                                        GPIO_AF4 | \
+                                        GPIO_OPENDRAIN | \
+                                        GPIO_SPEED_50MHZ | \
+                                        GPIO_FLOAT | \
+                                        GPIO_PORTD | \
+                                        GPIO_PIN4)
+#define GPIO_GT911_INT                 (GPIO_INPUT | \
+                                        GPIO_FLOAT | \
+                                        GPIO_PORTQ | \
+                                        GPIO_PIN4)
 #define GPIO_GT911_NRST                GPIO_LCD_DISP_NRST
 
 #define LED_STARTED        0

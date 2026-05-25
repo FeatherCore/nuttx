@@ -5,14 +5,22 @@
 #
 # ##############################################################################
 
-set(SRCS stm32h7rs_bringup.c stm32h7rs_autoleds.c stm32h7s78_heap.c)
+set(SRCS stm32_bringup.c stm32_autoleds.c stm32_heap.c)
 
 if(CONFIG_STM32H7RS_XSPI)
-  list(APPEND SRCS stm32h7rs_extmem.c stm32h7s78_xspi.c)
+  list(APPEND SRCS stm32_extmem.c stm32_xspi.c)
 endif()
 
 if(CONFIG_BOARDCTL_BOOT_IMAGE)
-  list(APPEND SRCS stm32h7rs_boot_image.c)
+  list(APPEND SRCS stm32_boot_image.c)
+endif()
+
+if(CONFIG_STM32H7S78_DK_LCD)
+  list(APPEND SRCS stm32_lcd.c)
+endif()
+
+if(CONFIG_STM32H7S78_DK_GT911)
+  list(APPEND SRCS stm32_touchscreen.c)
 endif()
 
 target_sources(board PRIVATE ${SRCS})

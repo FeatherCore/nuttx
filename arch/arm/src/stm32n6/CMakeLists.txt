@@ -40,19 +40,19 @@ if(CONFIG_BUILD_PROTECTED)
 endif()
 
 if(CONFIG_STM32N6_XSPI)
-  list(APPEND SRCS stm32n6_xspi.c)
+  list(APPEND SRCS stm32_xspi.c)
 endif()
 
 if(CONFIG_STM32N6_GPIO)
-  list(APPEND SRCS stm32n6_gpio.c)
+  list(APPEND SRCS stm32_gpio.c)
 endif()
 
 if(CONFIG_STM32N6_DISPLAY)
-  list(APPEND SRCS stm32n6_ltdc.c)
+  list(APPEND SRCS stm32_ltdc.c)
 endif()
 
 if(CONFIG_STM32N6_I2C)
-  list(APPEND SRCS stm32n6_i2c.c)
+  list(APPEND SRCS stm32_i2c.c)
 endif()
 
 else()

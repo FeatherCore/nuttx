@@ -7,22 +7,22 @@
 
 include $(TOPDIR)/Make.defs
 
-CSRCS = stm32h7rs_bringup.c stm32h7rs_autoleds.c stm32h7s78_heap.c
+CSRCS = stm32_bringup.c stm32_autoleds.c stm32_heap.c
 
 ifeq ($(CONFIG_STM32H7RS_XSPI),y)
-CSRCS += stm32h7rs_extmem.c stm32h7s78_xspi.c
+CSRCS += stm32_extmem.c stm32_xspi.c
 endif
 
 ifeq ($(CONFIG_STM32H7S78_DK_LCD),y)
-CSRCS += stm32h7s78_lcd.c
+CSRCS += stm32_lcd.c
 endif
 
 ifeq ($(CONFIG_STM32H7S78_DK_GT911),y)
-CSRCS += stm32h7s78_touch.c
+CSRCS += stm32_touchscreen.c
 endif
 
 ifeq ($(CONFIG_BOARDCTL_BOOT_IMAGE),y)
-CSRCS += stm32h7rs_boot_image.c
+CSRCS += stm32_boot_image.c
 endif
 
 include $(TOPDIR)/boards/Board.mk

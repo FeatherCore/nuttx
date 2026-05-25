@@ -36,7 +36,7 @@
  * Private Functions
  ****************************************************************************/
 
-static int stm32u5x9j_touch_attach(
+static int stm32_touch_attach(
                          FAR const struct sitronix_config_s *config,
                          xcpt_t isr, FAR void *arg)
 {
@@ -47,7 +47,7 @@ static int stm32u5x9j_touch_attach(
  * Public Functions
  ****************************************************************************/
 
-int stm32u5x9j_touch_initialize(FAR struct i2c_master_s *i2c5)
+int stm32_touchscreen_initialize(FAR struct i2c_master_s *i2c5)
 {
   static const struct sitronix_config_s config =
     {
@@ -56,7 +56,7 @@ int stm32u5x9j_touch_initialize(FAR struct i2c_master_s *i2c5)
       .xres      = STM32U5X9J_SITRONIX_XRES,
       .yres      = STM32U5X9J_SITRONIX_YRES,
       .poll_ms   = STM32U5X9J_SITRONIX_POLL_MSEC,
-      .attach    = stm32u5x9j_touch_attach,
+      .attach    = stm32_touch_attach,
     };
 
   if (i2c5 == NULL)

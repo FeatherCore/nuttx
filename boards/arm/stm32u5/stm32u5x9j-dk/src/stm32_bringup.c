@@ -49,7 +49,7 @@
  * Private Functions
  ****************************************************************************/
 
-static void stm32u5x9j_build_log(void)
+static void stm32_build_log(void)
 {
   struct utsname name;
 
@@ -126,7 +126,7 @@ int stm32_bringup(void)
 #endif
   int ret = OK;
 
-  stm32u5x9j_build_log();
+  stm32_build_log();
 
 #ifdef CONFIG_FS_PROCFS
   /* Mount the procfs file system */
@@ -160,7 +160,7 @@ int stm32_bringup(void)
 
 #if defined(CONFIG_STM32U5X9J_DK_OSPI_NOR) || \
     defined(CONFIG_STM32U5X9J_DK_HSPI_RAM)
-  ret = stm32u5x9j_extmem_initialize();
+  ret = stm32_extmem_initialize();
   if (ret < 0)
     {
       syslog(LOG_ERR, "ERROR: external memory bring-up failed: %d\n", ret);
@@ -168,7 +168,7 @@ int stm32_bringup(void)
 #ifdef CONFIG_STM32U5X9J_DK_HSPI_DIAG
   else
     {
-      ret = stm32u5x9j_hspi_diag_initialize();
+      ret = stm32_hspi_diag_initialize();
       if (ret < 0)
         {
           syslog(LOG_ERR, "ERROR: HSPI PSRAM diag failed: %d\n", ret);
@@ -178,7 +178,7 @@ int stm32_bringup(void)
 #endif
 
 #ifdef CONFIG_STM32U5X9J_DK_EMMC
-  ret = stm32u5x9j_emmc_initialize();
+  ret = stm32_emmc_initialize();
   if (ret < 0)
     {
       syslog(LOG_ERR, "ERROR: eMMC bring-up failed: %d\n", ret);
@@ -186,7 +186,7 @@ int stm32_bringup(void)
 #endif
 
 #ifdef CONFIG_STM32U5X9J_DK_LCD
-  ret = stm32u5x9j_lcd_initialize();
+  ret = stm32_lcd_initialize();
   if (ret < 0)
     {
       syslog(LOG_ERR, "ERROR: LCD bring-up failed: %d\n", ret);
@@ -219,7 +219,7 @@ int stm32_bringup(void)
 #ifdef CONFIG_STM32U5X9J_DK_TOUCH
   if (i2c5 != NULL)
     {
-      ret = stm32u5x9j_touch_initialize(i2c5);
+      ret = stm32_touchscreen_initialize(i2c5);
       if (ret < 0)
         {
           syslog(LOG_ERR, "ERROR: touchscreen init failed: %d\n", ret);
@@ -234,7 +234,7 @@ int stm32_bringup(void)
 #ifdef HAVE_I2C_PROBES
   if (i2c3 != NULL && i2c5 != NULL)
     {
-      ret = stm32u5x9j_i2c_probes_initialize(i2c3, i2c5);
+      ret = stm32_i2c_probes_initialize(i2c3, i2c5);
       if (ret < 0)
         {
           syslog(LOG_ERR, "ERROR: I2C board probes failed: %d\n", ret);

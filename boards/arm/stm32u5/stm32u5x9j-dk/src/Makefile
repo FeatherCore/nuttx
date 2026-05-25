@@ -24,10 +24,10 @@
 
 ASRCS =
 CSRCS = stm32_boot.c stm32_bringup.c stm32_userleds.c stm32_extmem.c
-CSRCS += stm32u5x9j_xspi.c
+CSRCS += stm32_xspi.c
 
 ifeq ($(CONFIG_BUILD_PROTECTED),y)
-CSRCS += stm32u5x9j_heap.c
+CSRCS += stm32_heap.c
 endif
 
 ifeq ($(CONFIG_ARCH_BUTTONS),y)

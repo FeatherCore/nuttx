@@ -136,7 +136,7 @@
      (STM32_HSPI1_BANK + STM32U5X9J_PSRAM_FB_RESERVED_SIZE)
 #  define STM32U5X9J_PSRAM_HEAP_SIZE \
      (STM32U5X9J_PSRAM_SIZE - STM32U5X9J_PSRAM_FB_RESERVED_SIZE)
-extern int stm32u5x9j_hspi1_psram_initialize(void);
+extern int stm32_hspi1_psram_initialize(void);
 #endif
 
 /* Some sanity checking.  If multiple memory regions are defined, verify
@@ -423,7 +423,7 @@ void arm_addregion(void)
 #endif
 
 #ifdef CONFIG_STM32U5X9J_DK_HSPI_HEAP
-  if (stm32u5x9j_hspi1_psram_initialize() == OK)
+  if (stm32_hspi1_psram_initialize() == OK)
     {
 #  if defined(CONFIG_BUILD_PROTECTED) && defined(CONFIG_MM_KERNEL_HEAP)
       stm32_mpu_uheap((uintptr_t)STM32U5X9J_PSRAM_HEAP_START,

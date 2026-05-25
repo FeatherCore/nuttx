@@ -28,7 +28,7 @@ MEMORY
 
 OUTPUT_ARCH(arm)
 EXTERN(_vectors)
-EXTERN(stm32n6570_heap_link)
+EXTERN(stm32_heap_link)
 ENTRY(_stext)
 SECTIONS
 {

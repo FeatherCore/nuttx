@@ -58,7 +58,7 @@ static bool g_emmc_info_registered;
  ****************************************************************************/
 
 #ifdef CONFIG_STM32U5X9J_DK_EMMC_INFO
-static ssize_t stm32u5x9j_emmcinfo_copyout(FAR struct file *filep,
+static ssize_t stm32_emmcinfo_copyout(FAR struct file *filep,
                                            FAR char *buffer, size_t buflen,
                                            FAR const char *text)
 {
@@ -83,7 +83,7 @@ static ssize_t stm32u5x9j_emmcinfo_copyout(FAR struct file *filep,
   return ncopy;
 }
 
-static ssize_t stm32u5x9j_emmcinfo_read(FAR struct file *filep,
+static ssize_t stm32_emmcinfo_read(FAR struct file *filep,
                                         FAR char *buffer, size_t buflen)
 {
   struct geometry geo;
@@ -146,17 +146,17 @@ static ssize_t stm32u5x9j_emmcinfo_read(FAR struct file *filep,
       return len;
     }
 
-  return stm32u5x9j_emmcinfo_copyout(filep, buffer, buflen, text);
+  return stm32_emmcinfo_copyout(filep, buffer, buflen, text);
 }
 
 static const struct file_operations g_emmcinfo_fops =
 {
   NULL,                         /* open */
   NULL,                         /* close */
-  stm32u5x9j_emmcinfo_read,     /* read */
+  stm32_emmcinfo_read,     /* read */
 };
 
-static int stm32u5x9j_emmcinfo_register(void)
+static int stm32_emmcinfo_register(void)
 {
   int ret;
 
@@ -180,7 +180,7 @@ static int stm32u5x9j_emmcinfo_register(void)
 }
 #endif
 
-static void stm32u5x9j_emmc_gpio_config(void)
+static void stm32_emmc_gpio_config(void)
 {
   stm32_configgpio(GPIO_SDMMC1_CK);
   stm32_configgpio(GPIO_SDMMC1_CMD);
@@ -198,11 +198,11 @@ static void stm32u5x9j_emmc_gpio_config(void)
  * Public Functions
  ****************************************************************************/
 
-int stm32u5x9j_emmc_initialize(void)
+int stm32_emmc_initialize(void)
 {
   int ret;
 
-  stm32u5x9j_emmc_gpio_config();
+  stm32_emmc_gpio_config();
 
   ret = stm32_sdmmc1_enable();
   if (ret < 0)
@@ -232,7 +232,7 @@ int stm32u5x9j_emmc_initialize(void)
          STM32U5X9J_EMMC_NODE);
 
 #ifdef CONFIG_STM32U5X9J_DK_EMMC_INFO
-  ret = stm32u5x9j_emmcinfo_register();
+  ret = stm32_emmcinfo_register();
   if (ret < 0)
     {
       syslog(LOG_ERR, "ERROR: register %s failed: %d\n",

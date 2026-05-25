@@ -31,7 +31,7 @@ ifeq ($(CONFIG_BUILD_PROTECTED),y)
   # The board heap overrides must be linked before libkarch's weak
   # arm_allocateheap.o is selected.
 
-  EXTRA_OBJS += board$(DELIM)stm32h7s78_heap$(OBJEXT)
+  EXTRA_OBJS += board$(DELIM)stm32_heap$(OBJEXT)
 else ifeq ($(CONFIG_STM32H7RS_APP_FORMAT_NXBOOT),y)
   ifeq ($(CONFIG_NXBOOT_BOOTLOADER),y)
     ARCHSCRIPT += $(BOARD_DIR)$(DELIM)scripts$(DELIM)flash-nxboot-loader.ld
