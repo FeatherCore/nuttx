@@ -22,6 +22,41 @@
 
 set(SRCS)
 
+if(CONFIG_ARCH_BOARD_STM32N6570_DK)
+
+list(
+  APPEND
+  SRCS
+  stm32n6_start.c
+  stm32n6_rcc.c
+  stm32n6_irq.c
+  stm32n6_lowputc.c
+  stm32n6_timerisr.c
+  stm32n6_serial.c
+  stm32n6_allocateheap.c)
+
+if(CONFIG_BUILD_PROTECTED)
+  list(APPEND SRCS stm32n6_userspace.c stm32n6_mpuinit.c)
+endif()
+
+if(CONFIG_STM32N6_XSPI)
+  list(APPEND SRCS stm32n6_xspi.c)
+endif()
+
+if(CONFIG_STM32N6_GPIO)
+  list(APPEND SRCS stm32n6_gpio.c)
+endif()
+
+if(CONFIG_STM32N6_DISPLAY)
+  list(APPEND SRCS stm32n6_ltdc.c)
+endif()
+
+if(CONFIG_STM32N6_I2C)
+  list(APPEND SRCS stm32n6_i2c.c)
+endif()
+
+else()
+
 # Required STM32N6 files
 
 list(
@@ -47,6 +82,8 @@ endif()
 
 if(CONFIG_STM32N6_STM32N6XXXX)
   list(APPEND SRCS stm32n6xx_rcc.c)
+endif()
+
 endif()
 
 target_sources(arch PRIVATE ${SRCS})

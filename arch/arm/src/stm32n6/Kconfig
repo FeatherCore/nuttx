@@ -1,40 +1,150 @@
+# arch/arm/src/stm32n6/Kconfig
 #
-# For a description of the syntax of this configuration file,
-# see the file kconfig-language.txt in the NuttX tools repository.
+# SPDX-License-Identifier: Apache-2.0
 #
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.  The
+# ASF licenses this file to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance with the
+# License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+# License for the specific language governing permissions and limitations
+# under the License.
 
 if ARCH_CHIP_STM32N6
 
 comment "STM32N6 Configuration Options"
 
+config STM32N6_STM32N6XXXX
+	bool
+	default y
+
 choice
-	prompt "STM32N6 Chip Selection"
+	prompt "STM32 N6 Chip Selection"
 	default ARCH_CHIP_STM32N657X0
 	depends on ARCH_CHIP_STM32N6
 
 config ARCH_CHIP_STM32N657X0
 	bool "STM32N657X0"
-	select ARCH_CORTEXM55
-	select ARCH_HAVE_FPU
-	select ARCH_HAVE_MPU
+	select STM32N6_STM32N6XXXX
 	select ARCH_HAVE_RAMFUNCS
-	select ARM_HAVE_MVE
 	select ARMV8M_HAVE_DCACHE
 	select ARMV8M_HAVE_ICACHE
 	---help---
-		STM32N657 Cortex-M55 part used by STM32N6570-DK.
+		STM32N657 Cortex-M55 part used by STM32N6570-DK and
+		NUCLEO-N657X0-Q.
 
-endchoice # STM32N6 Chip Selection
+endchoice
 
 menu "STM32N6 Peripheral Selection"
+
+config STM32N6_GPIO
+	bool "GPIO"
+	default n
+
+config STM32N6_USART1
+	bool "USART1"
+	default n
+	select STM32N6_USART
+	select STM32N6_USART1_SERIALDRIVER
+	select USART1_SERIALDRIVER
 
 config STM32N6_USART
 	bool "USART"
 	default n
 
-config STM32N6_GPIO
-	bool "GPIO"
+if STM32N6_USART
+
+config STM32N6_USART1_SERIALDRIVER
+	bool "USART1 serial driver"
 	default n
+	select ARCH_HAVE_SERIAL_TERMIOS
+	select USART1_SERIALDRIVER
+	---help---
+		Enable the STM32N657 USART1 lower-half.
+
+config STM32N6_SERIAL_DISABLE_REORDERING
+	bool "Disable reordering of ttySx devices."
+	depends on STM32N6_USART1
+	default n
+	---help---
+		NuttX per default reorders the serial ports (/dev/ttySx) so that the
+		console is always on /dev/ttyS0. If more than one UART is in use this
+		can, however, have the side-effect that all port mappings
+		(hardware USART1 -> /dev/ttyS0) change if the console is moved to
+		another UART. This option disables that reordering so port names
+		stay stable when the console is moved.
+
+config STM32N6_FLOWCONTROL_BROKEN
+	bool "Use Software UART RTS flow control"
+	default n
+	---help---
+		Enable this option to use software RTS flow control rather than
+		the hardware RTS line.  Useful in cases where the silicon RTS
+		behaviour does not match the application's needs.
+
+config STM32N6_SERIALBRK_BSDCOMPAT
+	bool "Use GPIO to send Break"
+	default n
+	---help---
+		Enable this option to send break by reconfiguring TX as a GPIO
+		held low for the requested duration, matching BSD-compatible
+		semantics.
+
+config STM32N6_PM_SERIAL_ACTIVITY
+	int "PM serial activity"
+	default 10
+	---help---
+		PM activity reported to power management logic on every serial
+		interrupt.
+
+endif # STM32N6_USART
+
+if USART1_SERIALDRIVER
+
+config USART1_RXBUFSIZE
+	int "USART1 receive buffer size"
+	default 256
+
+config USART1_TXBUFSIZE
+	int "USART1 transmit buffer size"
+	default 256
+
+config USART1_UNCONFIG_RX_ON_CLOSE
+	bool "Unconfigure USART1 RX pin on close"
+	default n
+	depends on STM32N6_USART1
+
+config USART1_UNCONFIG_TX_ON_CLOSE
+	bool "Unconfigure USART1 TX pin on close"
+	default n
+	depends on STM32N6_USART1
+
+config STM32N6_USART1_TX_POLL_DRAIN
+	bool "Drain USART1 TX buffer by polling"
+	default n
+	---help---
+		Diagnostic option for early STM32N6 protected-mode bring-up.  When
+		enabled, USART1 drains the software TX buffer synchronously when TX
+		interrupts are enabled, instead of depending on later TXE/TXFNF
+		interrupts to continue moving console output.
+
+config STM32N6_USART1_HIGH_PRIORITY
+	bool "Run USART1 at high IRQ priority"
+	default n
+	select ARCH_IRQPRIO
+	---help---
+		Diagnostic option for early STM32N6 protected-mode bring-up.  When
+		enabled, USART1 uses NVIC_SYSH_HIGH_PRIORITY so console TX/RX IRQs
+		are not masked by the normal BASEPRI critical-section threshold.
+
+endif # USART1_SERIALDRIVER
 
 config STM32N6_XSPI
 	bool "XSPI"
@@ -80,7 +190,7 @@ config STM32N6_I2C2_TIMING
 		The default matches the STM32CubeN6 timing algorithm for a
 		200 MHz PCLK1 source and 100 kHz standard-mode bus.
 
-endmenu # STM32N6 Peripheral Selection
+endmenu
 
 menu "STM32N6 Memory Attribute Configuration"
 
@@ -136,54 +246,6 @@ config STM32N6_PSRAM_MPU_NO_WRITE_ALLOCATE
 		regions shared with LTDC, DMA, or other bus masters still require
 		a non-cacheable MPU override or explicit cache maintenance.
 
-endmenu # STM32N6 Memory Attribute Configuration
-
-menu "STM32N6 USART Configuration"
-	depends on STM32N6_USART
-
-config STM32N6_SERIALDRIVER
-	bool
-
-config STM32N6_USART1_SERIALDRIVER
-	bool "USART1 serial driver"
-	default n
-	select ARCH_HAVE_SERIAL_TERMIOS
-	select STM32N6_SERIALDRIVER
-	select USART1_SERIALDRIVER
-	---help---
-		Enable the STM32N6570 USART1 lower-half.  The DK uses PE5/PE6 for
-		the 115200 8N1 debug console.
-
-if USART1_SERIALDRIVER
-
-config USART1_RXBUFSIZE
-	int "USART1 receive buffer size"
-	default 256
-
-config USART1_TXBUFSIZE
-	int "USART1 transmit buffer size"
-	default 256
-
-config STM32N6_USART1_TX_POLL_DRAIN
-	bool "Drain USART1 TX buffer by polling"
-	default n
-	---help---
-		Diagnostic option for early STM32N6 protected-mode bring-up.  When
-		enabled, USART1 drains the software TX buffer synchronously when TX
-		interrupts are enabled, instead of depending on later TXE/TXFNF
-		interrupts to continue moving console output.
-
-config STM32N6_USART1_HIGH_PRIORITY
-	bool "Run USART1 at high IRQ priority"
-	default n
-	select ARCH_IRQPRIO
-	---help---
-		Diagnostic option for early STM32N6 protected-mode bring-up.  When
-		enabled, USART1 uses NVIC_SYSH_HIGH_PRIORITY so console TX/RX IRQs
-		are not masked by the normal BASEPRI critical-section threshold.
-
-endif # USART1_SERIALDRIVER
-
-endmenu # STM32N6 USART Configuration
+endmenu
 
 endif # ARCH_CHIP_STM32N6
