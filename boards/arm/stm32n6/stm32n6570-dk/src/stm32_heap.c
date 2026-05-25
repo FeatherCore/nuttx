@@ -30,8 +30,8 @@
 #include <arch/board/board.h>
 
 #include "arm_internal.h"
-#include "hardware/stm32n6_memorymap.h"
-#include "stm32n6_mpuinit.h"
+#include "hardware/stm32n6xxx_memorymap.h"
+#include "stm32_mpuinit.h"
 #include "stm32n6570-dk.h"
 
 /****************************************************************************
@@ -39,28 +39,28 @@
  ****************************************************************************/
 
 #if defined(CONFIG_STM32N6_PSRAM_HEAP) && CONFIG_MM_REGIONS < 2
-#  error CONFIG_MM_REGIONS must be at least 2 with STM32N6_PSRAM_HEAP
+#  error CONFIG_MM_REGIONS must be at least 2 with CONFIG_STM32N6_PSRAM_HEAP
 #endif
 
 #ifdef CONFIG_STM32N6_PSRAM_HEAP
-#  if CONFIG_STM32N6_PSRAM_HEAP_OFFSET >= STM32N6_XSPI1_PSRAM_SIZE
+#  if CONFIG_STM32N6_PSRAM_HEAP_OFFSET >= BOARD_XSPI1_PSRAM_SIZE
 #    error CONFIG_STM32N6_PSRAM_HEAP_OFFSET must be smaller than PSRAM size
 #  endif
-#  define STM32N6570_PSRAM_HEAP_BASE \
-          (STM32N6_XSPI1_MEM_BASE + CONFIG_STM32N6_PSRAM_HEAP_OFFSET)
-#  define STM32N6570_PSRAM_HEAP_SIZE \
-          (STM32N6_XSPI1_PSRAM_SIZE - CONFIG_STM32N6_PSRAM_HEAP_OFFSET)
+#  define BOARD_PSRAM_HEAP_BASE \
+          (BOARD_XSPI1_PSRAM_BASE + CONFIG_STM32N6_PSRAM_HEAP_OFFSET)
+#  define BOARD_PSRAM_HEAP_SIZE \
+          (BOARD_XSPI1_PSRAM_SIZE - CONFIG_STM32N6_PSRAM_HEAP_OFFSET)
 #endif
 
 #if defined(CONFIG_BUILD_PROTECTED) && defined(CONFIG_MM_KERNEL_HEAP)
 #  ifndef CONFIG_STM32N6_PROTECTED_USRAM_BASE
 #    error CONFIG_STM32N6_PROTECTED_USRAM_BASE is required
 #  endif
-#  define STM32N6570_KERNEL_HEAP_END CONFIG_STM32N6_PROTECTED_USRAM_BASE
-#  define STM32N6570_BOOTSTRAP_UHEAP_SIZE \
+#  define BOARD_KERNEL_HEAP_END CONFIG_STM32N6_PROTECTED_USRAM_BASE
+#  define BOARD_BOOTSTRAP_UHEAP_SIZE \
           CONFIG_STM32N6_PROTECTED_UHEAP_SIZE
 #  if defined(CONFIG_STM32N6_PSRAM_HEAP) && \
-      STM32N6570_BOOTSTRAP_UHEAP_SIZE == 0
+      BOARD_BOOTSTRAP_UHEAP_SIZE == 0
 #    error STM32N6570-DK protected PSRAM heap requires an internal bootstrap user heap
 #  endif
 #endif
@@ -101,7 +101,7 @@ void stm32_heap_link(void)
 void up_allocate_heap(void **heap_start, size_t *heap_size)
 {
   uintptr_t heap_end = USERSPACE->us_bssend;
-  uintptr_t heap_base = heap_end - STM32N6570_BOOTSTRAP_UHEAP_SIZE;
+  uintptr_t heap_base = heap_end - BOARD_BOOTSTRAP_UHEAP_SIZE;
 
   board_autoled_on(LED_HEAPALLOCATE);
 
@@ -111,14 +111,14 @@ void up_allocate_heap(void **heap_start, size_t *heap_size)
                           CONFIG_STM32N6_PROTECTED_USRAM_SIZE);
 
   *heap_start = (FAR void *)heap_base;
-  *heap_size  = STM32N6570_BOOTSTRAP_UHEAP_SIZE;
+  *heap_size  = BOARD_BOOTSTRAP_UHEAP_SIZE;
 
   finfo("user SRAM bootstrap heap base=0x%08" PRIx32
         " size=0x%08" PRIx32 " psram=0x%08" PRIx32
         " psram-size=0x%08" PRIx32 "\n",
         (uint32_t)heap_base, (uint32_t)*heap_size,
-        (uint32_t)STM32N6570_PSRAM_HEAP_BASE,
-        (uint32_t)STM32N6570_PSRAM_HEAP_SIZE);
+        (uint32_t)BOARD_PSRAM_HEAP_BASE,
+        (uint32_t)BOARD_PSRAM_HEAP_SIZE);
 }
 #endif
 
@@ -134,16 +134,16 @@ void up_allocate_heap(void **heap_start, size_t *heap_size)
 #if defined(CONFIG_BUILD_PROTECTED) && defined(CONFIG_MM_KERNEL_HEAP)
 void up_allocate_kheap(void **heap_start, size_t *heap_size)
 {
-  DEBUGASSERT(g_idle_topstack < STM32N6570_KERNEL_HEAP_END);
+  DEBUGASSERT(g_idle_topstack < BOARD_KERNEL_HEAP_END);
 
   board_autoled_on(LED_HEAPALLOCATE);
   *heap_start = (FAR void *)g_idle_topstack;
-  *heap_size  = STM32N6570_KERNEL_HEAP_END - g_idle_topstack;
+  *heap_size  = BOARD_KERNEL_HEAP_END - g_idle_topstack;
 
   finfo("kernel SRAM heap base=0x%08" PRIx32
         " size=0x%08" PRIx32 " end=0x%08" PRIx32 "\n",
         (uint32_t)g_idle_topstack, (uint32_t)*heap_size,
-        (uint32_t)STM32N6570_KERNEL_HEAP_END);
+        (uint32_t)BOARD_KERNEL_HEAP_END);
 }
 #endif
 
@@ -168,13 +168,13 @@ void arm_addregion(void)
       return;
     }
 
-  stm32n6_mpu_uheap(STM32N6570_PSRAM_HEAP_BASE,
-                    STM32N6570_PSRAM_HEAP_SIZE);
-  kumm_addregion((FAR void *)STM32N6570_PSRAM_HEAP_BASE,
-                 STM32N6570_PSRAM_HEAP_SIZE);
+  stm32_mpu_uheap(BOARD_PSRAM_HEAP_BASE,
+                    BOARD_PSRAM_HEAP_SIZE);
+  kumm_addregion((FAR void *)BOARD_PSRAM_HEAP_BASE,
+                 BOARD_PSRAM_HEAP_SIZE);
   finfo("added PSRAM heap base=0x%08" PRIx32 " size=0x%08" PRIx32 "\n",
-        (uint32_t)STM32N6570_PSRAM_HEAP_BASE,
-        (uint32_t)STM32N6570_PSRAM_HEAP_SIZE);
+        (uint32_t)BOARD_PSRAM_HEAP_BASE,
+        (uint32_t)BOARD_PSRAM_HEAP_SIZE);
 #endif
 }
 #endif

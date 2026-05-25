@@ -31,6 +31,7 @@
 
 #include "arm_internal.h"
 #include "hardware/stm32_memorymap.h"
+#include "stm32.h"
 #include "stm32_mpuinit.h"
 
 #include "stm32u5x9j-dk.h"
@@ -39,12 +40,9 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define STM32U5X9J_INTERNAL_SRAM_END (STM32_SRAM5_BASE + STM32_SRAM5_SIZE)
-#define STM32U5X9J_PSRAM_BASE        STM32U5X9J_HSPI1_PSRAM_HEAP_BASE
-#define STM32U5X9J_PSRAM_SIZE        STM32U5X9J_HSPI1_PSRAM_HEAP_SIZE
-#define STM32U5X9J_PSRAM_END         (STM32U5X9J_PSRAM_BASE + \
-                                      STM32U5X9J_PSRAM_SIZE)
-#define STM32U5X9J_PROTECTED_USRAM_END \
+#define BOARD_PSRAM_HEAP_BASE        BOARD_HSPI1_PSRAM_HEAP_BASE
+#define BOARD_PSRAM_HEAP_SIZE        BOARD_HSPI1_PSRAM_HEAP_SIZE
+#define BOARD_PROTECTED_USRAM_END \
   (CONFIG_STM32U5X9J_PROTECTED_USRAM_BASE + \
    CONFIG_STM32U5X9J_PROTECTED_USRAM_SIZE)
 
@@ -53,13 +51,13 @@
 #    error CONFIG_STM32U5X9J_PROTECTED_USRAM_BASE is required
 #  endif
 #  ifdef CONFIG_STM32U5X9J_DK_LCD_FB_SRAM
-#    define STM32U5X9J_KERNEL_HEAP_END STM32U5X9J_INTERNAL_SRAM_FB_BASE
+#    define BOARD_KERNEL_HEAP_END BOARD_INTERNAL_SRAM_FB_BASE
 #  else
-#    define STM32U5X9J_KERNEL_HEAP_END CONFIG_STM32U5X9J_PROTECTED_USRAM_BASE
+#    define BOARD_KERNEL_HEAP_END CONFIG_STM32U5X9J_PROTECTED_USRAM_BASE
 #  endif
-#  define STM32U5X9J_BOOTSTRAP_UHEAP_SIZE \
+#  define BOARD_BOOTSTRAP_UHEAP_SIZE \
           CONFIG_STM32U5X9J_PROTECTED_UHEAP_SIZE
-#  if STM32U5X9J_BOOTSTRAP_UHEAP_SIZE == 0
+#  if BOARD_BOOTSTRAP_UHEAP_SIZE == 0
 #    error STM32U5x9J-DK protected build requires an internal bootstrap user heap
 #  endif
 #endif
@@ -94,27 +92,27 @@ void up_allocate_heap(void **heap_start, size_t *heap_size)
 {
 #ifdef CONFIG_STM32U5X9J_DK_HSPI_HEAP
   uintptr_t heap_end = USERSPACE->us_bssend;
-  uintptr_t heap_base = heap_end - STM32U5X9J_BOOTSTRAP_UHEAP_SIZE;
+  uintptr_t heap_base = heap_end - BOARD_BOOTSTRAP_UHEAP_SIZE;
 #else
   uintptr_t heap_base = USERSPACE->us_bssend;
-  uintptr_t heap_end = STM32U5X9J_PROTECTED_USRAM_END;
+  uintptr_t heap_end = BOARD_PROTECTED_USRAM_END;
 #endif
 
   DEBUGASSERT(heap_end > heap_base);
   DEBUGASSERT(heap_base >= CONFIG_STM32U5X9J_PROTECTED_USRAM_BASE);
-  DEBUGASSERT(heap_end <= STM32U5X9J_PROTECTED_USRAM_END);
+  DEBUGASSERT(heap_end <= BOARD_PROTECTED_USRAM_END);
 
   board_autoled_on(LED_HEAPALLOCATE);
   *heap_start = (FAR void *)heap_base;
 #ifdef CONFIG_STM32U5X9J_DK_HSPI_HEAP
-  *heap_size  = STM32U5X9J_BOOTSTRAP_UHEAP_SIZE;
+  *heap_size  = BOARD_BOOTSTRAP_UHEAP_SIZE;
 
   finfo("user SRAM bootstrap heap base=0x%08" PRIx32
         " size=0x%08" PRIx32 " psram=0x%08" PRIx32
         " psram-size=0x%08" PRIx32 "\n",
         (uint32_t)heap_base, (uint32_t)*heap_size,
-        (uint32_t)STM32U5X9J_PSRAM_BASE,
-        (uint32_t)STM32U5X9J_PSRAM_SIZE);
+        (uint32_t)BOARD_PSRAM_HEAP_BASE,
+        (uint32_t)BOARD_PSRAM_HEAP_SIZE);
 #else
   *heap_size = heap_end - heap_base;
   stm32_mpu_uheap(heap_base, *heap_size);
@@ -135,16 +133,16 @@ void up_allocate_heap(void **heap_start, size_t *heap_size)
 
 void up_allocate_kheap(void **heap_start, size_t *heap_size)
 {
-  DEBUGASSERT(g_idle_topstack < STM32U5X9J_KERNEL_HEAP_END);
+  DEBUGASSERT(g_idle_topstack < BOARD_KERNEL_HEAP_END);
 
   board_autoled_on(LED_HEAPALLOCATE);
   *heap_start = (FAR void *)g_idle_topstack;
-  *heap_size  = STM32U5X9J_KERNEL_HEAP_END - g_idle_topstack;
+  *heap_size  = BOARD_KERNEL_HEAP_END - g_idle_topstack;
 
   finfo("kernel SRAM heap base=0x%08" PRIx32
         " size=0x%08" PRIx32 " end=0x%08" PRIx32 "\n",
         (uint32_t)g_idle_topstack, (uint32_t)*heap_size,
-        (uint32_t)STM32U5X9J_KERNEL_HEAP_END);
+        (uint32_t)BOARD_KERNEL_HEAP_END);
 }
 #endif
 
@@ -159,6 +157,8 @@ void up_allocate_kheap(void **heap_start, size_t *heap_size)
 #if CONFIG_MM_REGIONS > 1
 void arm_addregion(void)
 {
+  stm32_addregion();
+
 #if defined(CONFIG_STM32U5X9J_DK_HSPI_HEAP)
   int ret;
 
@@ -170,14 +170,14 @@ void arm_addregion(void)
     }
 
 #  if defined(CONFIG_BUILD_PROTECTED) && defined(CONFIG_MM_KERNEL_HEAP)
-  stm32_mpu_uheap(STM32U5X9J_PSRAM_BASE, STM32U5X9J_PSRAM_SIZE);
+  stm32_mpu_uheap(BOARD_PSRAM_HEAP_BASE, BOARD_PSRAM_HEAP_SIZE);
 #  endif
 
-  kumm_addregion((FAR void *)STM32U5X9J_PSRAM_BASE,
-                 STM32U5X9J_PSRAM_SIZE);
+  kumm_addregion((FAR void *)BOARD_PSRAM_HEAP_BASE,
+                 BOARD_PSRAM_HEAP_SIZE);
   finfo("added PSRAM heap base=0x%08" PRIx32 " size=0x%08" PRIx32 "\n",
-        (uint32_t)STM32U5X9J_PSRAM_BASE,
-        (uint32_t)STM32U5X9J_PSRAM_SIZE);
+        (uint32_t)BOARD_PSRAM_HEAP_BASE,
+        (uint32_t)BOARD_PSRAM_HEAP_SIZE);
 #endif
 }
 #endif

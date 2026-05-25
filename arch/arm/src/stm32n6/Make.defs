@@ -25,24 +25,22 @@
 include armv8-m/Make.defs
 
 # The upstream STM32N6 port uses the common STM32-style stm32_* lower halves.
-# The STM32N6570-DK bring-up predates that port and still carries board
-# functionality not present upstream yet (XSPI NOR/PSRAM, LTDC, I2C touch,
-# protected heaps and NXboot).  Keep that board on the legacy lower halves
-# until those pieces are migrated one by one.
+# STM32N6570-DK now shares the stm32_* GPIO, XSPI, LTDC, I2C, timer,
+# console, start, RCC, heap and protected-mode helper paths.
 
 ifeq ($(CONFIG_ARCH_BOARD_STM32N6570_DK),y)
 
-CHIP_CSRCS += stm32n6_start.c
-CHIP_CSRCS += stm32n6_rcc.c
-CHIP_CSRCS += stm32n6_irq.c
-CHIP_CSRCS += stm32n6_lowputc.c
-CHIP_CSRCS += stm32n6_timerisr.c
-CHIP_CSRCS += stm32n6_serial.c
-CHIP_CSRCS += stm32n6_allocateheap.c
+CHIP_CSRCS += stm32_start.c
+CHIP_CSRCS += stm32_rcc.c
+CHIP_CSRCS += stm32_irq.c
+CHIP_CSRCS += stm32_lowputc.c
+CHIP_CSRCS += stm32_timerisr.c
+CHIP_CSRCS += stm32_serial.c
+CHIP_CSRCS += stm32_allocateheap.c
 
 ifeq ($(CONFIG_BUILD_PROTECTED),y)
-CHIP_CSRCS += stm32n6_userspace.c
-CHIP_CSRCS += stm32n6_mpuinit.c
+CHIP_CSRCS += stm32_userspace.c
+CHIP_CSRCS += stm32_mpuinit.c
 endif
 
 ifeq ($(CONFIG_STM32N6_XSPI),y)

@@ -57,6 +57,16 @@ extern "C"
 
 void stm32_lowsetup(void);
 
+/****************************************************************************
+ * Name: stm32_usart1_wait_txcomplete
+ *
+ * Description:
+ *   Wait for the early USART1 console transmitter to drain.
+ *
+ ****************************************************************************/
+
+void stm32_usart1_wait_txcomplete(void);
+
 #undef EXTERN
 #if defined(__cplusplus)
 }

@@ -26,6 +26,294 @@
 
 #include <nuttx/config.h>
 
+#ifdef CONFIG_ARCH_BOARD_STM32N6570_DK
+
+#include <errno.h>
+#include <inttypes.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <syslog.h>
+
+#include <arch/board/board.h>
+
+#include "arm_internal.h"
+#include "hardware/stm32n6xxx_pwr.h"
+#include "hardware/stm32n6xxx_rcc.h"
+#include "hardware/stm32n6xxx_gpio.h"
+
+/****************************************************************************
+ * Pre-processor Definitions
+ ****************************************************************************/
+
+#define STM32_RCC_TIMEOUT       1000000u
+
+#define STM32_PLL1_DIVM         8u
+#define STM32_PLL1_DIVN         100u
+
+#define STM32_IC1_DIV           1u
+#define STM32_IC2_DIV           2u
+#define STM32_IC3_DIV           4u
+#define STM32_IC6_DIV           4u
+#define STM32_IC11_DIV          2u
+
+#define STM32_SMPS_PIN          (1u << 4)
+#define STM32_SMPS_PIN_INDEX    4u
+
+/****************************************************************************
+ * Private Functions
+ ****************************************************************************/
+
+static bool stm32_clock_ready(void)
+{
+  const uint32_t cfgr1_mask = RCC_CFGR1_CPUSWS_MASK |
+                              RCC_CFGR1_SYSSWS_MASK;
+  const uint32_t cfgr1_target = RCC_CFGR1_CPUSWS_IC1 |
+                                RCC_CFGR1_SYSSWS_IC2_IC6_IC11;
+  const uint32_t diven_mask = RCC_DIVENR_IC1EN | RCC_DIVENR_IC2EN |
+                              RCC_DIVENR_IC3EN | RCC_DIVENR_IC6EN |
+                              RCC_DIVENR_IC11EN;
+  uint32_t sr;
+
+  sr = getreg32(STM32_RCC_SR);
+
+  return (sr & (RCC_SR_HSIRDY | RCC_SR_PLL1RDY)) ==
+           (RCC_SR_HSIRDY | RCC_SR_PLL1RDY) &&
+         (getreg32(STM32_RCC_CFGR1) & cfgr1_mask) == cfgr1_target &&
+         (getreg32(STM32_RCC_DIVENR) & diven_mask) == diven_mask;
+}
+
+static int stm32_wait_reg(uintptr_t addr, uint32_t mask, uint32_t value,
+                          FAR const char *name)
+{
+  uint32_t timeout = STM32_RCC_TIMEOUT;
+
+  while ((getreg32(addr) & mask) != value)
+    {
+      if (timeout-- == 0)
+        {
+          syslog(LOG_ERR, "stm32n6: %s timeout reg=%08" PRIx32
+                 " mask=%08" PRIx32 " want=%08" PRIx32 "\n",
+                 name, getreg32(addr), mask, value);
+          return -ETIMEDOUT;
+        }
+    }
+
+  return OK;
+}
+
+static void stm32_ic_config(uintptr_t reg, uint32_t div)
+{
+  putreg32(RCC_ICCFGR(RCC_ICCFGR_SEL_PLL1, div), reg);
+}
+
+static void stm32_smps_overdrive(void)
+{
+  uint32_t regval;
+
+  /* STM32N6570-DK uses PF4 to select the external SMPS output voltage.
+   * Cube's 800 MHz FSBL drives it high before requesting VOS scale 0.
+   */
+
+  putreg32(RCC_AHB4ENSR_GPIOFENS, STM32_RCC_AHB4ENSR);
+  (void)getreg32(STM32_RCC_AHB4ENR);
+
+  regval = getreg32(STM32_GPIOF_BASE + STM32_GPIO_MODER_OFFSET);
+  regval &= ~GPIO_MODER_MASK(STM32_SMPS_PIN_INDEX);
+  regval |= GPIO_MODER_OUTPUT << GPIO_MODER_SHIFT(STM32_SMPS_PIN_INDEX);
+  putreg32(regval, STM32_GPIOF_BASE + STM32_GPIO_MODER_OFFSET);
+
+  regval = getreg32(STM32_GPIOF_BASE + STM32_GPIO_OTYPER_OFFSET);
+  regval &= ~STM32_SMPS_PIN;
+  putreg32(regval, STM32_GPIOF_BASE + STM32_GPIO_OTYPER_OFFSET);
+
+  regval = getreg32(STM32_GPIOF_BASE + STM32_GPIO_OSPEED_OFFSET);
+  regval &= ~GPIO_OSPEED_MASK(STM32_SMPS_PIN_INDEX);
+  regval |= GPIO_OSPEED_100MHZ << GPIO_OSPEED_SHIFT(STM32_SMPS_PIN_INDEX);
+  putreg32(regval, STM32_GPIOF_BASE + STM32_GPIO_OSPEED_OFFSET);
+
+  regval = getreg32(STM32_GPIOF_BASE + STM32_GPIO_PUPDR_OFFSET);
+  regval &= ~GPIO_PUPDR_MASK(STM32_SMPS_PIN_INDEX);
+  regval |= GPIO_PUPDR_NONE << GPIO_PUPDR_SHIFT(STM32_SMPS_PIN_INDEX);
+  putreg32(regval, STM32_GPIOF_BASE + STM32_GPIO_PUPDR_OFFSET);
+
+  putreg32(STM32_SMPS_PIN, STM32_GPIOF_BASE + STM32_GPIO_BSRR_OFFSET);
+}
+
+/****************************************************************************
+ * Public Functions
+ ****************************************************************************/
+
+void stm32_power_config(void)
+{
+  int ret;
+
+  putreg32(RCC_AHB4ENSR_PWRENS, STM32_RCC_AHB4ENSR);
+  (void)getreg32(STM32_RCC_AHB4ENR);
+
+  /* Match CubeN6's 800 MHz FSBL before raising the clock tree:
+   * external SMPS overdrive, external VCORE supply, then VOS scale 0.
+   */
+
+  stm32_smps_overdrive();
+
+  modifyreg32(STM32_PWR_CR1, PWR_SUPPLY_CONFIG_MASK,
+              PWR_EXTERNAL_SOURCE_SUPPLY);
+
+  ret = stm32_wait_reg(STM32_PWR_VOSCR, PWR_VOSCR_ACTVOSRDY,
+                       PWR_VOSCR_ACTVOSRDY, "ACTVOS ready");
+  if (ret < 0)
+    {
+      goto out;
+    }
+
+  modifyreg32(STM32_PWR_VOSCR, PWR_VOSCR_VOS,
+              PWR_REGULATOR_VOLTAGE_SCALE0);
+
+  ret = stm32_wait_reg(STM32_PWR_VOSCR, PWR_VOSCR_VOSRDY,
+                       PWR_VOSCR_VOSRDY, "VOS ready");
+  if (ret < 0)
+    {
+      goto out;
+    }
+
+  /* Cube's FSBL configures VDDIO2 (GPIOO/GPIOP) and VDDIO3 (GPION) as
+   * valid 1.8 V supplies before touching XSPI pins.
+   */
+
+  modifyreg32(STM32_PWR_SVMCR3, 0,
+              PWR_SVMCR3_VDDIO2SV | PWR_SVMCR3_VDDIO3SV |
+              PWR_SVMCR3_VDDIO2VRSEL | PWR_SVMCR3_VDDIO3VRSEL);
+
+  /* Cube only sets VDDIOxSV and VDDIOxVRSEL here.  The VDDIOxRDY bits
+   * belong to the independent voltage monitor path and remain clear when
+   * VDDIOxVMEN is not enabled.
+   */
+
+  ret = OK;
+
+out:
+  (void)ret;
+}
+
+void stm32_clockconfig(void)
+{
+  int ret;
+
+  if (stm32_clock_ready())
+    {
+      stm32_power_config();
+      putreg32(RCC_BUSENSR_ALL_BUS, STM32_RCC_BUSENSR);
+      putreg32(RCC_MEMENSR_AXISRAM | RCC_MEMENSR_AHBSRAM,
+               STM32_RCC_MEMENSR);
+      putreg32(RCC_APB4ENSR2_SYSCFGENS | RCC_APB4ENSR2_BSECENS,
+               STM32_RCC_APB4ENSR2);
+      modifyreg32(STM32_RCC_CCIPR13, RCC_CCIPR13_USART1SEL_MASK,
+                  RCC_CCIPR13_USART1SEL_PCLK2);
+      return;
+    }
+
+  stm32_power_config();
+
+  putreg32(RCC_BUSENSR_ALL_BUS, STM32_RCC_BUSENSR);
+  putreg32(RCC_MEMENSR_AXISRAM | RCC_MEMENSR_AHBSRAM,
+           STM32_RCC_MEMENSR);
+  putreg32(RCC_APB4ENSR2_SYSCFGENS | RCC_APB4ENSR2_BSECENS,
+           STM32_RCC_APB4ENSR2);
+  modifyreg32(STM32_RCC_CCIPR13, RCC_CCIPR13_USART1SEL_MASK,
+              RCC_CCIPR13_USART1SEL_PCLK2);
+
+  putreg32(RCC_CSR_HSIONS, STM32_RCC_CSR);
+  ret = stm32_wait_reg(STM32_RCC_SR, RCC_SR_HSIRDY, RCC_SR_HSIRDY,
+                       "HSI ready");
+  if (ret < 0)
+    {
+      return;
+    }
+
+  modifyreg32(STM32_RCC_HSICFGR, RCC_HSICFGR_HSIDIV_MASK,
+              RCC_HSICFGR_HSIDIV_DIV1);
+
+  modifyreg32(STM32_RCC_CFGR1,
+              RCC_CFGR1_CPUSW_MASK | RCC_CFGR1_SYSSW_MASK,
+              RCC_CFGR1_CPUSW_HSI | RCC_CFGR1_SYSSW_HSI);
+  ret = stm32_wait_reg(STM32_RCC_CFGR1,
+                       RCC_CFGR1_CPUSWS_MASK | RCC_CFGR1_SYSSWS_MASK,
+                       RCC_CFGR1_CPUSWS_HSI | RCC_CFGR1_SYSSWS_HSI,
+                       "HSI switch");
+  if (ret < 0)
+    {
+      return;
+    }
+
+  putreg32(RCC_CCR_PLL1ONC, STM32_RCC_CCR);
+  ret = stm32_wait_reg(STM32_RCC_SR, RCC_SR_PLL1RDY, 0,
+                       "PLL1 off");
+  if (ret < 0)
+    {
+      return;
+    }
+
+  putreg32(RCC_PLL1CFGR1_PLL1SEL_HSI |
+           RCC_PLL1CFGR1_DIVM(STM32_PLL1_DIVM) |
+           RCC_PLL1CFGR1_DIVN(STM32_PLL1_DIVN),
+           STM32_RCC_PLL1CFGR1);
+  putreg32(0, STM32_RCC_PLL1CFGR2);
+  putreg32(RCC_PLL1CFGR3_MODSSRST | RCC_PLL1CFGR3_MODSSDIS |
+           RCC_PLL1CFGR3_PDIV1(1) | RCC_PLL1CFGR3_PDIV2(1) |
+           RCC_PLL1CFGR3_PDIVEN, STM32_RCC_PLL1CFGR3);
+
+  modifyreg32(STM32_RCC_CFGR2,
+              RCC_CFGR2_PPRE1_MASK | RCC_CFGR2_PPRE2_MASK |
+              RCC_CFGR2_PPRE4_MASK | RCC_CFGR2_PPRE5_MASK |
+              RCC_CFGR2_HPRE_MASK,
+              RCC_CFGR2_HPRE_DIV2);
+
+  putreg32(RCC_CSR_PLL1ONS, STM32_RCC_CSR);
+  ret = stm32_wait_reg(STM32_RCC_SR, RCC_SR_PLL1RDY, RCC_SR_PLL1RDY,
+                       "PLL1 ready");
+  if (ret < 0)
+    {
+      return;
+    }
+
+  stm32_ic_config(STM32_RCC_IC1CFGR, STM32_IC1_DIV);
+  stm32_ic_config(STM32_RCC_IC2CFGR, STM32_IC2_DIV);
+  stm32_ic_config(STM32_RCC_IC3CFGR, STM32_IC3_DIV);
+  stm32_ic_config(STM32_RCC_IC6CFGR, STM32_IC6_DIV);
+  stm32_ic_config(STM32_RCC_IC11CFGR, STM32_IC11_DIV);
+
+  putreg32(RCC_DIVENSR_IC1ENS | RCC_DIVENSR_IC2ENS | RCC_DIVENSR_IC3ENS |
+           RCC_DIVENSR_IC6ENS | RCC_DIVENSR_IC11ENS,
+           STM32_RCC_DIVENSR);
+  ret = stm32_wait_reg(STM32_RCC_DIVENR,
+                       RCC_DIVENR_IC1EN | RCC_DIVENR_IC2EN |
+                       RCC_DIVENR_IC3EN | RCC_DIVENR_IC6EN |
+                       RCC_DIVENR_IC11EN,
+                       RCC_DIVENR_IC1EN | RCC_DIVENR_IC2EN |
+                       RCC_DIVENR_IC3EN | RCC_DIVENR_IC6EN |
+                       RCC_DIVENR_IC11EN,
+                       "IC dividers enable");
+  if (ret < 0)
+    {
+      return;
+    }
+
+  modifyreg32(STM32_RCC_CFGR1,
+              RCC_CFGR1_CPUSW_MASK | RCC_CFGR1_SYSSW_MASK,
+              RCC_CFGR1_CPUSW_IC1 | RCC_CFGR1_SYSSW_IC2_IC6_IC11);
+  ret = stm32_wait_reg(STM32_RCC_CFGR1,
+                       RCC_CFGR1_CPUSWS_MASK | RCC_CFGR1_SYSSWS_MASK,
+                       RCC_CFGR1_CPUSWS_IC1 |
+                       RCC_CFGR1_SYSSWS_IC2_IC6_IC11,
+                       "PLL1 switch");
+  if (ret < 0)
+    {
+      return;
+    }
+}
+
+#else /* CONFIG_ARCH_BOARD_STM32N6570_DK */
+
 #include <stdint.h>
 #include <stdio.h>
 #include <assert.h>
@@ -88,3 +376,5 @@ void stm32_clockenable(void)
   stm32_stdclockconfig();
 }
 #endif
+
+#endif /* CONFIG_ARCH_BOARD_STM32N6570_DK */

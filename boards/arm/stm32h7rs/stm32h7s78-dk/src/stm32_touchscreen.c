@@ -22,8 +22,8 @@
 
 #include "arm_internal.h"
 
-#include "hardware/stm32h7rs_gpio.h"
-#include "hardware/stm32h7rs_rcc.h"
+#include "hardware/stm32_gpio.h"
+#include "hardware/stm32_rcc.h"
 #include "stm32_i2c.h"
 
 #include "stm32h7s78-dk.h"
@@ -34,8 +34,9 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define GT911_ADDR             0x5du  /* Cube TS_I2C_ADDRESS 0xba >> 1 */
-#define GT911_I2C_FREQUENCY    100000u
+#define BOARD_GT911_ADDR           0x5du  /* Cube TS_I2C_ADDRESS 0xba >> 1 */
+#define BOARD_GT911_I2C_FREQUENCY  100000u
+#define BOARD_GT911_INT_PIN        3u
 
 /****************************************************************************
  * Private Data
@@ -43,10 +44,10 @@
 
 static const struct gt911_config_s g_gt911_config =
 {
-  .address   = GT911_ADDR,
-  .frequency = GT911_I2C_FREQUENCY,
-  .xres      = STM32H7S78_LCD_WIDTH,
-  .yres      = STM32H7S78_LCD_HEIGHT,
+  .address   = BOARD_GT911_ADDR,
+  .frequency = BOARD_GT911_I2C_FREQUENCY,
+  .xres      = BOARD_LTDC_WIDTH,
+  .yres      = BOARD_LTDC_HEIGHT,
   .poll_ms   = CONFIG_STM32H7S78_DK_GT911_POLL_MS,
 };
 
@@ -57,22 +58,21 @@ static const struct gt911_config_s g_gt911_config =
 static void stm32_gt911_int_config(void)
 {
   uint32_t regval;
-  const unsigned int pin = 3;
 
-  modifyreg32(STM32H7RS_RCC_AHB4ENR, 0, RCC_AHB4ENR_GPIOEEN);
-  (void)getreg32(STM32H7RS_RCC_AHB4ENR);
+  modifyreg32(STM32_RCC_AHB4ENR, 0, RCC_AHB4ENR_GPIOEEN);
+  (void)getreg32(STM32_RCC_AHB4ENR);
 
-  regval = getreg32(STM32H7RS_GPIOE_MODER);
-  regval &= ~GPIO_MODE_MASK(pin);
-  regval |= GPIO_MODE_INPUT << GPIO_MODE_SHIFT(pin);
-  putreg32(regval, STM32H7RS_GPIOE_MODER);
+  regval = getreg32(STM32_GPIOE_MODER);
+  regval &= ~GPIO_MODE_MASK(BOARD_GT911_INT_PIN);
+  regval |= GPIO_MODE_INPUT << GPIO_MODE_SHIFT(BOARD_GT911_INT_PIN);
+  putreg32(regval, STM32_GPIOE_MODER);
 
-  modifyreg32(STM32H7RS_GPIOE_OTYPER, 1u << pin, 0);
+  modifyreg32(STM32_GPIOE_OTYPER, 1u << BOARD_GT911_INT_PIN, 0);
 
-  regval = getreg32(STM32H7RS_GPIOE_PUPDR);
-  regval &= ~GPIO_PUPD_MASK(pin);
-  regval |= GPIO_PULLUP << GPIO_PUPD_SHIFT(pin);
-  putreg32(regval, STM32H7RS_GPIOE_PUPDR);
+  regval = getreg32(STM32_GPIOE_PUPDR);
+  regval &= ~GPIO_PUPD_MASK(BOARD_GT911_INT_PIN);
+  regval |= GPIO_PULLUP << GPIO_PUPD_SHIFT(BOARD_GT911_INT_PIN);
+  putreg32(regval, STM32_GPIOE_PUPDR);
 }
 
 /****************************************************************************

@@ -5,14 +5,11 @@
  *
  ****************************************************************************/
 
-/* Initial internal-flash linker skeleton derived from the STM32CubeH7RS
- * Template_LL linker memory map:
+/* Internal-Flash image layout for non-protected builds that run directly
+ * from the STM32H7S78-DK 64 KiB internal Flash:
  *
  *   FLASH: 0x08000000, 64 KiB
  *   RAM:   0x24000000, 456 KiB
- *
- * This script is a porting placeholder.  It will need the final NuttX section
- * layout once the STM32H7RS reset/start code is available.
  */
 
 MEMORY

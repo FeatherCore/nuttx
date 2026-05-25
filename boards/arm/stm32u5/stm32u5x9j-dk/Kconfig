@@ -5,7 +5,7 @@
 
 if ARCH_BOARD_STM32U5X9J_DK
 
-menu "STM32U5x9J-DK Peripheral Bring-up"
+menu "STM32U5x9J-DK Peripherals"
 
 config STM32U5X9J_DK_USERLEDS
 	bool "LED3/LED4 user LED driver"
@@ -56,8 +56,9 @@ config STM32U5X9J_DK_OSPI_NOR
 	---help---
 		Initialize the 64 MiB MX25UM51245G external NOR, read its JEDEC
 		ID, and leave it in memory-mapped mode at the OCTOSPI1 XIP
-		window. The default bring-up does not register the NOR as a
-		writable device because this region is reserved for later XIP code.
+		window. The default board initialization does not register the NOR
+		as a writable device because this region is reserved for later XIP
+		code.
 
 config STM32U5X9J_DK_OSPI_MTD
 	bool "Register OSPI1 NOR as /dev/mtd0"
@@ -110,7 +111,7 @@ config STM32U5X9J_DK_HSPI_HEAP
 	default y
 	depends on STM32U5X9J_DK_HSPI_RAM
 	---help---
-		Reserve the PSRAM framebuffer window for display bring-up and add
+		Reserve the PSRAM framebuffer window for display scanout and add
 		the remaining PSRAM region to the NuttX heap in arm_addregion().
 
 config STM32U5X9J_PROTECTED_USRAM_BASE
@@ -159,7 +160,7 @@ config STM32U5X9J_DK_EMMC
 	select SCHED_WORKQUEUE
 	select STM32U5_SDMMC1
 	---help---
-		Enable board-level eMMC bring-up on SDMMC1 using an 8-bit bus.
+		Enable board-level eMMC support on SDMMC1 using an 8-bit bus.
 
 config STM32U5X9J_DK_EMMC_AUTOMOUNT
 	bool "Try mounting existing vfat on /mnt/emmc"
@@ -247,14 +248,15 @@ config STM32U5X9J_DK_LCD_FB_SRAM
 endchoice
 
 config STM32U5X9J_DK_LCD_COLORBAR
-	bool "Draw LCD color bars during bring-up"
+	bool "Draw LCD color bars during initialization"
 	default n
 	depends on STM32U5X9J_DK_LCD
 	---help---
-		Fill the framebuffer with vertical color bars after LCD bring-up.
+		Fill the framebuffer with vertical color bars after LCD
+		initialization.
 
 config STM32U5X9J_DK_LCD_PATTERN
-	bool "Draw extended LCD static pattern during bring-up"
+	bool "Draw extended LCD static pattern during initialization"
 	default n
 	depends on STM32U5X9J_DK_LCD_COLORBAR
 	---help---

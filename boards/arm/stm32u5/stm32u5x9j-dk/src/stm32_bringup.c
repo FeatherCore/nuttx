@@ -95,7 +95,7 @@ static FAR struct i2c_master_s *stm32_i2c_register_bus(int bus)
  ****************************************************************************/
 
 /****************************************************************************
- * Should not be here, but there is a bug in clock_initalize logic that
+ * Should not be here, but there is a bug in clock_initialize logic that
  * prevents external RTC to be used when no internal RTC !
  * **************************************************************************/
 #if defined(CONFIG_RTC) && defined(CONFIG_RTC_EXTERNAL)
@@ -163,7 +163,8 @@ int stm32_bringup(void)
   ret = stm32_extmem_initialize();
   if (ret < 0)
     {
-      syslog(LOG_ERR, "ERROR: external memory bring-up failed: %d\n", ret);
+      syslog(LOG_ERR,
+             "ERROR: external memory initialization failed: %d\n", ret);
     }
 #ifdef CONFIG_STM32U5X9J_DK_HSPI_DIAG
   else
@@ -181,7 +182,7 @@ int stm32_bringup(void)
   ret = stm32_emmc_initialize();
   if (ret < 0)
     {
-      syslog(LOG_ERR, "ERROR: eMMC bring-up failed: %d\n", ret);
+      syslog(LOG_ERR, "ERROR: eMMC initialization failed: %d\n", ret);
     }
 #endif
 
@@ -189,7 +190,7 @@ int stm32_bringup(void)
   ret = stm32_lcd_initialize();
   if (ret < 0)
     {
-      syslog(LOG_ERR, "ERROR: LCD bring-up failed: %d\n", ret);
+      syslog(LOG_ERR, "ERROR: LCD initialization failed: %d\n", ret);
     }
 #endif
 

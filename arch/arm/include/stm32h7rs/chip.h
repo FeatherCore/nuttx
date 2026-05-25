@@ -22,21 +22,21 @@
 #  error STM32H7RS chip not identified
 #endif
 
-/* STM32H7S7L8 resources used by the STM32H7S78-DK first-stage port.
+/* STM32H7S7L8 resources used by the STM32H7S78-DK port.
  * The sizes come from the STM32H7RS CMSIS device header and the CubeH7RS
  * STM32H7S78-DK XIP template.
  */
 
-#define STM32H7RS_FLASH_SIZE        (64 * 1024)
-#define STM32H7RS_AXI_SRAM_SIZE     (456 * 1024)
-#define STM32H7RS_AHB_SRAM_SIZE     (16 * 1024)
-#define STM32H7RS_XSPI2_NOR_SIZE    (128 * 1024 * 1024)
-#define STM32H7RS_XSPI1_PSRAM_SIZE  (32 * 1024 * 1024)
+#define STM32_FLASH_SIZE        (64 * 1024)
+#define STM32_AXI_SRAM_SIZE     (456 * 1024)
+#define STM32_AHB_SRAM_SIZE     (16 * 1024)
+#define STM32_XSPI2_NOR_SIZE    (128 * 1024 * 1024)
+#define STM32_XSPI1_PSRAM_SIZE  (32 * 1024 * 1024)
 
-#define STM32H7RS_NGPIO             16
-#define STM32H7RS_NUSART            3
-#define STM32H7RS_NUART             5
-#define STM32H7RS_NXSPI             2
+#define STM32_NGPIO             16
+#define STM32_NUSART            3
+#define STM32_NUART             5
+#define STM32_NXSPI             2
 
 #define NVIC_SYSH_PRIORITY_MIN      0xf0
 #define NVIC_SYSH_PRIORITY_DEFAULT  0x80

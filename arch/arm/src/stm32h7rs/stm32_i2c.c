@@ -22,10 +22,10 @@
 
 #include "arm_internal.h"
 
-#include "hardware/stm32h7rs_gpio.h"
+#include "hardware/stm32_gpio.h"
 #include "hardware/stm32_i2c.h"
-#include "hardware/stm32h7rs_memorymap.h"
-#include "hardware/stm32h7rs_rcc.h"
+#include "hardware/stm32_memorymap.h"
+#include "hardware/stm32_rcc.h"
 
 #include "stm32_i2c.h"
 
@@ -107,10 +107,10 @@ static void stm32_i2c_config_gpio(void)
   uint32_t regval;
   int pin;
 
-  modifyreg32(STM32H7RS_RCC_AHB4ENR, 0, RCC_AHB4ENR_GPIOBEN);
-  (void)getreg32(STM32H7RS_RCC_AHB4ENR);
+  modifyreg32(STM32_RCC_AHB4ENR, 0, RCC_AHB4ENR_GPIOBEN);
+  (void)getreg32(STM32_RCC_AHB4ENR);
 
-  regval = getreg32(STM32H7RS_GPIOB_MODER);
+  regval = getreg32(STM32_GPIOB_MODER);
   for (pin = 0; pin <= 15; pin++)
     {
       if ((pins & (1u << pin)) != 0)
@@ -120,11 +120,11 @@ static void stm32_i2c_config_gpio(void)
         }
     }
 
-  putreg32(regval, STM32H7RS_GPIOB_MODER);
+  putreg32(regval, STM32_GPIOB_MODER);
 
-  modifyreg32(STM32H7RS_GPIOB_OTYPER, 0, pins);
+  modifyreg32(STM32_GPIOB_OTYPER, 0, pins);
 
-  regval = getreg32(STM32H7RS_GPIOB_OSPEEDR);
+  regval = getreg32(STM32_GPIOB_OSPEEDR);
   for (pin = 0; pin <= 15; pin++)
     {
       if ((pins & (1u << pin)) != 0)
@@ -134,9 +134,9 @@ static void stm32_i2c_config_gpio(void)
         }
     }
 
-  putreg32(regval, STM32H7RS_GPIOB_OSPEEDR);
+  putreg32(regval, STM32_GPIOB_OSPEEDR);
 
-  regval = getreg32(STM32H7RS_GPIOB_PUPDR);
+  regval = getreg32(STM32_GPIOB_PUPDR);
   for (pin = 0; pin <= 15; pin++)
     {
       if ((pins & (1u << pin)) != 0)
@@ -146,17 +146,17 @@ static void stm32_i2c_config_gpio(void)
         }
     }
 
-  putreg32(regval, STM32H7RS_GPIOB_PUPDR);
+  putreg32(regval, STM32_GPIOB_PUPDR);
 
-  regval = getreg32(STM32H7RS_GPIOB_AFRL);
+  regval = getreg32(STM32_GPIOB_AFRL);
   regval &= ~GPIO_AFR_MASK(6);
   regval |= GPIO_AF_I2C1 << GPIO_AFR_SHIFT(6);
-  putreg32(regval, STM32H7RS_GPIOB_AFRL);
+  putreg32(regval, STM32_GPIOB_AFRL);
 
-  regval = getreg32(STM32H7RS_GPIOB_AFRH);
+  regval = getreg32(STM32_GPIOB_AFRH);
   regval &= ~GPIO_AFR_MASK(9);
   regval |= GPIO_AF_I2C1 << GPIO_AFR_SHIFT(9);
-  putreg32(regval, STM32H7RS_GPIOB_AFRH);
+  putreg32(regval, STM32_GPIOB_AFRH);
 }
 
 static void stm32_i2c_clear(FAR struct stm32_i2c_priv_s *priv)
@@ -236,13 +236,13 @@ static int stm32_i2c_clock_enable(FAR struct stm32_i2c_priv_s *priv)
 #ifdef CONFIG_STM32H7RS_I2C1
   if (priv->base == STM32_I2C1_BASE)
     {
-      modifyreg32(STM32H7RS_RCC_CCIPR2, 0x3000u, 0);
-      modifyreg32(STM32H7RS_RCC_APB1ENR1, 0, RCC_APB1ENR1_I2C1EN);
-      (void)getreg32(STM32H7RS_RCC_APB1ENR1);
+      modifyreg32(STM32_RCC_CCIPR2, 0x3000u, 0);
+      modifyreg32(STM32_RCC_APB1ENR1, 0, RCC_APB1ENR1_I2C1EN);
+      (void)getreg32(STM32_RCC_APB1ENR1);
 
-      modifyreg32(STM32H7RS_RCC_APB1RSTR1, 0, RCC_APB1RSTR1_I2C1RST);
+      modifyreg32(STM32_RCC_APB1RSTR1, 0, RCC_APB1RSTR1_I2C1RST);
       up_udelay(1);
-      modifyreg32(STM32H7RS_RCC_APB1RSTR1, RCC_APB1RSTR1_I2C1RST, 0);
+      modifyreg32(STM32_RCC_APB1RSTR1, RCC_APB1RSTR1_I2C1RST, 0);
       return OK;
     }
 #endif
@@ -255,7 +255,7 @@ static void stm32_i2c_clock_disable(FAR struct stm32_i2c_priv_s *priv)
 #ifdef CONFIG_STM32H7RS_I2C1
   if (priv->base == STM32_I2C1_BASE)
     {
-      modifyreg32(STM32H7RS_RCC_APB1ENR1, RCC_APB1ENR1_I2C1EN, 0);
+      modifyreg32(STM32_RCC_APB1ENR1, RCC_APB1ENR1_I2C1EN, 0);
     }
 #endif
 }

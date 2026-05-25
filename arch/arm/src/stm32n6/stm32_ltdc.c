@@ -28,8 +28,8 @@
 #include "arm_internal.h"
 
 #include "hardware/stm32_ltdc.h"
-#include "hardware/stm32n6_memorymap.h"
-#include "hardware/stm32n6_rcc.h"
+#include "hardware/stm32n6xxx_memorymap.h"
+#include "hardware/stm32n6xxx_rcc.h"
 
 #include "stm32_gpio.h"
 #include "stm32_ltdc.h"
@@ -118,11 +118,11 @@
 #  error BOARD_LTDC_FB_SIZE is too small for the configured LTDC buffers
 #endif
 
-#define RIFSC_RISC_SECCFGR(n)   (STM32N6_RIFSC_BASE + 0x0010 + \
+#define RIFSC_RISC_SECCFGR(n)   (STM32_RIFSC_BASE + 0x0010 + \
                                  ((uintptr_t)(n) << 2))
-#define RIFSC_RISC_PRIVCFGR(n)  (STM32N6_RIFSC_BASE + 0x0030 + \
+#define RIFSC_RISC_PRIVCFGR(n)  (STM32_RIFSC_BASE + 0x0030 + \
                                  ((uintptr_t)(n) << 2))
-#define RIFSC_RIMC_ATTR(n)      (STM32N6_RIFSC_BASE + 0x0c10 + \
+#define RIFSC_RIMC_ATTR(n)      (STM32_RIFSC_BASE + 0x0c10 + \
                                  ((uintptr_t)(n) << 2))
 
 #define RIF_MASTER_LTDC1        10
@@ -255,10 +255,10 @@ static int stm32_ltdc_clock_enable(void)
   uint32_t timeout = 1000000;
 
   putreg32(RCC_ICCFGR(RCC_ICCFGR_SEL_PLL1, BOARD_LTDC_CLOCK_DIV),
-           STM32N6_RCC_IC16CFGR);
-  putreg32(RCC_DIVENSR_IC16ENS, STM32N6_RCC_DIVENSR);
+           STM32_RCC_IC16CFGR);
+  putreg32(RCC_DIVENSR_IC16ENS, STM32_RCC_DIVENSR);
 
-  while ((getreg32(STM32N6_RCC_DIVENR) & RCC_DIVENR_IC16EN) == 0)
+  while ((getreg32(STM32_RCC_DIVENR) & RCC_DIVENR_IC16EN) == 0)
     {
       if (timeout-- == 0)
         {
@@ -266,15 +266,15 @@ static int stm32_ltdc_clock_enable(void)
         }
     }
 
-  modifyreg32(STM32N6_RCC_CCIPR4, RCC_CCIPR4_LTDCSEL_MASK,
+  modifyreg32(STM32_RCC_CCIPR4, RCC_CCIPR4_LTDCSEL_MASK,
               RCC_CCIPR4_LTDCSEL_IC16);
 
-  putreg32(RCC_APB5ENSR_LTDCENS, STM32N6_RCC_APB5ENSR);
-  (void)getreg32(STM32N6_RCC_APB5ENR);
+  putreg32(RCC_APB5ENSR_LTDCENS, STM32_RCC_APB5ENSR);
+  (void)getreg32(STM32_RCC_APB5ENR);
 
-  putreg32(RCC_APB5RSTR_LTDCRST, STM32N6_RCC_APB5RSTR);
+  putreg32(RCC_APB5RSTR_LTDCRST, STM32_RCC_APB5RSTR);
   up_udelay(1);
-  putreg32(RCC_APB5RSTR_LTDCRST, STM32N6_RCC_APB5RSTCR);
+  putreg32(RCC_APB5RSTR_LTDCRST, STM32_RCC_APB5RSTCR);
 
   return OK;
 }
@@ -291,8 +291,8 @@ static void stm32_ltdc_rif_master_config(unsigned int master)
 
 static void stm32_ltdc_rif_config(void)
 {
-  putreg32(RCC_AHB3ENSR_RIFSCENS, STM32N6_RCC_AHB3ENSR);
-  (void)getreg32(STM32N6_RCC_AHB3ENR);
+  putreg32(RCC_AHB3ENSR_RIFSCENS, STM32_RCC_AHB3ENSR);
+  (void)getreg32(STM32_RCC_AHB3ENR);
 
   stm32_ltdc_rif_master_config(RIF_MASTER_LTDC1);
   stm32_ltdc_rif_master_config(RIF_MASTER_LTDC2);

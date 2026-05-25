@@ -20,22 +20,23 @@
 #
 ############################################################################
 
-# Common ARM and Cortex-M7 files.  STM32H7RS chip-specific sources are added
-# incrementally as the register, clock, GPIO, IRQ and serial layers are ported.
+# Common ARM and Cortex-M7 files.  STM32H7RS follows the shared STM32
+# stm32_* lower-half layout for clock, IRQ, console, timer, protected build
+# helpers, XSPI, I2C and LTDC.
 
 include armv7-m/Make.defs
 
-CHIP_CSRCS += stm32h7rs_start.c
-CHIP_CSRCS += stm32h7rs_rcc.c
-CHIP_CSRCS += stm32h7rs_irq.c
-CHIP_CSRCS += stm32h7rs_lowputc.c
-CHIP_CSRCS += stm32h7rs_timerisr.c
-CHIP_CSRCS += stm32h7rs_serial.c
-CHIP_CSRCS += stm32h7rs_allocateheap.c
+CHIP_CSRCS += stm32_start.c
+CHIP_CSRCS += stm32_rcc.c
+CHIP_CSRCS += stm32_irq.c
+CHIP_CSRCS += stm32_lowputc.c
+CHIP_CSRCS += stm32_timerisr.c
+CHIP_CSRCS += stm32_serial.c
+CHIP_CSRCS += stm32_allocateheap.c
 
 ifeq ($(CONFIG_BUILD_PROTECTED),y)
-CHIP_CSRCS += stm32h7rs_userspace.c
-CHIP_CSRCS += stm32h7rs_mpuinit.c
+CHIP_CSRCS += stm32_userspace.c
+CHIP_CSRCS += stm32_mpuinit.c
 endif
 
 ifeq ($(CONFIG_STM32H7RS_XSPI),y)

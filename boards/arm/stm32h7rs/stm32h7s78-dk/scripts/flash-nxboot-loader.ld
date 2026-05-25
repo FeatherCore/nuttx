@@ -27,7 +27,7 @@
  *   internal Flash: 0x08000000, 64 KiB
  *   AXI SRAM:       0x24000000, 456 KiB
  *   XSPI2 NOR:      0x70000000, 128 MiB, split into three 32 MiB
- *                   NXboot slots for the first-stage bring-up.
+ *                   NXboot slots for the first-stage loader.
  *
  * Keep these checks in sync with arch/arm/src/stm32h7rs/Kconfig and the
  * nsh app linker script.

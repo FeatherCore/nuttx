@@ -39,7 +39,7 @@
 /* Clocking *****************************************************************/
 
 /* The STM32U5x9J-DK Cube LL template configures the maximum system clock
- * from MSIS and PLL1. Keep the first NuttX bring-up on the same 160 MHz path.
+ * from MSIS and PLL1. Keep NuttX on the same 160 MHz board clock path.
  *
  *   System Clock source : PLL (MSIS)
  *   SYSCLK(Hz)          : 160000000   Determined by PLL configuration
@@ -245,8 +245,8 @@
 #define GPIO_SDMMC1_D7   (GPIO_SDMMC1_D7_1  | GPIO_SPEED_100MHZ | GPIO_PULLUP)
 
 /* SDMMC uses the 160 MHz SYSCLK kernel clock. The divisors are deliberately
- * conservative for first eMMC bring-up: 400 kHz during identification and
- * about 20 MHz for transfer.
+ * conservative for eMMC reliability: 400 kHz during identification and about
+ * 20 MHz for transfer.
  */
 
 #define STM32_SDMMC_INIT_CLKDIV    200

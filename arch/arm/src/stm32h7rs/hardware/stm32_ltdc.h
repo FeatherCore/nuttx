@@ -12,13 +12,11 @@
  * Included Files
  ****************************************************************************/
 
-#include "stm32h7rs_memorymap.h"
+#include "stm32_memorymap.h"
 
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
-
-#define STM32_LTDC_BASE       STM32H7RS_LTDC_BASE
 
 #define STM32_LTDC_SSCR       (STM32_LTDC_BASE + 0x0008)
 #define STM32_LTDC_BPCR       (STM32_LTDC_BASE + 0x000c)

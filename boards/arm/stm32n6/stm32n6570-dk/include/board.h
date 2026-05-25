@@ -10,28 +10,34 @@
 
 /* Target clock profile from STM32CubeN6 Template FSBL 800 MHz setup:
  * Cortex-M55 at 800 MHz, with bus/peripheral clocks in the 400/200 MHz
- * class.  The first code drop exposes these as fixed bring-up constants;
- * the RCC sequence is translated in arch/arm/src/stm32n6/stm32n6_rcc.c.
+ * class.  Keep these as fixed board clock constants; the RCC sequence is
+ * translated in arch/arm/src/stm32n6/stm32_rcc.c.
  */
 
-#define STM32N6_SYSCLK_FREQUENCY       400000000ul
-#define STM32N6_CPUCLK_FREQUENCY       800000000ul
-#define STM32N6_SYSBUS_FREQUENCY       400000000ul
-#define STM32N6_HCLK_FREQUENCY         200000000ul
-#define STM32N6_PCLK1_FREQUENCY        200000000ul
-#define STM32N6_PCLK2_FREQUENCY        200000000ul
-#define STM32N6_XSPI_FREQUENCY         200000000ul
+#define STM32_HSI_FREQUENCY            64000000ul
+#define STM32_SYSCLK_FREQUENCY         400000000ul
+#define STM32_CPUCLK_FREQUENCY         800000000ul
+#define STM32_SYSBUS_FREQUENCY         400000000ul
+#define STM32_HCLK_FREQUENCY           200000000ul
+#define STM32_PCLK1_FREQUENCY          200000000ul
+#define STM32_PCLK2_FREQUENCY          200000000ul
+#define STM32_XSPI_FREQUENCY           200000000ul
 
-#define STM32N6_USART1_BAUD            115200ul
+#define STM32_USART1_FREQUENCY         STM32_PCLK2_FREQUENCY
 
-#define STM32N6_FSBL_LOAD_BASE         0x34180400u
-#define STM32N6_APP_RAM_BASE           0x34000000u
-#define STM32N6_XSPI2_NOR_BASE         0x70000000u
-#define STM32N6_XSPI1_PSRAM_BASE       0x90000000u
-#define STM32N6_NXBOOT_APP_OFFSET      0x00100000u
-#define STM32N6_NXBOOT_APP_BASE        0x70100000u
-#define STM32N6_NXBOOT_HEADER_SIZE     0x00000400u
-#define STM32N6_NXBOOT_APP_VECTOR      0x70100400u
+#define BOARD_FSBL_LOAD_BASE           0x34180400u
+#define BOARD_APP_RAM_BASE             0x34000000u
+#define BOARD_APP_RAM_SIZE             (2 * 1024 * 1024u)
+#define BOARD_AXISRAM_BASE             0x34000000u
+#define BOARD_AXISRAM_SIZE             0x003ca000u
+#define BOARD_XSPI2_NOR_BASE           0x70000000u
+#define BOARD_XSPI2_NOR_SIZE           (128 * 1024 * 1024u)
+#define BOARD_XSPI1_PSRAM_BASE         0x90000000u
+#define BOARD_XSPI1_PSRAM_SIZE         (32 * 1024 * 1024u)
+#define BOARD_NXBOOT_APP_OFFSET        0x00100000u
+#define BOARD_NXBOOT_APP_BASE          0x70100000u
+#define BOARD_NXBOOT_HEADER_SIZE       0x00000400u
+#define BOARD_NXBOOT_APP_VECTOR        0x70100400u
 
 #define BOARD_LTDC_WIDTH               800u
 #define BOARD_LTDC_HEIGHT              480u
@@ -42,7 +48,7 @@
   (BOARD_LTDC_STRIDE * BOARD_LTDC_HEIGHT)
 #define BOARD_LTDC_FB_SIZE             \
   (BOARD_LTDC_FRAME_SIZE * BOARD_LTDC_FB_COUNT)
-#define BOARD_LTDC_FB_BASE             STM32N6_XSPI1_PSRAM_BASE
+#define BOARD_LTDC_FB_BASE             BOARD_XSPI1_PSRAM_BASE
 #define BOARD_LTDC_HSYNC               4u
 #define BOARD_LTDC_HBP                 4u
 #define BOARD_LTDC_HFP                 4u
@@ -50,14 +56,6 @@
 #define BOARD_LTDC_VBP                 4u
 #define BOARD_LTDC_VFP                 4u
 #define BOARD_LTDC_CLOCK_DIV           32u
-
-#define STM32N6570_LCD_WIDTH           BOARD_LTDC_WIDTH
-#define STM32N6570_LCD_HEIGHT          BOARD_LTDC_HEIGHT
-#define STM32N6570_LCD_BPP             BOARD_LTDC_BPP
-#define STM32N6570_LCD_STRIDE          BOARD_LTDC_STRIDE
-#define STM32N6570_LCD_FB_BASE         BOARD_LTDC_FB_BASE
-#define STM32N6570_LCD_FB_SIZE         BOARD_LTDC_FB_SIZE
-#define STM32N6570_LCD_FB_RESERVE      BOARD_LTDC_FB_SIZE
 
 /* GPIO pin selections ******************************************************/
 
@@ -185,6 +183,21 @@
                                         GPIO_FLOAT | \
                                         GPIO_PORTD | \
                                         GPIO_PIN4)
+
+#define GPIO_USART1_TX                 (GPIO_ALT | \
+                                        GPIO_AF7 | \
+                                        GPIO_PUSHPULL | \
+                                        GPIO_SPEED_50MHZ | \
+                                        GPIO_PULLUP | \
+                                        GPIO_PORTE | \
+                                        GPIO_PIN5)
+#define GPIO_USART1_RX                 (GPIO_ALT | \
+                                        GPIO_AF7 | \
+                                        GPIO_PUSHPULL | \
+                                        GPIO_SPEED_50MHZ | \
+                                        GPIO_PULLUP | \
+                                        GPIO_PORTE | \
+                                        GPIO_PIN6)
 #define GPIO_GT911_INT                 (GPIO_INPUT | \
                                         GPIO_FLOAT | \
                                         GPIO_PORTQ | \

@@ -39,16 +39,16 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define STM32U5X9J_OSPI_INIT_PRESCALER      3u
-#define STM32U5X9J_OSPI_RUN_PRESCALER       1u
-#define STM32U5X9J_OSPI_CSHT                2u
-#define STM32U5X9J_OSPI_FIFO_THRESHOLD      4u
-#define STM32U5X9J_OSPI_DIAG_PATH           "/dev/ospi0"
-#define STM32U5X9J_OSPI_DLYB_MAX_PHASE      12u
-#define STM32U5X9J_OSPI_XSPIM_PORT          1u
-#define STM32U5X9J_OSPI_XSPIM_REQ2ACK       1u
+#define BOARD_OSPI_INIT_PRESCALER      3u
+#define BOARD_OSPI_RUN_PRESCALER       1u
+#define BOARD_OSPI_CSHT                2u
+#define BOARD_OSPI_FIFO_THRESHOLD      4u
+#define BOARD_OSPI_DIAG_PATH           "/dev/ospi0"
+#define BOARD_OSPI_DLYB_MAX_PHASE      12u
+#define BOARD_OSPI_XSPIM_PORT          1u
+#define BOARD_OSPI_XSPIM_REQ2ACK       1u
 
-#define MX25UM51245G_FLASH_SIZE             STM32U5X9J_OSPI1_NOR_SIZE
+#define MX25UM51245G_FLASH_SIZE             BOARD_OSPI1_NOR_SIZE
 #define MX25UM51245G_ERASE_SIZE             (64u * 1024u)
 #define MX25UM51245G_SUBSECTOR_SIZE         (4u * 1024u)
 #define MX25UM51245G_PAGE_SIZE              256u
@@ -88,26 +88,26 @@
 #define MX25UM51245G_RESET_DELAY_MS         100u
 #define MX25UM51245G_WRITE_REG_DELAY_MS     40u
 #define MX25UM51245G_READY_TIMEOUT_MS       5000u
-#define STM32U5X9J_OSPI_HSLV_PORTA_MASK     ((1u << 1) | (1u << 2))
-#define STM32U5X9J_OSPI_HSLV_PORTC_MASK     0x000fu
-#define STM32U5X9J_OSPI_HSLV_PORTF_MASK     0x07c0u
+#define BOARD_OSPI_HSLV_PORTA_MASK     ((1u << 1) | (1u << 2))
+#define BOARD_OSPI_HSLV_PORTC_MASK     0x000fu
+#define BOARD_OSPI_HSLV_PORTF_MASK     0x07c0u
 
-#define STM32U5X9J_HSPI_INIT_PRESCALER      3u
-#define STM32U5X9J_HSPI_RUN_PRESCALER       0u
-#define STM32U5X9J_HSPI_CSHT                1u
-#define STM32U5X9J_HSPI_FIFO_THRESHOLD      2u
-#define STM32U5X9J_HSPI_MAXTRAN             0u
-#define STM32U5X9J_HSPI_CSBOUND             11u
-#define STM32U5X9J_HSPI_DIAG_PATH           "/dev/hspiram0"
-#define STM32U5X9J_HSPI_HSLV_PORTH_MASK     0xfe00u
-#define STM32U5X9J_HSPI_HSLV_PORTI_MASK     0xff1fu
-#define STM32U5X9J_HSPI_HSLV_PORTJ_MASK     0x0001u
+#define BOARD_HSPI_INIT_PRESCALER      3u
+#define BOARD_HSPI_RUN_PRESCALER       0u
+#define BOARD_HSPI_CSHT                1u
+#define BOARD_HSPI_FIFO_THRESHOLD      2u
+#define BOARD_HSPI_MAXTRAN             0u
+#define BOARD_HSPI_CSBOUND             11u
+#define BOARD_HSPI_DIAG_PATH           "/dev/hspiram0"
+#define BOARD_HSPI_HSLV_PORTH_MASK     0xfe00u
+#define BOARD_HSPI_HSLV_PORTI_MASK     0xff1fu
+#define BOARD_HSPI_HSLV_PORTJ_MASK     0x0001u
 
-#define APS512XX_RAM_SIZE                   STM32U5X9J_HSPI1_PSRAM_SIZE
+#define APS512XX_RAM_SIZE                   BOARD_HSPI1_PSRAM_SIZE
 #define APS512XX_FB_RESERVED                \
-                                            STM32U5X9J_HSPI1_PSRAM_FB_RESERVED_SIZE
-#define APS512XX_HEAP_BASE                  STM32U5X9J_HSPI1_PSRAM_HEAP_BASE
-#define APS512XX_HEAP_SIZE                  STM32U5X9J_HSPI1_PSRAM_HEAP_SIZE
+                                            BOARD_HSPI1_PSRAM_FB_RESERVED_SIZE
+#define APS512XX_HEAP_BASE                  BOARD_HSPI1_PSRAM_HEAP_BASE
+#define APS512XX_HEAP_SIZE                  BOARD_HSPI1_PSRAM_HEAP_SIZE
 #define APS512XX_DEVSIZE                    25u
 #define APS512XX_RESET_CMD                  0xffu
 #define APS512XX_READ_LINEAR_BURST_CMD      0x20u
@@ -141,7 +141,7 @@
 #define APS512XX_WRITE_LATENCY              3u
 
 #if defined(CONFIG_STM32U5X9J_DK_OSPI_SCRATCH_TEST)
-#  define HAVE_STM32U5X9J_OSPI_WRITE_CMDS   1
+#  define HAVE_OSPI_WRITE_CMDS   1
 #endif
 
 /****************************************************************************
@@ -267,11 +267,11 @@ static void stm32_ospi_gpio_config(void)
   modifyreg32(STM32_PWR_SVMCR, 0, PWR_SVMCR_IO2SV);
 
   stm32_gpio_hslv_enable(STM32_GPIOA_BASE,
-                              STM32U5X9J_OSPI_HSLV_PORTA_MASK);
+                              BOARD_OSPI_HSLV_PORTA_MASK);
   stm32_gpio_hslv_enable(STM32_GPIOC_BASE,
-                              STM32U5X9J_OSPI_HSLV_PORTC_MASK);
+                              BOARD_OSPI_HSLV_PORTC_MASK);
   stm32_gpio_hslv_enable(STM32_GPIOF_BASE,
-                              STM32U5X9J_OSPI_HSLV_PORTF_MASK);
+                              BOARD_OSPI_HSLV_PORTF_MASK);
 
   stm32_configgpio(GPIO_OSPI1_CLK);
   stm32_configgpio(GPIO_OSPI1_DQS);
@@ -681,7 +681,7 @@ stm32_ospi_switch_dopi_run(FAR const struct stm32_xspi_config_s *config,
   return OK;
 }
 
-#ifdef HAVE_STM32U5X9J_OSPI_WRITE_CMDS
+#ifdef HAVE_OSPI_WRITE_CMDS
 static int stm32_ospi_erase_subsector(uint32_t address)
 {
   int ret;
@@ -857,7 +857,7 @@ static int stm32_ospi_scratch_test(void)
       return ret;
     }
 
-  xip = (FAR const uint8_t *)(STM32U5X9J_OSPI1_NOR_MEM_BASE + offset);
+  xip = (FAR const uint8_t *)(BOARD_OSPI1_NOR_MEM_BASE + offset);
   for (i = 0; i < sizeof(pattern); i++)
     {
       if (xip[i] != pattern[i])
@@ -874,7 +874,7 @@ static ssize_t stm32_ospi_diag_read(FAR struct file *filep,
                                          FAR char *buffer, size_t buflen)
 {
   FAR const volatile uint32_t *xip =
-    (FAR const volatile uint32_t *)STM32U5X9J_OSPI1_NOR_MEM_BASE;
+    (FAR const volatile uint32_t *)BOARD_OSPI1_NOR_MEM_BASE;
   char text[512];
   int len;
 
@@ -892,7 +892,7 @@ static ssize_t stm32_ospi_diag_read(FAR struct file *filep,
                  MX25UM51245G_SUBSECTOR_SIZE, MX25UM51245G_PAGE_SIZE,
                  g_ospi_jedec[0], g_ospi_jedec[1], g_ospi_jedec[2],
                  g_ospi_jedec[0] == MX25UM51245G_MANUFACTURER_ID,
-                 STM32U5X9J_OSPI1_NOR_MEM_BASE, *xip,
+                 BOARD_OSPI1_NOR_MEM_BASE, *xip,
                  g_ospi_nor_dtr ? "opi-dtr" : "spi-str",
 #ifdef CONFIG_STM32U5X9J_DK_OSPI_SCRATCH_TEST
                  "enabled",
@@ -971,7 +971,7 @@ static int stm32_ospi_diag_register(void)
       return OK;
     }
 
-  ret = register_driver(STM32U5X9J_OSPI_DIAG_PATH, &g_ospi_diag_fops,
+  ret = register_driver(BOARD_OSPI_DIAG_PATH, &g_ospi_diag_fops,
                         0666, NULL);
   if (ret < 0)
     {
@@ -980,7 +980,7 @@ static int stm32_ospi_diag_register(void)
 
   g_ospi_diag_registered = true;
   syslog(LOG_INFO, "stm32u5x9j: OSPI1 NOR diagnostic at %s\n",
-         STM32U5X9J_OSPI_DIAG_PATH);
+         BOARD_OSPI_DIAG_PATH);
 
   return OK;
 }
@@ -1005,11 +1005,11 @@ static void stm32_hspi_gpio_config(void)
   modifyreg32(STM32_PWR_SVMCR, 0, PWR_SVMCR_IO2SV);
 
   stm32_gpio_hslv_enable(STM32_GPIOH_BASE,
-                              STM32U5X9J_HSPI_HSLV_PORTH_MASK);
+                              BOARD_HSPI_HSLV_PORTH_MASK);
   stm32_gpio_hslv_enable(STM32_GPIOI_BASE,
-                              STM32U5X9J_HSPI_HSLV_PORTI_MASK);
+                              BOARD_HSPI_HSLV_PORTI_MASK);
   stm32_gpio_hslv_enable(STM32_GPIOJ_BASE,
-                              STM32U5X9J_HSPI_HSLV_PORTJ_MASK);
+                              BOARD_HSPI_HSLV_PORTJ_MASK);
 
   stm32_configgpio(GPIO_HSPI1_CLK);
   stm32_configgpio(GPIO_HSPI1_NCLK);
@@ -1135,7 +1135,7 @@ static int stm32_psram_enter_memory_mapped(void)
 static int stm32_psram_selftest(void)
 {
   volatile uint32_t *mem =
-    (volatile uint32_t *)STM32U5X9J_HSPI1_PSRAM_MEM_BASE;
+    (volatile uint32_t *)BOARD_HSPI1_PSRAM_MEM_BASE;
   uint32_t saved[8];
   uint32_t pattern[8] =
     {
@@ -1189,9 +1189,9 @@ static ssize_t stm32_hspi_diag_read(FAR struct file *filep,
                  "framebuffer base=0x%08x size=%u\n"
                  "heap base=0x%08x size=%u enabled=%u\n"
                  "selftest=save-write-read-restore-32B last=%d\n",
-                 STM32U5X9J_HSPI1_PSRAM_MEM_BASE, APS512XX_RAM_SIZE,
+                 BOARD_HSPI1_PSRAM_MEM_BASE, APS512XX_RAM_SIZE,
                  stm32_hspi1_psram_is_mapped(),
-                 STM32U5X9J_HSPI1_PSRAM_MEM_BASE, APS512XX_FB_RESERVED,
+                 BOARD_HSPI1_PSRAM_MEM_BASE, APS512XX_FB_RESERVED,
                  APS512XX_HEAP_BASE, APS512XX_HEAP_SIZE,
 #ifdef CONFIG_STM32U5X9J_DK_HSPI_HEAP
                  1,
@@ -1244,7 +1244,7 @@ static int stm32_hspi_diag_register(void)
       return OK;
     }
 
-  ret = register_driver(STM32U5X9J_HSPI_DIAG_PATH, &g_hspi_diag_fops,
+  ret = register_driver(BOARD_HSPI_DIAG_PATH, &g_hspi_diag_fops,
                         0666, NULL);
   if (ret < 0)
     {
@@ -1253,7 +1253,7 @@ static int stm32_hspi_diag_register(void)
 
   g_hspi_diag_registered = true;
   syslog(LOG_INFO, "stm32u5x9j: HSPI1 PSRAM diagnostic at %s\n",
-         STM32U5X9J_HSPI_DIAG_PATH);
+         BOARD_HSPI_DIAG_PATH);
 
   return OK;
 }
@@ -1272,9 +1272,9 @@ int stm32_ospi1_nor_initialize(void)
       .port           = STM32_XSPI_PORT_OCTOSPI1,
       .memory_type    = XSPI_DCR1_MTYP_MICRON,
       .device_size    = MX25UM51245G_DEVSIZE,
-      .csht           = STM32U5X9J_OSPI_CSHT,
-      .prescaler      = STM32U5X9J_OSPI_INIT_PRESCALER,
-      .fifo_threshold = STM32U5X9J_OSPI_FIFO_THRESHOLD,
+      .csht           = BOARD_OSPI_CSHT,
+      .prescaler      = BOARD_OSPI_INIT_PRESCALER,
+      .fifo_threshold = BOARD_OSPI_FIFO_THRESHOLD,
       .maxtran        = 0,
       .csbound        = 0,
       .refresh        = 0,
@@ -1285,9 +1285,9 @@ int stm32_ospi1_nor_initialize(void)
       .port           = STM32_XSPI_PORT_OCTOSPI1,
       .memory_type    = XSPI_DCR1_MTYP_MICRON,
       .device_size    = MX25UM51245G_DEVSIZE,
-      .csht           = STM32U5X9J_OSPI_CSHT,
-      .prescaler      = STM32U5X9J_OSPI_RUN_PRESCALER,
-      .fifo_threshold = STM32U5X9J_OSPI_FIFO_THRESHOLD,
+      .csht           = BOARD_OSPI_CSHT,
+      .prescaler      = BOARD_OSPI_RUN_PRESCALER,
+      .fifo_threshold = BOARD_OSPI_FIFO_THRESHOLD,
       .maxtran        = 0,
       .csbound        = 0,
       .refresh        = 0,
@@ -1298,9 +1298,9 @@ int stm32_ospi1_nor_initialize(void)
       .port           = STM32_XSPI_PORT_OCTOSPI1,
       .memory_type    = XSPI_DCR1_MTYP_MACRONIX,
       .device_size    = MX25UM51245G_DEVSIZE,
-      .csht           = STM32U5X9J_OSPI_CSHT,
-      .prescaler      = STM32U5X9J_OSPI_INIT_PRESCALER,
-      .fifo_threshold = STM32U5X9J_OSPI_FIFO_THRESHOLD,
+      .csht           = BOARD_OSPI_CSHT,
+      .prescaler      = BOARD_OSPI_INIT_PRESCALER,
+      .fifo_threshold = BOARD_OSPI_FIFO_THRESHOLD,
       .maxtran        = 0,
       .csbound        = 0,
       .refresh        = 0,
@@ -1311,9 +1311,9 @@ int stm32_ospi1_nor_initialize(void)
       .port           = STM32_XSPI_PORT_OCTOSPI1,
       .memory_type    = XSPI_DCR1_MTYP_MACRONIX,
       .device_size    = MX25UM51245G_DEVSIZE,
-      .csht           = STM32U5X9J_OSPI_CSHT,
-      .prescaler      = STM32U5X9J_OSPI_RUN_PRESCALER,
-      .fifo_threshold = STM32U5X9J_OSPI_FIFO_THRESHOLD,
+      .csht           = BOARD_OSPI_CSHT,
+      .prescaler      = BOARD_OSPI_RUN_PRESCALER,
+      .fifo_threshold = BOARD_OSPI_FIFO_THRESHOLD,
       .maxtran        = 0,
       .csbound        = 0,
       .refresh        = 0,
@@ -1322,12 +1322,12 @@ int stm32_ospi1_nor_initialize(void)
   const struct stm32_xspim_config_s xspim_config =
     {
       .port         = STM32_XSPI_PORT_OCTOSPI1,
-      .clk_port     = STM32U5X9J_OSPI_XSPIM_PORT,
-      .dqs_port     = STM32U5X9J_OSPI_XSPIM_PORT,
-      .ncs_port     = STM32U5X9J_OSPI_XSPIM_PORT,
-      .iolow_port   = STM32U5X9J_OSPI_XSPIM_PORT,
-      .iohigh_port  = STM32U5X9J_OSPI_XSPIM_PORT,
-      .req2ack_time = STM32U5X9J_OSPI_XSPIM_REQ2ACK,
+      .clk_port     = BOARD_OSPI_XSPIM_PORT,
+      .dqs_port     = BOARD_OSPI_XSPIM_PORT,
+      .ncs_port     = BOARD_OSPI_XSPIM_PORT,
+      .iolow_port   = BOARD_OSPI_XSPIM_PORT,
+      .iohigh_port  = BOARD_OSPI_XSPIM_PORT,
+      .req2ack_time = BOARD_OSPI_XSPIM_REQ2ACK,
     };
 
   uint8_t id[3] =
@@ -1354,8 +1354,8 @@ int stm32_ospi1_nor_initialize(void)
   stm32_ospi_gpio_config();
 
   syslog(LOG_INFO, "stm32u5x9j: OSPI1 NOR init prescaler=%u"
-         " run prescaler=%u\n", STM32U5X9J_OSPI_INIT_PRESCALER,
-         STM32U5X9J_OSPI_RUN_PRESCALER);
+         " run prescaler=%u\n", BOARD_OSPI_INIT_PRESCALER,
+         BOARD_OSPI_RUN_PRESCALER);
 
   ret = stm32_ospi_configure(&spi_init_config, &xspim_config);
   if (ret < 0)
@@ -1455,10 +1455,10 @@ int stm32_ospi1_nor_initialize(void)
       return ret;
     }
 
-  first = *(volatile uint32_t *)STM32U5X9J_OSPI1_NOR_MEM_BASE;
+  first = *(volatile uint32_t *)BOARD_OSPI1_NOR_MEM_BASE;
   syslog(LOG_INFO, "stm32u5x9j: OSPI1 NOR %s mapped at 0x%08x"
          " first=0x%08" PRIx32 "\n", g_ospi_nor_dtr ? "DTR" : "STR",
-         STM32U5X9J_OSPI1_NOR_MEM_BASE, first);
+         BOARD_OSPI1_NOR_MEM_BASE, first);
   return OK;
 }
 
@@ -1486,13 +1486,13 @@ int stm32_hspi1_psram_initialize(void)
       .port           = STM32_XSPI_PORT_HSPI1,
       .memory_type    = XSPI_DCR1_MTYP_APMEM_16BIT,
       .device_size    = APS512XX_DEVSIZE,
-      .csht           = STM32U5X9J_HSPI_CSHT,
-      .prescaler      = STM32U5X9J_HSPI_INIT_PRESCALER,
-      .fifo_threshold = STM32U5X9J_HSPI_FIFO_THRESHOLD,
-      .maxtran        = STM32U5X9J_HSPI_MAXTRAN,
-      .csbound        = STM32U5X9J_HSPI_CSBOUND,
+      .csht           = BOARD_HSPI_CSHT,
+      .prescaler      = BOARD_HSPI_INIT_PRESCALER,
+      .fifo_threshold = BOARD_HSPI_FIFO_THRESHOLD,
+      .maxtran        = BOARD_HSPI_MAXTRAN,
+      .csbound        = BOARD_HSPI_CSBOUND,
       .refresh        = stm32_psram_refresh(
-                          STM32U5X9J_HSPI_INIT_PRESCALER),
+                          BOARD_HSPI_INIT_PRESCALER),
     };
 
   const struct stm32_xspi_config_s run_config =
@@ -1500,13 +1500,13 @@ int stm32_hspi1_psram_initialize(void)
       .port           = STM32_XSPI_PORT_HSPI1,
       .memory_type    = XSPI_DCR1_MTYP_APMEM_16BIT,
       .device_size    = APS512XX_DEVSIZE,
-      .csht           = STM32U5X9J_HSPI_CSHT,
-      .prescaler      = STM32U5X9J_HSPI_RUN_PRESCALER,
-      .fifo_threshold = STM32U5X9J_HSPI_FIFO_THRESHOLD,
-      .maxtran        = STM32U5X9J_HSPI_MAXTRAN,
-      .csbound        = STM32U5X9J_HSPI_CSBOUND,
+      .csht           = BOARD_HSPI_CSHT,
+      .prescaler      = BOARD_HSPI_RUN_PRESCALER,
+      .fifo_threshold = BOARD_HSPI_FIFO_THRESHOLD,
+      .maxtran        = BOARD_HSPI_MAXTRAN,
+      .csbound        = BOARD_HSPI_CSBOUND,
       .refresh        = stm32_psram_refresh(
-                          STM32U5X9J_HSPI_RUN_PRESCALER),
+                          BOARD_HSPI_RUN_PRESCALER),
     };
 
   int ret;
@@ -1520,8 +1520,8 @@ int stm32_hspi1_psram_initialize(void)
   g_hspi_ram_mapped = false;
 
   syslog(LOG_INFO, "stm32u5x9j: HSPI1 PSRAM init prescaler=%u"
-         " run prescaler=%u\n", STM32U5X9J_HSPI_INIT_PRESCALER,
-         STM32U5X9J_HSPI_RUN_PRESCALER);
+         " run prescaler=%u\n", BOARD_HSPI_INIT_PRESCALER,
+         BOARD_HSPI_RUN_PRESCALER);
 
   ret = stm32_xspi_common_setup();
   if (ret < 0)
@@ -1602,7 +1602,7 @@ int stm32_hspi1_psram_initialize(void)
     }
 
   syslog(LOG_INFO, "stm32u5x9j: HSPI1 PSRAM mapped at 0x%08x\n",
-         STM32U5X9J_HSPI1_PSRAM_MEM_BASE);
+         BOARD_HSPI1_PSRAM_MEM_BASE);
   return OK;
 }
 

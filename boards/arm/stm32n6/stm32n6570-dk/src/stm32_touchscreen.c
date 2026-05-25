@@ -45,8 +45,8 @@ static const struct gt911_config_s g_gt911_config =
 {
   .address   = GT911_ADDR,
   .frequency = GT911_I2C_FREQUENCY,
-  .xres      = STM32N6570_LCD_WIDTH,
-  .yres      = STM32N6570_LCD_HEIGHT,
+  .xres      = BOARD_LTDC_WIDTH,
+  .yres      = BOARD_LTDC_HEIGHT,
   .poll_ms   = CONFIG_STM32N6570_DK_GT911_POLL_MS,
 };
 

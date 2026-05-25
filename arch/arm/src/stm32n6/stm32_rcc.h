@@ -70,6 +70,17 @@ extern "C"
 void stm32_clockconfig(void);
 
 /****************************************************************************
+ * Name: stm32_power_config
+ *
+ * Description:
+ *   Apply board-required power and I/O voltage-domain settings before
+ *   high-speed external-memory and peripheral setup.
+ *
+ ****************************************************************************/
+
+void stm32_power_config(void);
+
+/****************************************************************************
  * Name: stm32_stdclockconfig
  *
  * Description:

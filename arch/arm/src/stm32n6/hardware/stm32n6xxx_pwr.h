@@ -29,6 +29,8 @@
 
 #include <nuttx/config.h>
 
+#include "hardware/stm32n6xxx_memorymap.h"
+
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
@@ -69,6 +71,13 @@
 
 /* Register Bitfield Definitions ********************************************/
 
+/* Power Control Register 1 (PWR_CR1) */
+
+#define PWR_CR1_SDEN               (1 << 2)  /* Bit 2: SMPS step-down converter enable */
+
+#define PWR_SUPPLY_CONFIG_MASK     PWR_CR1_SDEN
+#define PWR_EXTERNAL_SOURCE_SUPPLY 0
+
 /* Debug Backup Domain Protection Control Register (PWR_DBPCR) */
 
 #define PWR_DBPCR_DBP              (1 << 0)  /* Bit 0: Disable backup domain write protection */
@@ -83,6 +92,9 @@
 #define PWR_VOSCR_VOSRDY           (1 << 1)  /* Bit 1:  VOS Ready */
 #define PWR_VOSCR_ACTVOS           (1 << 16) /* Bit 16: Active VOS (read-back) */
 #define PWR_VOSCR_ACTVOSRDY        (1 << 17) /* Bit 17: Active VOS ready */
+
+#define PWR_REGULATOR_VOLTAGE_SCALE0 PWR_VOSCR_VOS
+#define PWR_REGULATOR_VOLTAGE_SCALE1 0
 
 /* CPU Power Control Register (PWR_CPUCR) */
 
@@ -104,9 +116,14 @@
 
 /* Supply Voltage Monitoring Control Register 3 (PWR_SVMCR3) - VddIO2/3 */
 
+#define PWR_SVMCR3_VDDIO2VMEN     (1 << 0)  /* Bit 0: VddIO2 voltage monitor enable */
+#define PWR_SVMCR3_VDDIO3VMEN     (1 << 1)  /* Bit 1: VddIO3 voltage monitor enable */
 #define PWR_SVMCR3_VDDIO2SV       (1 << 8)  /* Bit 8: VddIO2 supply valid */
 #define PWR_SVMCR3_VDDIO3SV       (1 << 9)  /* Bit 9: VddIO3 supply valid */
-#define PWR_SVMCR3_VDDIO2VRSEL    (1 << 16) /* Bit 16: VddIO2 high-speed low-voltage */
-#define PWR_SVMCR3_VDDIO3VRSEL    (1 << 17) /* Bit 17: VddIO3 high-speed low-voltage */
+#define PWR_SVMCR3_VDDIO2RDY      (1 << 16) /* Bit 16: VddIO2 ready */
+#define PWR_SVMCR3_VDDIO3RDY      (1 << 17) /* Bit 17: VddIO3 ready */
+#define PWR_SVMCR3_VDDIOVRSEL     (1 << 24) /* Bit 24: VddIO voltage range */
+#define PWR_SVMCR3_VDDIO2VRSEL    (1 << 25) /* Bit 25: VddIO2 voltage range */
+#define PWR_SVMCR3_VDDIO3VRSEL    (1 << 26) /* Bit 26: VddIO3 voltage range */
 
 #endif /* __ARCH_ARM_SRC_STM32N6_HARDWARE_STM32N6XXX_PWR_H */

@@ -43,8 +43,7 @@ config STM32H7RS_USART
 	bool "USART"
 	default n
 	---help---
-		Enable STM32H7RS USART support once the low-level serial driver is
-		ported.
+		Enable STM32H7RS USART register and clock support.
 
 config STM32H7RS_UART4_SERIALDRIVER
 	bool "UART4 serial driver"
@@ -59,15 +58,14 @@ config STM32H7RS_GPIO
 	bool "GPIO"
 	default n
 	---help---
-		Enable STM32H7RS GPIO support once the GPIO register layer is
-		ported.
+		Enable STM32H7RS GPIO register and pin configuration support.
 
 config STM32H7RS_XSPI
 	bool "XSPI"
 	default n
 	---help---
-		Enable STM32H7RS XSPI support once the memory-mapped external
-		flash/PSRAM path is ported.
+		Enable STM32H7RS XSPI support for memory-mapped external
+		flash and PSRAM.
 
 config STM32H7RS_I2C
 	bool "I2C"

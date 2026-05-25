@@ -24,10 +24,10 @@
 
 #include "arm_internal.h"
 
-#include "hardware/stm32n6_memorymap.h"
+#include "hardware/stm32n6xxx_memorymap.h"
 #include "stm32_gpio.h"
 #include "stm32_ltdc.h"
-#include "stm32n6_mpuinit.h"
+#include "stm32_mpuinit.h"
 
 #include "stm32n6570-dk.h"
 
@@ -141,7 +141,7 @@ int up_fbinitialize(int display)
    * before the configured PSRAM heap, so map it explicitly.
    */
 
-  stm32n6_mpu_uheap(BOARD_LTDC_FB_BASE, BOARD_LTDC_FB_SIZE);
+  stm32_mpu_uheap(BOARD_LTDC_FB_BASE, BOARD_LTDC_FB_SIZE);
 
   ret = stm32_lcd_panel_config();
   if (ret < 0)

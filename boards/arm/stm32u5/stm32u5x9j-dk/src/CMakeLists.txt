@@ -23,7 +23,7 @@
 set(SRCS stm32_boot.c stm32_bringup.c stm32_userleds.c stm32_extmem.c
          stm32_xspi.c)
 
-if(CONFIG_BUILD_PROTECTED)
+if(CONFIG_BUILD_PROTECTED OR CONFIG_STM32U5X9J_DK_HSPI_HEAP)
   list(APPEND SRCS stm32_heap.c)
 endif()
 

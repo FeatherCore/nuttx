@@ -28,9 +28,9 @@
 
 #include "arm_internal.h"
 
-#include "hardware/stm32n6_gpio.h"
-#include "hardware/stm32n6_memorymap.h"
-#include "hardware/stm32n6_rcc.h"
+#include "hardware/stm32n6xxx_memorymap.h"
+#include "hardware/stm32n6xxx_rcc.h"
+#include "hardware/stm32n6xxx_gpio.h"
 #include "hardware/stm32_xspi.h"
 
 #include "stm32_xspi.h"
@@ -40,11 +40,11 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define STM32N6570_XSPI_200MHZ           200000000u
-#define STM32N6570_XSPI_50MHZ            50000000u
-#define STM32N6570_XSPI_PSRAM_MAPPED_HZ  STM32N6570_XSPI_200MHZ
-#define STM32N6570_XSPI_NOR_RESET_DELAY_MS 100u
-#define STM32N6570_XSPI_STATUS_TIMEOUT   1000000u
+#define BOARD_XSPI_200MHZ           200000000u
+#define BOARD_XSPI_50MHZ            50000000u
+#define BOARD_XSPI_PSRAM_MAPPED_HZ  BOARD_XSPI_200MHZ
+#define BOARD_XSPI_NOR_RESET_DELAY_MS 100u
+#define BOARD_XSPI_STATUS_TIMEOUT   1000000u
 
 #define MX66UW1G45G_RESET_ENABLE_CMD     0x66u
 #define MX66UW1G45G_RESET_MEMORY_CMD     0x99u
@@ -75,7 +75,7 @@
 #define MX66UW1G45G_SR_WIP               0x01u
 #define MX66UW1G45G_SR_WEL               0x02u
 #define MX66UW1G45G_DEVSIZE              26u
-#define MX66UW1G45G_SIZE                 STM32N6_XSPI2_NOR_SIZE
+#define MX66UW1G45G_SIZE                 BOARD_XSPI2_NOR_SIZE
 #define MX66UW1G45G_PAGE_SIZE            256u
 #define MX66UW1G45G_SECTOR_SIZE          0x1000u
 #define MX66UW1G45G_BLOCK_SIZE           0x10000u
@@ -105,9 +105,9 @@
 #define APS256_RESET_DELAY_MS            1u
 
 #ifdef CONFIG_ARCH_RAMFUNCS
-#  define STM32N6570_RAMFUNC locate_code(".ramfunc") noinline_function
+#  define BOARD_RAMFUNC locate_code(".ramfunc") noinline_function
 #else
-#  define STM32N6570_RAMFUNC
+#  define BOARD_RAMFUNC
 #endif
 
 #ifdef CONFIG_STM32N6570_DK_PSRAM_SELFTEST_DEBUG
@@ -125,7 +125,7 @@ static bool g_psram_selftest_done;
 
 static void stm32_nor_invalidate_cache(uint32_t offset, size_t nbytes)
 {
-  uintptr_t start = STM32N6_XSPI2_MEM_BASE + offset;
+  uintptr_t start = BOARD_XSPI2_NOR_BASE + offset;
 
   up_invalidate_dcache(start, start + nbytes);
 }
@@ -160,9 +160,9 @@ static void stm32_xspi2_gpio_config(void)
                   (1u << 4) | (1u << 5) | (1u << 6) | (1u << 8) |
                   (1u << 9) | (1u << 10) | (1u << 11);
 
-  putreg32(RCC_AHB4ENSR_GPIONENS, STM32N6_RCC_AHB4ENSR);
-  (void)getreg32(STM32N6_RCC_AHB4ENR);
-  stm32_xspi_config_gpio(STM32N6_GPION_BASE, pins, GPIO_AF_XSPIM);
+  putreg32(RCC_AHB4ENSR_GPIONENS, STM32_RCC_AHB4ENSR);
+  (void)getreg32(STM32_RCC_AHB4ENR);
+  stm32_xspi_config_gpio(STM32_GPION_BASE, pins, GPIO_AF_XSPIM);
 }
 
 static void stm32_xspi1_gpio_config(void)
@@ -175,19 +175,19 @@ static void stm32_xspi1_gpio_config(void)
                         (1u << 14) | (1u << 15);
 
   putreg32(RCC_AHB4ENSR_GPIOOENS | RCC_AHB4ENSR_GPIOPENS,
-           STM32N6_RCC_AHB4ENSR);
-  (void)getreg32(STM32N6_RCC_AHB4ENR);
-  stm32_xspi_config_gpio(STM32N6_GPIOO_BASE, gpioo_pins,
+           STM32_RCC_AHB4ENSR);
+  (void)getreg32(STM32_RCC_AHB4ENR);
+  stm32_xspi_config_gpio(STM32_GPIOO_BASE, gpioo_pins,
                            GPIO_AF_XSPIM);
-  stm32_xspi_config_gpio(STM32N6_GPIOP_BASE, gpiop_pins,
+  stm32_xspi_config_gpio(STM32_GPIOP_BASE, gpiop_pins,
                            GPIO_AF_XSPIM);
 }
 
 static void stm32_xspi_enable_clocks(void)
 {
   putreg32(RCC_AHB5ENSR_XSPI1ENS | RCC_AHB5ENSR_XSPI2ENS |
-           RCC_AHB5ENSR_XSPIMENS, STM32N6_RCC_AHB5ENSR);
-  (void)getreg32(STM32N6_RCC_AHB5ENR);
+           RCC_AHB5ENSR_XSPIMENS, STM32_RCC_AHB5ENSR);
+  (void)getreg32(STM32_RCC_AHB5ENR);
 }
 
 static int stm32_nor_read_cfg2_spi(uint32_t address, uint8_t *value)
@@ -212,7 +212,7 @@ static int stm32_nor_read_status_spi(uint8_t *status)
                                 ccr, 0, 1, status);
 }
 
-static STM32N6570_RAMFUNC int stm32_nor_read_status_octal(uint8_t *status)
+static BOARD_RAMFUNC int stm32_nor_read_status_octal(uint8_t *status)
 {
   uint8_t data[2];
   uint32_t ccr;
@@ -237,10 +237,10 @@ static STM32N6570_RAMFUNC int stm32_nor_read_status_octal(uint8_t *status)
   return ret;
 }
 
-static STM32N6570_RAMFUNC int stm32_nor_wait_status(
+static BOARD_RAMFUNC int stm32_nor_wait_status(
   int (*read_status)(uint8_t *status), uint8_t mask, uint8_t value)
 {
-  uint32_t timeout = STM32N6570_XSPI_STATUS_TIMEOUT;
+  uint32_t timeout = BOARD_XSPI_STATUS_TIMEOUT;
   uint8_t status;
   int ret;
 
@@ -268,7 +268,7 @@ static int stm32_nor_wait_wip_spi(void)
                                  MX66UW1G45G_SR_WIP, 0);
 }
 
-static STM32N6570_RAMFUNC int stm32_nor_wait_wip_octal(void)
+static BOARD_RAMFUNC int stm32_nor_wait_wip_octal(void)
 {
   return stm32_nor_wait_status(stm32_nor_read_status_octal,
                                  MX66UW1G45G_SR_WIP, 0);
@@ -291,7 +291,7 @@ static int stm32_nor_write_enable_spi(void)
                                  MX66UW1G45G_SR_WEL);
 }
 
-static STM32N6570_RAMFUNC int stm32_nor_write_enable_octal(void)
+static BOARD_RAMFUNC int stm32_nor_write_enable_octal(void)
 {
   int ret;
 
@@ -403,7 +403,7 @@ static int stm32_nor_config_cfg2_spi(uint32_t address, uint8_t value,
   return OK;
 }
 
-static STM32N6570_RAMFUNC int stm32_xspi2_enter_memory_mapped(void)
+static BOARD_RAMFUNC int stm32_xspi2_enter_memory_mapped(void)
 {
   uintptr_t base = STM32_XSPI2_BASE;
   uint32_t prescaler = 0;
@@ -412,7 +412,7 @@ static STM32N6570_RAMFUNC int stm32_xspi2_enter_memory_mapped(void)
   int ret;
 
   source_hz = stm32_xspi_get_source_hz(base);
-  if (source_hz < STM32N6570_XSPI_200MHZ)
+  if (source_hz < BOARD_XSPI_200MHZ)
     {
       syslog(LOG_WARNING,
              "stm32n6: XSPI2 HSLV disabled, NOR mapped at 50MHz\n");
@@ -445,12 +445,12 @@ static int stm32_xspi1_enter_memory_mapped(void)
   int ret;
 
   source_hz = stm32_xspi_get_source_hz(base);
-  target_hz = STM32N6570_XSPI_PSRAM_MAPPED_HZ;
-  if (!stm32_xspi_hslv_enabled(base) && target_hz > STM32N6570_XSPI_50MHZ)
+  target_hz = BOARD_XSPI_PSRAM_MAPPED_HZ;
+  if (!stm32_xspi_hslv_enabled(base) && target_hz > BOARD_XSPI_50MHZ)
     {
       syslog(LOG_WARNING,
              "stm32n6: XSPI1 HSLV disabled, PSRAM mapped at 50MHz\n");
-      target_hz = STM32N6570_XSPI_50MHZ;
+      target_hz = BOARD_XSPI_50MHZ;
     }
 
   prescaler = stm32_xspi_prescaler(source_hz, target_hz);
@@ -668,10 +668,10 @@ static int stm32_psram_selftest_range(uintptr_t base, size_t size,
   psramtestinfo("range base=%08" PRIxPTR " size=%zu label=%s begin\n",
                 base, size, label);
 
-  if (base < STM32N6_XSPI1_MEM_BASE ||
-      base > STM32N6_XSPI1_MEM_BASE + STM32N6_XSPI1_PSRAM_SIZE ||
+  if (base < BOARD_XSPI1_PSRAM_BASE ||
+      base > BOARD_XSPI1_PSRAM_BASE + BOARD_XSPI1_PSRAM_SIZE ||
       size < sizeof(pattern) ||
-      size > STM32N6_XSPI1_MEM_BASE + STM32N6_XSPI1_PSRAM_SIZE - base)
+      size > BOARD_XSPI1_PSRAM_BASE + BOARD_XSPI1_PSRAM_SIZE - base)
     {
       ferr("ERROR: PSRAM self-test range invalid base=0x%08" PRIx32
            " size=0x%08" PRIx32 "\n", (uint32_t)base, (uint32_t)size);
@@ -793,8 +793,8 @@ static int stm32_psram_selftest_range(uintptr_t base, size_t size,
 
 static int stm32_psram_selftest(void)
 {
-  return stm32_psram_selftest_range(STM32N6_XSPI1_MEM_BASE,
-                                         STM32N6_XSPI1_PSRAM_SIZE,
+  return stm32_psram_selftest_range(BOARD_XSPI1_PSRAM_BASE,
+                                         BOARD_XSPI1_PSRAM_SIZE,
                                          "");
 }
 
@@ -823,14 +823,14 @@ static int stm32_psram_verify_once(void)
   return ret;
 }
 
-static STM32N6570_RAMFUNC uint32_t stm32_nor_octal_command_ccr(void)
+static BOARD_RAMFUNC uint32_t stm32_nor_octal_command_ccr(void)
 {
   return XSPI_CCR_IMODE_8_LINES | XSPI_CCR_IDTR | XSPI_CCR_ISIZE_16 |
          XSPI_CCR_ADMODE_8_LINES | XSPI_CCR_ADDTR |
          XSPI_CCR_ADSIZE_32;
 }
 
-static STM32N6570_RAMFUNC uint32_t stm32_nor_octal_data_ccr(void)
+static BOARD_RAMFUNC uint32_t stm32_nor_octal_data_ccr(void)
 {
   return stm32_nor_octal_command_ccr() |
          XSPI_CCR_DMODE_8_LINES | XSPI_CCR_DDTR | XSPI_CCR_DQSE;
@@ -848,7 +848,7 @@ static void stm32_nor_log_error(FAR const char *op, int ret)
          getreg32(STM32_XSPI_CR(STM32_XSPI2_BASE)));
 }
 
-static STM32N6570_RAMFUNC int stm32_nor_restore_memory_mapped(int opret)
+static BOARD_RAMFUNC int stm32_nor_restore_memory_mapped(int opret)
 {
   int mapret;
 
@@ -864,7 +864,7 @@ static STM32N6570_RAMFUNC int stm32_nor_restore_memory_mapped(int opret)
   return opret;
 }
 
-static STM32N6570_RAMFUNC int stm32_nor_finish_error(FAR const char *op,
+static BOARD_RAMFUNC int stm32_nor_finish_error(FAR const char *op,
                                                     int opret)
 {
   int mapret;
@@ -910,7 +910,7 @@ int stm32_xspi2_nor_initialize(void)
 
   source_hz = stm32_xspi_get_source_hz(STM32_XSPI2_BASE);
   startup_prescaler =
-    stm32_xspi_prescaler(source_hz, STM32N6570_XSPI_50MHZ);
+    stm32_xspi_prescaler(source_hz, BOARD_XSPI_50MHZ);
 
   stm32_xspi2_gpio_config();
 
@@ -944,7 +944,7 @@ int stm32_xspi2_nor_initialize(void)
       syslog(LOG_WARNING, "XSPI2 NOR octal reset failed: %d\n", ret);
     }
 
-  up_mdelay(STM32N6570_XSPI_NOR_RESET_DELAY_MS);
+  up_mdelay(BOARD_XSPI_NOR_RESET_DELAY_MS);
 
   ret = stm32_xspi_command(STM32_XSPI2_BASE,
                              MX66UW1G45G_RESET_ENABLE_CMD,
@@ -966,7 +966,7 @@ int stm32_xspi2_nor_initialize(void)
       return ret;
     }
 
-  up_mdelay(STM32N6570_XSPI_NOR_RESET_DELAY_MS);
+  up_mdelay(BOARD_XSPI_NOR_RESET_DELAY_MS);
 
   ret = stm32_nor_readid(id);
   if (ret < 0)
@@ -1068,14 +1068,14 @@ int stm32_xspi2_nor_initialize(void)
       return ret;
     }
 
-  header = *(volatile uint32_t *)(STM32N6_XSPI2_MEM_BASE +
+  header = *(volatile uint32_t *)(BOARD_XSPI2_NOR_BASE +
                                   CONFIG_STM32N6_OTA_PRIMARY_SLOT_OFFSET);
   syslog(LOG_INFO, "XSPI2 NOR mapped 0x%08x ota0[0]=0x%08" PRIx32 "\n",
-         STM32N6_XSPI2_MEM_BASE, header);
+         BOARD_XSPI2_NOR_BASE, header);
   return OK;
 }
 
-STM32N6570_RAMFUNC int stm32_xspi2_nor_erase(uint32_t offset,
+BOARD_RAMFUNC int stm32_xspi2_nor_erase(uint32_t offset,
                                             size_t nbytes)
 {
   uint32_t start_offset = offset;
@@ -1168,7 +1168,7 @@ STM32N6570_RAMFUNC int stm32_xspi2_nor_erase(uint32_t offset,
   return OK;
 }
 
-STM32N6570_RAMFUNC ssize_t stm32_xspi2_nor_write(
+BOARD_RAMFUNC ssize_t stm32_xspi2_nor_write(
   uint32_t offset, FAR const uint8_t *buffer, size_t nbytes)
 {
   uint32_t start_offset = offset;
@@ -1290,7 +1290,7 @@ static int stm32_xspi1_psram_map_internal(bool verify)
 
   source_hz = stm32_xspi_get_source_hz(STM32_XSPI1_BASE);
   startup_prescaler =
-    stm32_xspi_prescaler(source_hz, STM32N6570_XSPI_50MHZ);
+    stm32_xspi_prescaler(source_hz, BOARD_XSPI_50MHZ);
 
   stm32_xspi1_gpio_config();
 
@@ -1364,7 +1364,7 @@ static int stm32_xspi1_psram_map_internal(bool verify)
     }
 
   syslog(LOG_INFO, "XSPI1 PSRAM mapped at 0x%08x refresh=%" PRIu32 "\n",
-         STM32N6_XSPI1_MEM_BASE,
+         BOARD_XSPI1_PSRAM_BASE,
          getreg32(STM32_XSPI_DCR4(STM32_XSPI1_BASE)));
   return OK;
 }

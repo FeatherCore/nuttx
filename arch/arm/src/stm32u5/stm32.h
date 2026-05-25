@@ -47,4 +47,12 @@
 #include "stm32_uart.h"
 #include "stm32_lowputc.h"
 
+/****************************************************************************
+ * Public Function Prototypes
+ ****************************************************************************/
+
+#if CONFIG_MM_REGIONS > 1
+void stm32_addregion(void);
+#endif
+
 #endif /* __ARCH_ARM_SRC_STM32U5_STM32_H */

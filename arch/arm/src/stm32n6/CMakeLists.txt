@@ -22,21 +22,25 @@
 
 set(SRCS)
 
+# The upstream STM32N6 port uses the common STM32-style stm32_* lower halves.
+# STM32N6570-DK now shares the stm32_* GPIO, XSPI, LTDC, I2C, timer,
+# console, start, RCC, heap and protected-mode helper paths.
+
 if(CONFIG_ARCH_BOARD_STM32N6570_DK)
 
 list(
   APPEND
   SRCS
-  stm32n6_start.c
-  stm32n6_rcc.c
-  stm32n6_irq.c
-  stm32n6_lowputc.c
-  stm32n6_timerisr.c
-  stm32n6_serial.c
-  stm32n6_allocateheap.c)
+  stm32_start.c
+  stm32_rcc.c
+  stm32_irq.c
+  stm32_lowputc.c
+  stm32_timerisr.c
+  stm32_serial.c
+  stm32_allocateheap.c)
 
 if(CONFIG_BUILD_PROTECTED)
-  list(APPEND SRCS stm32n6_userspace.c stm32n6_mpuinit.c)
+  list(APPEND SRCS stm32_userspace.c stm32_mpuinit.c)
 endif()
 
 if(CONFIG_STM32N6_XSPI)

@@ -20,10 +20,10 @@
 
 #include "arm_internal.h"
 
-#include "hardware/stm32h7rs_gpio.h"
-#include "hardware/stm32h7rs_pwr.h"
-#include "hardware/stm32h7rs_rcc.h"
-#include "hardware/stm32h7rs_sbs.h"
+#include "hardware/stm32_gpio.h"
+#include "hardware/stm32_pwr.h"
+#include "hardware/stm32_rcc.h"
+#include "hardware/stm32_sbs.h"
 #include "hardware/stm32_xspi.h"
 
 #include "stm32_xspi.h"
@@ -119,7 +119,7 @@ void stm32_xspi_config_gpio(uintptr_t portbase, uint32_t pins,
   uint32_t regval;
   int pin;
 
-  regval = getreg32(portbase + STM32H7RS_GPIO_MODER_OFFSET);
+  regval = getreg32(portbase + STM32_GPIO_MODER_OFFSET);
   for (pin = 0; pin <= 15; pin++)
     {
       if ((pins & (1u << pin)) != 0)
@@ -129,13 +129,13 @@ void stm32_xspi_config_gpio(uintptr_t portbase, uint32_t pins,
         }
     }
 
-  putreg32(regval, portbase + STM32H7RS_GPIO_MODER_OFFSET);
+  putreg32(regval, portbase + STM32_GPIO_MODER_OFFSET);
 
-  regval = getreg32(portbase + STM32H7RS_GPIO_OTYPER_OFFSET);
+  regval = getreg32(portbase + STM32_GPIO_OTYPER_OFFSET);
   regval &= ~pins;
-  putreg32(regval, portbase + STM32H7RS_GPIO_OTYPER_OFFSET);
+  putreg32(regval, portbase + STM32_GPIO_OTYPER_OFFSET);
 
-  regval = getreg32(portbase + STM32H7RS_GPIO_OSPEEDR_OFFSET);
+  regval = getreg32(portbase + STM32_GPIO_OSPEEDR_OFFSET);
   for (pin = 0; pin <= 15; pin++)
     {
       if ((pins & (1u << pin)) != 0)
@@ -145,9 +145,9 @@ void stm32_xspi_config_gpio(uintptr_t portbase, uint32_t pins,
         }
     }
 
-  putreg32(regval, portbase + STM32H7RS_GPIO_OSPEEDR_OFFSET);
+  putreg32(regval, portbase + STM32_GPIO_OSPEEDR_OFFSET);
 
-  regval = getreg32(portbase + STM32H7RS_GPIO_PUPDR_OFFSET);
+  regval = getreg32(portbase + STM32_GPIO_PUPDR_OFFSET);
   for (pin = 0; pin <= 15; pin++)
     {
       if ((pins & (1u << pin)) != 0)
@@ -156,9 +156,9 @@ void stm32_xspi_config_gpio(uintptr_t portbase, uint32_t pins,
         }
     }
 
-  putreg32(regval, portbase + STM32H7RS_GPIO_PUPDR_OFFSET);
+  putreg32(regval, portbase + STM32_GPIO_PUPDR_OFFSET);
 
-  regval = getreg32(portbase + STM32H7RS_GPIO_AFRL_OFFSET);
+  regval = getreg32(portbase + STM32_GPIO_AFRL_OFFSET);
   for (pin = 0; pin <= 7; pin++)
     {
       if ((pins & (1u << pin)) != 0)
@@ -168,9 +168,9 @@ void stm32_xspi_config_gpio(uintptr_t portbase, uint32_t pins,
         }
     }
 
-  putreg32(regval, portbase + STM32H7RS_GPIO_AFRL_OFFSET);
+  putreg32(regval, portbase + STM32_GPIO_AFRL_OFFSET);
 
-  regval = getreg32(portbase + STM32H7RS_GPIO_AFRH_OFFSET);
+  regval = getreg32(portbase + STM32_GPIO_AFRH_OFFSET);
   for (pin = 8; pin <= 15; pin++)
     {
       if ((pins & (1u << pin)) != 0)
@@ -180,33 +180,33 @@ void stm32_xspi_config_gpio(uintptr_t portbase, uint32_t pins,
         }
     }
 
-  putreg32(regval, portbase + STM32H7RS_GPIO_AFRH_OFFSET);
+  putreg32(regval, portbase + STM32_GPIO_AFRH_OFFSET);
 }
 
 int stm32_xspi_common_setup(void)
 {
   int ret;
 
-  modifyreg32(STM32H7RS_PWR_CSR2, 0,
+  modifyreg32(STM32_PWR_CSR2, 0,
               PWR_CSR2_EN_XSPIM1 | PWR_CSR2_EN_XSPIM2);
 
-  modifyreg32(STM32H7RS_RCC_APB4ENR, 0, RCC_APB4ENR_SBSEN);
-  (void)getreg32(STM32H7RS_RCC_APB4ENR);
+  modifyreg32(STM32_RCC_APB4ENR, 0, RCC_APB4ENR_SBSEN);
+  (void)getreg32(STM32_RCC_APB4ENR);
 
-  modifyreg32(STM32H7RS_RCC_CR, 0, RCC_CR_CSION);
-  ret = stm32_xspi_wait_reg_trace(STM32H7RS_RCC_CR, RCC_CR_CSIRDY,
+  modifyreg32(STM32_RCC_CR, 0, RCC_CR_CSION);
+  ret = stm32_xspi_wait_reg_trace(STM32_RCC_CR, RCC_CR_CSIRDY,
                                   RCC_CR_CSIRDY, "CSI ready");
   if (ret < 0)
     {
       return ret;
     }
 
-  modifyreg32(STM32H7RS_SBS_CCCSR,
+  modifyreg32(STM32_SBS_CCCSR,
               SBS_CCCSR_XSPI1_COMP_CODESEL | SBS_CCCSR_XSPI2_COMP_CODESEL,
               0);
-  modifyreg32(STM32H7RS_SBS_CCCSR, 0,
+  modifyreg32(STM32_SBS_CCCSR, 0,
               SBS_CCCSR_XSPI1_COMP_EN | SBS_CCCSR_XSPI2_COMP_EN);
-  ret = stm32_xspi_wait_reg_trace(STM32H7RS_SBS_CCCSR,
+  ret = stm32_xspi_wait_reg_trace(STM32_SBS_CCCSR,
                                   SBS_CCCSR_XSPI1_COMP_RDY,
                                   SBS_CCCSR_XSPI1_COMP_RDY,
                                   "XSPI1 compensation ready");
@@ -215,7 +215,7 @@ int stm32_xspi_common_setup(void)
       return ret;
     }
 
-  ret = stm32_xspi_wait_reg_trace(STM32H7RS_SBS_CCCSR,
+  ret = stm32_xspi_wait_reg_trace(STM32_SBS_CCCSR,
                                   SBS_CCCSR_XSPI2_COMP_RDY,
                                   SBS_CCCSR_XSPI2_COMP_RDY,
                                   "XSPI2 compensation ready");
@@ -224,16 +224,16 @@ int stm32_xspi_common_setup(void)
       return ret;
     }
 
-  modifyreg32(STM32H7RS_SBS_CCCSR, 0,
+  modifyreg32(STM32_SBS_CCCSR, 0,
               SBS_CCCSR_XSPI1_IOHSLV | SBS_CCCSR_XSPI2_IOHSLV);
 
-  modifyreg32(STM32H7RS_RCC_CCIPR1,
+  modifyreg32(STM32_RCC_CCIPR1,
               RCC_CCIPR1_XSPI1SEL_MASK | RCC_CCIPR1_XSPI2SEL_MASK,
               RCC_CCIPR1_XSPI1SEL_PLL2S | RCC_CCIPR1_XSPI2SEL_PLL2S);
-  modifyreg32(STM32H7RS_RCC_AHB5ENR, 0,
+  modifyreg32(STM32_RCC_AHB5ENR, 0,
               RCC_AHB5ENR_XSPI1EN | RCC_AHB5ENR_XSPI2EN |
               RCC_AHB5ENR_XSPIMEN);
-  (void)getreg32(STM32H7RS_RCC_AHB5ENR);
+  (void)getreg32(STM32_RCC_AHB5ENR);
 
   /* MODE=0 maps XSPI1 to XSPIM_P1 and XSPI2 to XSPIM_P2.  Cube also enables
    * the chip-select override and routes both XSPI instances to NCS1.
@@ -382,8 +382,8 @@ void stm32_xspi_controller_config(
 
   fthreshold = config->fifo_threshold > 0 ? config->fifo_threshold - 1u : 0;
 
-  modifyreg32(STM32H7RS_RCC_AHB5RSTR, 0, config->reset);
-  modifyreg32(STM32H7RS_RCC_AHB5RSTR, config->reset, 0);
+  modifyreg32(STM32_RCC_AHB5RSTR, 0, config->reset);
+  modifyreg32(STM32_RCC_AHB5RSTR, config->reset, 0);
 
   putreg32(0, STM32_XSPI_CR(config->base));
   putreg32(config->memory_type | XSPI_DCR1_DEVSIZE(config->device_size) |

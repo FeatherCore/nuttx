@@ -39,9 +39,9 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define STM32U5X9J_EMMC_NODE       "/dev/mmcsd0"
-#define STM32U5X9J_EMMC_INFO_NODE  "/dev/emmcinfo0"
-#define STM32U5X9J_EMMC_BLOCK0_LEN 512
+#define BOARD_EMMC_NODE       "/dev/mmcsd0"
+#define BOARD_EMMC_INFO_NODE  "/dev/emmcinfo0"
+#define BOARD_EMMC_BLOCK0_LEN 512
 
 /****************************************************************************
  * Private Data
@@ -88,7 +88,7 @@ static ssize_t stm32_emmcinfo_read(FAR struct file *filep,
 {
   struct geometry geo;
   struct file block;
-  uint8_t block0[STM32U5X9J_EMMC_BLOCK0_LEN];
+  uint8_t block0[BOARD_EMMC_BLOCK0_LEN];
   char text[512];
   uint32_t checksum = 0;
   ssize_t nread = -ENODEV;
@@ -101,7 +101,7 @@ static ssize_t stm32_emmcinfo_read(FAR struct file *filep,
   memset(&geo, 0, sizeof(geo));
   memset(block0, 0, sizeof(block0));
 
-  open_ret = file_open(&block, STM32U5X9J_EMMC_NODE, O_RDONLY);
+  open_ret = file_open(&block, BOARD_EMMC_NODE, O_RDONLY);
   if (open_ret >= 0)
     {
       geo_ret = file_ioctl(&block, BIOC_GEOMETRY,
@@ -127,7 +127,7 @@ static ssize_t stm32_emmcinfo_read(FAR struct file *filep,
                  " first16=%02x %02x %02x %02x %02x %02x %02x %02x "
                  "%02x %02x %02x %02x %02x %02x %02x %02x close=%d\n"
                  "mount=vfat:/mnt/emmc mount_only=1 idma=enabled\n",
-                 STM32U5X9J_EMMC_NODE, g_emmc_sdio != NULL,
+                 BOARD_EMMC_NODE, g_emmc_sdio != NULL,
                  open_ret, geo_ret, geo.geo_available,
                  geo.geo_mediachanged, geo.geo_writeenabled,
                  (uint64_t)geo.geo_nsectors,
@@ -165,7 +165,7 @@ static int stm32_emmcinfo_register(void)
       return OK;
     }
 
-  ret = register_driver(STM32U5X9J_EMMC_INFO_NODE, &g_emmcinfo_fops,
+  ret = register_driver(BOARD_EMMC_INFO_NODE, &g_emmcinfo_fops,
                         0444, NULL);
   if (ret < 0)
     {
@@ -174,7 +174,7 @@ static int stm32_emmcinfo_register(void)
 
   g_emmc_info_registered = true;
   syslog(LOG_INFO, "stm32u5x9j: eMMC read-only diagnostic at %s\n",
-         STM32U5X9J_EMMC_INFO_NODE);
+         BOARD_EMMC_INFO_NODE);
 
   return OK;
 }
@@ -229,32 +229,32 @@ int stm32_emmc_initialize(void)
   sdio_mediachange(g_emmc_sdio, true);
   syslog(LOG_INFO,
          "stm32u5x9j: eMMC registered at %s bus=8-bit idma=enabled\n",
-         STM32U5X9J_EMMC_NODE);
+         BOARD_EMMC_NODE);
 
 #ifdef CONFIG_STM32U5X9J_DK_EMMC_INFO
   ret = stm32_emmcinfo_register();
   if (ret < 0)
     {
       syslog(LOG_ERR, "ERROR: register %s failed: %d\n",
-             STM32U5X9J_EMMC_INFO_NODE, ret);
+             BOARD_EMMC_INFO_NODE, ret);
       return ret;
     }
 #endif
 
 #ifdef CONFIG_STM32U5X9J_DK_EMMC_AUTOMOUNT
   mkdir("/mnt/emmc", 0777);
-  ret = mount(STM32U5X9J_EMMC_NODE, "/mnt/emmc", "vfat", 0, NULL);
+  ret = mount(BOARD_EMMC_NODE, "/mnt/emmc", "vfat", 0, NULL);
   if (ret < 0)
     {
       syslog(LOG_WARNING,
              "stm32u5x9j: %s vfat mount skipped: %d\n",
-             STM32U5X9J_EMMC_NODE,
+             BOARD_EMMC_NODE,
              -errno);
     }
   else
     {
       syslog(LOG_INFO, "stm32u5x9j: mounted %s at /mnt/emmc\n",
-             STM32U5X9J_EMMC_NODE);
+             BOARD_EMMC_NODE);
     }
 #endif
 

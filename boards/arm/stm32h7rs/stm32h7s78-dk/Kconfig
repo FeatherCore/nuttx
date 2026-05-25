@@ -25,9 +25,9 @@ config STM32H7RS_EXTNOR_OTA_PARTITION
 	select MTD_PARTITION
 	---help---
 		Register /dev/ota0, /dev/ota1 and /dev/ota2 from the
-		STM32H7S78-DK XSPI2 NOR MTD.  The first implementation keeps the
-		partition table in Kconfig so NXboot slot geometry and board
-		bring-up stay in sync.
+		STM32H7S78-DK XSPI2 NOR MTD.  Keep the partition table in
+		Kconfig so NXboot slot geometry and board registration stay in
+		sync.
 
 config STM32H7RS_PSRAM_HEAP
 	bool "Use XSPI1 PSRAM as an extra heap region"
@@ -44,10 +44,9 @@ config STM32H7RS_PSRAM_HEAP_OFFSET
 	depends on STM32H7RS_PSRAM_HEAP
 	---help---
 		Reserve the first bytes of the memory-mapped XSPI1 PSRAM window
-		before adding the remaining range to the NuttX heap.  This is useful
-		during bring-up because low PSRAM addresses can be used for
-		destructive self-tests without overlapping malloc metadata or user
-		allocations.
+		before adding the remaining range to the NuttX heap.  LCD-enabled
+		configurations keep this area for the double-buffered framebuffer
+		without overlapping malloc metadata or user allocations.
 
 config STM32H7RS_PROTECTED_USRAM_BASE
 	hex "Protected build user SRAM base"
@@ -103,7 +102,7 @@ config STM32H7S78_DK_GT911_POLL_MS
 	depends on STM32H7S78_DK_GT911
 
 config STM32H7S78_DK_GT911_DEBUG
-	bool "GT911 touchscreen bring-up logs"
+	bool "GT911 touchscreen debug logs"
 	default n
 	depends on STM32H7S78_DK_GT911
 	select INPUT_GT911_DEBUG

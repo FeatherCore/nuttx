@@ -15,7 +15,7 @@
 #include <nuttx/config.h>
 #include <arch/irq.h>
 #include <arch/stm32h7rs/chip.h>
-#include "hardware/stm32h7rs_memorymap.h"
+#include "hardware/stm32_memorymap.h"
 
 #define ARMV7M_PERIPHERAL_INTERRUPTS STM32_IRQ_NEXTINTS
 

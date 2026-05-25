@@ -12,23 +12,11 @@
  * Included Files
  ****************************************************************************/
 
-#include "stm32h7rs_memorymap.h"
+#include "stm32_memorymap.h"
 
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
-
-#ifndef STM32_XSPI1_BASE
-#  define STM32_XSPI1_BASE              STM32H7RS_XSPI1_BASE
-#endif
-
-#ifndef STM32_XSPI2_BASE
-#  define STM32_XSPI2_BASE              STM32H7RS_XSPI2_BASE
-#endif
-
-#ifndef STM32_XSPIM_BASE
-#  define STM32_XSPIM_BASE              STM32H7RS_XSPIM_BASE
-#endif
 
 #define STM32_XSPI_CR(b)             ((b) + 0x0000u)
 #define STM32_XSPI_DCR1(b)           ((b) + 0x0008u)

@@ -47,6 +47,7 @@
 #  include <termios.h>
 #endif
 
+#include <arch/armv8-m/nvicpri.h>
 #include <arch/board/board.h>
 
 #include "chip.h"
@@ -65,6 +66,14 @@
 #if defined(CONFIG_PM) && !defined(CONFIG_STM32N6_PM_SERIAL_ACTIVITY)
 #  define CONFIG_STM32N6_PM_SERIAL_ACTIVITY  10
 #endif
+
+#ifndef STM32_USART1_FREQUENCY
+#  define STM32_USART1_FREQUENCY STM32_HSI_FREQUENCY
+#endif
+
+#define STM32_USART_SETUP_TIMEOUT 1000000u
+#define STM32_USART_ICR_ERROR_MASK \
+  (USART_ICR_PECF | USART_ICR_FECF | USART_ICR_NCF | USART_ICR_ORECF)
 
 /* USART Unconfigure bits */
 
@@ -244,7 +253,7 @@ static struct stm32_serial_s g_usart1priv =
   .bits          = CONFIG_USART1_BITS,
   .stopbits2     = CONFIG_USART1_2STOP,
   .baud          = CONFIG_USART1_BAUD,
-  .apbclock      = STM32_HSI_FREQUENCY,  /* USART1SEL=HSI via CCIPR13 */
+  .apbclock      = STM32_USART1_FREQUENCY,
   .usartbase     = STM32_USART1_BASE,
   .tx_gpio       = GPIO_USART1_TX,
   .rx_gpio       = GPIO_USART1_RX,
@@ -274,7 +283,7 @@ static struct stm32_serial_s g_usart1priv =
 /* This table lets us iterate over the configured USARTs */
 
 static struct stm32_serial_s * const
-  g_uart_devs[STM32N6_NUSART] =
+  g_uart_devs[STM32_NUSART] =
 {
 #ifdef CONFIG_STM32N6_USART1_SERIALDRIVER
   [0] = &g_usart1priv,
@@ -639,7 +648,7 @@ static void stm32serial_pm_setsuspend(bool suspend)
 
   g_serialpm.serial_suspended = suspend;
 
-  for (n = 0; n < STM32N6_NUSART; n++)
+  for (n = 0; n < STM32_NUSART; n++)
     {
       struct stm32_serial_s *priv = g_uart_devs[n];
 
@@ -718,6 +727,7 @@ static int stm32serial_setup(struct uart_dev_s *dev)
     (struct stm32_serial_s *)dev->priv;
 
 #ifndef CONFIG_SUPPRESS_UART_CONFIG
+  uint32_t timeout;
   uint32_t regval;
 
   /* Note: The logic here depends on the fact that that the USART module
@@ -792,6 +802,9 @@ static int stm32serial_setup(struct uart_dev_s *dev)
               USART_CR3_EIE);
 
   stm32serial_putreg(priv, STM32_USART_CR3_OFFSET, regval);
+  stm32serial_putreg(priv, STM32_USART_PRESC_OFFSET, 0);
+  stm32serial_putreg(priv, STM32_USART_ICR_OFFSET,
+                     STM32_USART_ICR_ERROR_MASK | USART_ICR_TCCF);
 
   /* Configure the USART line format and speed. */
 
@@ -803,6 +816,17 @@ static int stm32serial_setup(struct uart_dev_s *dev)
   regval     |= (USART_CR1_UE | USART_CR1_TE | USART_CR1_RE |
                  USART_CR1_FIFOEN);
   stm32serial_putreg(priv, STM32_USART_CR1_OFFSET, regval);
+
+  timeout = STM32_USART_SETUP_TIMEOUT;
+  while ((stm32serial_getreg(priv, STM32_USART_ISR_OFFSET) &
+          (USART_ISR_TEACK | USART_ISR_REACK)) !=
+         (USART_ISR_TEACK | USART_ISR_REACK))
+    {
+      if (timeout-- == 0)
+        {
+          break;
+        }
+    }
 
 #endif /* CONFIG_SUPPRESS_UART_CONFIG */
 
@@ -911,6 +935,18 @@ static int stm32serial_attach(struct uart_dev_s *dev)
 
   if (ret == OK)
     {
+#ifdef CONFIG_STM32N6_USART1_HIGH_PRIORITY
+      if (priv->irq == STM32_IRQ_USART1)
+        {
+          ret = up_prioritize_irq(priv->irq, NVIC_SYSH_HIGH_PRIORITY);
+          if (ret < 0)
+            {
+              irq_detach(priv->irq);
+              return ret;
+            }
+        }
+#endif
+
       /* Enable the interrupt (RX and TX interrupts are still disabled
        * in the USART
        */
@@ -1396,6 +1432,20 @@ static void stm32serial_send(struct uart_dev_s *dev, int ch)
   stm32serial_putreg(priv, STM32_USART_TDR_OFFSET, (uint32_t)ch);
 }
 
+#ifdef CONFIG_STM32N6_USART1_TX_POLL_DRAIN
+static void stm32serial_txpoll(struct uart_dev_s *dev)
+{
+  while (dev->xmit.head != dev->xmit.tail)
+    {
+      while (!stm32serial_txready(dev))
+        {
+        }
+
+      uart_xmitchars(dev);
+    }
+}
+#endif
+
 /****************************************************************************
  * Name: stm32serial_txint
  *
@@ -1441,7 +1491,16 @@ static void stm32serial_txint(struct uart_dev_s *dev, bool enable)
        * interrupts disabled (note this may recurse).
        */
 
-      uart_xmitchars(dev);
+#  ifdef CONFIG_STM32N6_USART1_TX_POLL_DRAIN
+      if (priv->irq == STM32_IRQ_USART1)
+        {
+          stm32serial_txpoll(dev);
+        }
+      else
+#  endif
+        {
+          uart_xmitchars(dev);
+        }
 #endif
     }
   else
@@ -1552,7 +1611,7 @@ static int stm32serial_pmprepare(struct pm_callback_s *cb, int domain,
        * buffers.
        */
 
-      for (n = 0; n < STM32N6_NUSART; n++)
+      for (n = 0; n < STM32_NUSART; n++)
         {
           struct stm32_serial_s *priv = g_uart_devs[n];
 
@@ -1622,7 +1681,7 @@ void arm_earlyserialinit(void)
 
   /* Disable all USART interrupts */
 
-  for (i = 0; i < STM32N6_NUSART; i++)
+  for (i = 0; i < STM32_NUSART; i++)
     {
       if (g_uart_devs[i])
         {
@@ -1687,7 +1746,7 @@ void arm_serialinit(void)
 
   strlcpy(devname, "/dev/ttySx", sizeof(devname));
 
-  for (i = 0; i < STM32N6_NUSART; i++)
+  for (i = 0; i < STM32_NUSART; i++)
     {
       /* Don't create a device for non-configured ports. */
 

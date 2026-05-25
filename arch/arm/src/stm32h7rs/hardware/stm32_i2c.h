@@ -12,15 +12,11 @@
  * Included Files
  ****************************************************************************/
 
-#include "stm32h7rs_memorymap.h"
+#include "stm32_memorymap.h"
 
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
-
-#ifndef STM32_I2C1_BASE
-#  define STM32_I2C1_BASE          STM32H7RS_I2C1_BASE
-#endif
 
 #define STM32_I2C_CR1_OFFSET       0x0000u
 #define STM32_I2C_CR2_OFFSET       0x0004u

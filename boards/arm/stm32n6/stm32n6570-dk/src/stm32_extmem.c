@@ -21,13 +21,14 @@
 
 #include <debug.h>
 
+#include <arch/board/board.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/fs/ioctl.h>
 #include <nuttx/mtd/mtd.h>
 
 #include <arch/stm32n6/chip.h>
 
-#include "hardware/stm32n6_memorymap.h"
+#include "hardware/stm32n6xxx_memorymap.h"
 #include "stm32n6570-dk.h"
 
 /****************************************************************************
@@ -95,8 +96,8 @@ static struct stm32_xip_mtd_s g_nor_mtd =
       .ioctl  = stm32_xip_ioctl,
       .name   = "stm32n6-xspi2-nor",
     },
-  .base = STM32N6_XSPI2_MEM_BASE,
-  .size = STM32N6_XSPI2_NOR_SIZE,
+  .base = BOARD_XSPI2_NOR_BASE,
+  .size = BOARD_XSPI2_NOR_SIZE,
 };
 
 #ifdef CONFIG_STM32N6_EXTNOR_OTA_PARTITION

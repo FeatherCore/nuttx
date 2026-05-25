@@ -26,7 +26,7 @@
 #include <nuttx/mtd/mtd.h>
 
 #include "chip.h"
-#include "hardware/stm32h7rs_memorymap.h"
+#include "hardware/stm32_memorymap.h"
 
 #include "stm32h7s78-dk.h"
 
@@ -34,8 +34,8 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define STM32_NOR_BLOCK_SIZE        512u
-#define STM32_NOR_ERASE_SIZE        0x10000u
+#define BOARD_NOR_BLOCK_SIZE        512u
+#define BOARD_NOR_ERASE_SIZE        0x10000u
 
 /****************************************************************************
  * Private Types
@@ -87,8 +87,8 @@ static struct stm32_xip_mtd_s g_nor_mtd =
       .ioctl  = stm32_xip_ioctl,
       .name   = "stm32h7rs-xspi2-nor",
     },
-  .base = STM32H7RS_XSPI2_MEM_BASE,
-  .size = STM32H7RS_XSPI2_NOR_SIZE,
+  .base = STM32_XSPI2_MEM_BASE,
+  .size = STM32_XSPI2_NOR_SIZE,
 };
 
 #ifdef CONFIG_STM32H7RS_EXTNOR_OTA_PARTITION
@@ -120,9 +120,9 @@ static ssize_t stm32_xip_bread(FAR struct mtd_dev_s *dev,
                                off_t startblock, size_t nblocks,
                                FAR uint8_t *buffer)
 {
-  return stm32_xip_read(dev, startblock * STM32_NOR_BLOCK_SIZE,
-                        nblocks * STM32_NOR_BLOCK_SIZE, buffer) /
-         STM32_NOR_BLOCK_SIZE;
+  return stm32_xip_read(dev, startblock * BOARD_NOR_BLOCK_SIZE,
+                        nblocks * BOARD_NOR_BLOCK_SIZE, buffer) /
+         BOARD_NOR_BLOCK_SIZE;
 }
 
 static int stm32_xip_erase(FAR struct mtd_dev_s *dev, off_t startblock,
@@ -177,9 +177,9 @@ static int stm32_xip_ioctl(FAR struct mtd_dev_s *dev, int cmd,
             }
 
           memset(geo, 0, sizeof(*geo));
-          geo->blocksize    = STM32_NOR_BLOCK_SIZE;
-          geo->erasesize    = STM32_NOR_ERASE_SIZE;
-          geo->neraseblocks = priv->size / STM32_NOR_ERASE_SIZE;
+          geo->blocksize    = BOARD_NOR_BLOCK_SIZE;
+          geo->erasesize    = BOARD_NOR_ERASE_SIZE;
+          geo->neraseblocks = priv->size / BOARD_NOR_ERASE_SIZE;
           strlcpy(geo->model, "MX66UW1G45G-xip", sizeof(geo->model));
           return OK;
         }
@@ -229,8 +229,8 @@ static int stm32_register_ota_partitions(FAR struct mtd_dev_s *mtd)
       off_t firstblock;
       off_t nblocks;
 
-      firstblock = part->offset / STM32_NOR_BLOCK_SIZE;
-      nblocks    = part->size / STM32_NOR_BLOCK_SIZE;
+      firstblock = part->offset / BOARD_NOR_BLOCK_SIZE;
+      nblocks    = part->size / BOARD_NOR_BLOCK_SIZE;
       partmtd    = mtd_partition(mtd, firstblock, nblocks);
 
       if (partmtd == NULL)
@@ -272,7 +272,8 @@ int stm32_extmem_initialize(void)
   ret = stm32_xspi1_psram_initialize();
   if (ret < 0)
     {
-      syslog(LOG_ERR, "stm32h7rs: XSPI1 PSRAM init failed: %d\n", ret);
+      syslog(LOG_ERR, "stm32h7s78-dk: XSPI1 PSRAM init failed: %d\n",
+             ret);
       return ret;
     }
 

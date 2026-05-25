@@ -1,0 +1,61 @@
+/****************************************************************************
+ * arch/arm/src/stm32h7rs/hardware/stm32_memorymap.h
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ ****************************************************************************/
+
+#ifndef __ARCH_ARM_SRC_STM32H7RS_HARDWARE_STM32_MEMORYMAP_H
+#define __ARCH_ARM_SRC_STM32H7RS_HARDWARE_STM32_MEMORYMAP_H
+
+#define STM32_FLASH_BASE       0x08000000u
+#define STM32_ITCM_BASE        0x00000000u
+#define STM32_DTCM_BASE        0x20000000u
+#define STM32_AXI_SRAM_BASE    0x24000000u
+#define STM32_AHB_SRAM_BASE    0x30000000u
+#define STM32_BKPSRAM_BASE     0x38800000u
+
+#define STM32_XSPI2_MEM_BASE   0x70000000u
+#define STM32_XSPI1_MEM_BASE   0x90000000u
+
+#define STM32_PERIPH_BASE      0x40000000u
+
+#define STM32_APB1_BASE        STM32_PERIPH_BASE
+#define STM32_AHB1_BASE        (STM32_PERIPH_BASE + 0x00020000u)
+#define STM32_APB2_BASE        (STM32_PERIPH_BASE + 0x02000000u)
+#define STM32_AHB2_BASE        (STM32_PERIPH_BASE + 0x08000000u)
+#define STM32_AHB3_BASE        (STM32_PERIPH_BASE + 0x08020000u)
+#define STM32_APB5_BASE        (STM32_PERIPH_BASE + 0x10000000u)
+#define STM32_AHB5_BASE        (STM32_PERIPH_BASE + 0x12000000u)
+#define STM32_APB4_BASE        (STM32_PERIPH_BASE + 0x18000000u)
+#define STM32_AHB4_BASE        (STM32_PERIPH_BASE + 0x18020000u)
+
+#define STM32_USART1_BASE      (STM32_APB2_BASE + 0x1000u)
+#define STM32_USART2_BASE      (STM32_APB1_BASE + 0x4400u)
+#define STM32_USART3_BASE      (STM32_APB1_BASE + 0x4800u)
+#define STM32_UART4_BASE       (STM32_APB1_BASE + 0x4c00u)
+#define STM32_UART5_BASE       (STM32_APB1_BASE + 0x5000u)
+#define STM32_LPTIM1_BASE      (STM32_APB1_BASE + 0x2400u)
+#define STM32_I2C1_BASE        (STM32_APB1_BASE + 0x5400u)
+
+#define STM32_GPIOA_BASE       (STM32_AHB4_BASE + 0x0000u)
+#define STM32_GPIOB_BASE       (STM32_AHB4_BASE + 0x0400u)
+#define STM32_GPIOC_BASE       (STM32_AHB4_BASE + 0x0800u)
+#define STM32_GPIOD_BASE       (STM32_AHB4_BASE + 0x0c00u)
+#define STM32_GPIOE_BASE       (STM32_AHB4_BASE + 0x1000u)
+#define STM32_GPIOF_BASE       (STM32_AHB4_BASE + 0x1400u)
+#define STM32_GPIOG_BASE       (STM32_AHB4_BASE + 0x1800u)
+#define STM32_GPION_BASE       (STM32_AHB4_BASE + 0x3400u)
+#define STM32_GPIOO_BASE       (STM32_AHB4_BASE + 0x3800u)
+#define STM32_GPIOP_BASE       (STM32_AHB4_BASE + 0x3c00u)
+#define STM32_SBS_BASE         (STM32_APB4_BASE + 0x0400u)
+#define STM32_LTDC_BASE        (STM32_APB5_BASE + 0x1000u)
+#define STM32_RCC_BASE         (STM32_AHB4_BASE + 0x4400u)
+#define STM32_PWR_BASE         (STM32_AHB4_BASE + 0x4800u)
+
+#define STM32_FLASH_R_BASE     (STM32_AHB5_BASE + 0x2000u)
+#define STM32_XSPI1_BASE       (STM32_AHB5_BASE + 0x5000u)
+#define STM32_XSPI2_BASE       (STM32_AHB5_BASE + 0xa000u)
+#define STM32_XSPIM_BASE       (STM32_AHB5_BASE + 0xb400u)
+
+#endif /* __ARCH_ARM_SRC_STM32H7RS_HARDWARE_STM32_MEMORYMAP_H */

@@ -26,7 +26,7 @@ ASRCS =
 CSRCS = stm32_boot.c stm32_bringup.c stm32_userleds.c stm32_extmem.c
 CSRCS += stm32_xspi.c
 
-ifeq ($(CONFIG_BUILD_PROTECTED),y)
+ifneq ($(CONFIG_BUILD_PROTECTED)$(CONFIG_STM32U5X9J_DK_HSPI_HEAP),)
 CSRCS += stm32_heap.c
 endif
 

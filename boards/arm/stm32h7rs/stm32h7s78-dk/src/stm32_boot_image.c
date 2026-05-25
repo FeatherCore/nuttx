@@ -30,9 +30,9 @@
 #ifdef CONFIG_ARM_MPU
 #  include "mpu.h"
 #endif
-#include "hardware/stm32h7rs_memorymap.h"
+#include "hardware/stm32_memorymap.h"
 #include "nvic.h"
-#include "stm32h7rs.h"
+#include "stm32.h"
 
 /****************************************************************************
  * Private Types
@@ -73,44 +73,44 @@ static void systick_disable(void)
   putreg32(0, NVIC_SYSTICK_CURRENT);
 }
 
-static uintptr_t stm32h7rs_slot_base(FAR const char *path)
+static uintptr_t stm32_slot_base(FAR const char *path)
 {
   if (strcmp(path, CONFIG_STM32H7RS_OTA_PRIMARY_SLOT_DEVPATH) == 0)
     {
-      return STM32H7RS_XSPI2_MEM_BASE +
+      return STM32_XSPI2_MEM_BASE +
              CONFIG_STM32H7RS_OTA_PRIMARY_SLOT_OFFSET;
     }
 
   if (strcmp(path, CONFIG_STM32H7RS_OTA_SECONDARY_SLOT_DEVPATH) == 0)
     {
-      return STM32H7RS_XSPI2_MEM_BASE +
+      return STM32_XSPI2_MEM_BASE +
              CONFIG_STM32H7RS_OTA_SECONDARY_SLOT_OFFSET;
     }
 
   if (strcmp(path, CONFIG_STM32H7RS_OTA_TERTIARY_SLOT_DEVPATH) == 0)
     {
-      return STM32H7RS_XSPI2_MEM_BASE +
+      return STM32_XSPI2_MEM_BASE +
              CONFIG_STM32H7RS_OTA_TERTIARY_SLOT_OFFSET;
     }
 
   return 0;
 }
 
-static bool stm32h7rs_address_in_range(uintptr_t address, uintptr_t base,
+static bool stm32_address_in_range(uintptr_t address, uintptr_t base,
                                        size_t size)
 {
   return address >= base && address < base + size;
 }
 
-static bool stm32h7rs_valid_stack(uint32_t stack)
+static bool stm32_valid_stack(uint32_t stack)
 {
-  return stm32h7rs_address_in_range(stack, STM32H7RS_AXI_SRAM_BASE,
-                                    STM32H7RS_AXI_SRAM_SIZE) ||
-         stm32h7rs_address_in_range(stack, STM32H7RS_AHB_SRAM_BASE,
-                                    STM32H7RS_AHB_SRAM_SIZE);
+  return stm32_address_in_range(stack, STM32_AXI_SRAM_BASE,
+                                    STM32_AXI_SRAM_SIZE) ||
+         stm32_address_in_range(stack, STM32_AHB_SRAM_BASE,
+                                    STM32_AHB_SRAM_SIZE);
 }
 
-static bool stm32h7rs_valid_reset(uint32_t reset, uintptr_t vtor)
+static bool stm32_valid_reset(uint32_t reset, uintptr_t vtor)
 {
   uintptr_t address = reset & ~1u;
   uintptr_t slotend = vtor + CONFIG_STM32H7RS_OTA_SLOT_SIZE;
@@ -148,7 +148,7 @@ int board_boot_image(FAR const char *path, uint32_t hdr_size)
       return bytes < 0 ? bytes : -EIO;
     }
 
-  vtor = stm32h7rs_slot_base(path);
+  vtor = stm32_slot_base(path);
   if (vtor == 0)
     {
       syslog(LOG_ERR, "Unsupported boot slot path: %s\n", path);
@@ -160,9 +160,9 @@ int board_boot_image(FAR const char *path, uint32_t hdr_size)
   syslog(LOG_INFO, "Boot vector msp=0x%08" PRIx32
          " reset=0x%08" PRIx32 " vtor=0x%08" PRIxPTR "\n",
          vt.spr, vt.reset, vtor);
-  stm32h7rs_uart4_wait_txcomplete();
+  stm32_uart4_wait_txcomplete();
 
-  if (!stm32h7rs_valid_stack(vt.spr) || !stm32h7rs_valid_reset(vt.reset,
+  if (!stm32_valid_stack(vt.spr) || !stm32_valid_reset(vt.reset,
                                                                vtor))
     {
       syslog(LOG_ERR, "Invalid boot vector table\n");

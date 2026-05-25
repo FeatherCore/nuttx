@@ -1,7 +1,7 @@
 # STM32H7S78-DK
 
 This board directory targets the STMicroelectronics STM32H7S78-DK discovery
-kit.  The current bring-up follows the STM32CubeH7RS
+kit.  The board support follows the STM32CubeH7RS
 `Templates/Template_XIP_Custom` project: a first-stage image runs from the
 64 KiB internal Flash, configures XSPI2 NOR and XSPI1 PSRAM, then boots a
 NuttX application linked for XIP from the XSPI2 NOR window.
@@ -9,17 +9,22 @@ NuttX application linked for XIP from the XSPI2 NOR window.
 Reference material:
 
 ```text
-/home/uan-wsl2/third/STM32CubeH7RS/Projects/STM32H7S78-DK/Templates/Template_XIP_Custom
-/home/uan-wsl2/third/STM32CubeH7RS/Drivers/BSP/STM32H7S78-DK
-/home/uan-wsl2/third/STM32CubeH7RS/Drivers/CMSIS/Device/ST/STM32H7RSxx
+/home/uan/Feather-develop/third/third/STM32CubeH7RS/Projects/STM32H7S78-DK/Templates/Template_XIP_Custom
+/home/uan/Feather-develop/third/third/STM32CubeH7RS/Drivers/BSP/STM32H7S78-DK
+/home/uan/Feather-develop/third/third/STM32CubeH7RS/Drivers/CMSIS/Device/ST/STM32H7RSxx
 ```
 
 ## Configurations
 
-`nsh` builds an NXboot application image linked at `0x70000400`, leaving the
-first `0x400` bytes in the primary XSPI2 NOR slot for the NXboot header.  It
-enables UART4 console, MPU/cache setup, XSPI bring-up, read-only OTA MTD
-partitions, and adds XSPI1 PSRAM to the heap after a small guard offset.
+`nsh` and `knsh` build NXboot application images linked for the primary XSPI2
+NOR slot after the `0x400` byte NXboot header.  They enable UART4 console,
+MPU/cache setup, XSPI initialization, read-only OTA MTD partitions, and XSPI1
+PSRAM heap registration.
+
+`nsh-lvgl` and `knsh-lvgl` add the RK050HR18 RGB565 framebuffer and GT911
+touchscreen paths.  The first 2 MiB of XSPI1 PSRAM are reserved for the
+double-buffered framebuffer, and the remaining PSRAM window is used as the
+extra heap region.
 
 `nxboot` builds the internal-Flash loader at `0x08000000`.  It initializes the
 same clock tree, MPU/cache policy, UART4, XSPI2 NOR, and XSPI1 PSRAM path used
@@ -32,6 +37,12 @@ by the Cube boot template before handing off to the primary NXboot slot.
 make -j$(nproc)
 
 ./tools/configure.sh -E stm32h7s78-dk:nsh
+make -j$(nproc)
+
+./tools/configure.sh -E stm32h7s78-dk:nsh-lvgl
+make -j$(nproc)
+
+./tools/configure.sh -E stm32h7s78-dk:knsh-lvgl
 make -j$(nproc)
 ```
 

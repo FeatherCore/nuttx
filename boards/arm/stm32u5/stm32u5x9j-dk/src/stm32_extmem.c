@@ -84,8 +84,8 @@ static struct stm32_xip_mtd_s g_ospi_mtd =
       .ioctl  = stm32_xip_ioctl,
       .name   = "stm32u5x9j-ospi1-nor",
     },
-  .base = STM32U5X9J_OSPI1_NOR_MEM_BASE,
-  .size = STM32U5X9J_OSPI1_NOR_SIZE,
+  .base = BOARD_OSPI1_NOR_MEM_BASE,
+  .size = BOARD_OSPI1_NOR_SIZE,
 };
 #endif
 

@@ -23,8 +23,8 @@
 #include "arm_internal.h"
 
 #include "hardware/stm32_i2c.h"
-#include "hardware/stm32n6_memorymap.h"
-#include "hardware/stm32n6_rcc.h"
+#include "hardware/stm32n6xxx_memorymap.h"
+#include "hardware/stm32n6xxx_rcc.h"
 
 #include "stm32_i2c.h"
 
@@ -177,15 +177,15 @@ static int stm32_i2c_clock_enable(FAR struct stm32_i2c_priv_s *priv)
 #ifdef CONFIG_STM32N6_I2C2
   if (priv->base == STM32_I2C2_BASE)
     {
-      modifyreg32(STM32N6_RCC_CCIPR4, RCC_CCIPR4_I2C2SEL_MASK,
+      modifyreg32(STM32_RCC_CCIPR4, RCC_CCIPR4_I2C2SEL_MASK,
                   RCC_CCIPR4_I2C2SEL_PCLK1);
 
-      putreg32(RCC_APB1ENSR1_I2C2ENS, STM32N6_RCC_APB1ENSR1);
-      (void)getreg32(STM32N6_RCC_APB1ENR1);
+      putreg32(RCC_APB1ENSR1_I2C2ENS, STM32_RCC_APB1ENSR1);
+      (void)getreg32(STM32_RCC_APB1ENR1);
 
-      putreg32(RCC_APB1RSTR1_I2C2RST, STM32N6_RCC_APB1RSTR1);
+      putreg32(RCC_APB1RSTR1_I2C2RST, STM32_RCC_APB1RSTR1);
       up_udelay(1);
-      putreg32(RCC_APB1RSTCR1_I2C2RSTC, STM32N6_RCC_APB1RSTCR1);
+      putreg32(RCC_APB1RSTCR1_I2C2RSTC, STM32_RCC_APB1RSTCR1);
       return OK;
     }
 #endif
@@ -198,7 +198,7 @@ static void stm32_i2c_clock_disable(FAR struct stm32_i2c_priv_s *priv)
 #ifdef CONFIG_STM32N6_I2C2
   if (priv->base == STM32_I2C2_BASE)
     {
-      putreg32(RCC_APB1ENCR1_I2C2ENC, STM32N6_RCC_APB1ENCR1);
+      putreg32(RCC_APB1ENCR1_I2C2ENC, STM32_RCC_APB1ENCR1);
     }
 #endif
 }

@@ -27,8 +27,8 @@ struct stm32_ltdc_config_s
   uintptr_t fb_base;
 
   /* fb1_base is optional.  When it is zero, the second framebuffer is assumed
-   * to be contiguous after fb_base.  STM32U5x9J-DK uses explicit non-zero
-   * addresses for both direct PSRAM buffers and GFXMMU virtual buffers.
+   * to be contiguous after fb_base.  Boards with non-linear or externally
+   * placed framebuffers may provide explicit non-zero addresses.
    */
 
   uintptr_t fb1_base;

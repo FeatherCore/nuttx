@@ -227,11 +227,28 @@ void up_irqinitialize(void)
   int num_priority_registers;
   int i;
 
+#ifdef CONFIG_ARCH_BOARD_STM32N6570_DK
+  /* The STM32N6570-DK app can be entered from NXboot with core/external
+   * interrupt state inherited from the bootloader.  Start from a quiet NVIC
+   * state before installing vectors and enabling global interrupts.
+   */
+
+  putreg32(0, NVIC_SYSTICK_CTRL);
+  putreg32(NVIC_SYSTICK_RELOAD_MASK, NVIC_SYSTICK_RELOAD);
+  putreg32(0, NVIC_SYSTICK_CURRENT);
+
+  putreg32(NVIC_INTCTRL_PENDSTCLR | NVIC_INTCTRL_PENDSVCLR,
+           NVIC_INTCTRL);
+#endif
+
   /* Disable all interrupts */
 
   for (i = 0; i < NR_IRQS - STM32_IRQ_FIRST; i += 32)
     {
       putreg32(0xffffffff, NVIC_IRQ_CLEAR(i));
+#ifdef CONFIG_ARCH_BOARD_STM32N6570_DK
+      putreg32(0xffffffff, NVIC_IRQ_CLRPEND(i));
+#endif
     }
 
   /* The standard location for the vector table is at the beginning of FLASH
@@ -285,11 +302,18 @@ void up_irqinitialize(void)
   irq_attach(STM32_IRQ_SVCALL, arm_svcall, NULL);
   irq_attach(STM32_IRQ_HARDFAULT, arm_hardfault, NULL);
 
+#ifdef CONFIG_ARCH_BOARD_STM32N6570_DK
+  irq_attach(STM32_IRQ_BUSFAULT, arm_busfault, NULL);
+  irq_attach(STM32_IRQ_USAGEFAULT, arm_usagefault, NULL);
+#endif
+
   /* Set the priority of the SVCall interrupt */
 
 #ifdef CONFIG_ARCH_IRQPRIO
 
-  /* up_prioritize_irq(STM32_IRQ_PENDSV, NVIC_SYSH_PRIORITY_MIN); */
+#ifdef CONFIG_ARCH_BOARD_STM32N6570_DK
+  up_prioritize_irq(STM32_IRQ_PENDSV, NVIC_SYSH_PRIORITY_MIN);
+#endif
 
 #endif
 
@@ -322,12 +346,19 @@ void up_irqinitialize(void)
 #ifndef CONFIG_ARM_MPU
   irq_attach(STM32_IRQ_MEMFAULT, arm_memfault, NULL);
 #endif
+#ifndef CONFIG_ARCH_BOARD_STM32N6570_DK
   irq_attach(STM32_IRQ_BUSFAULT, arm_busfault, NULL);
   irq_attach(STM32_IRQ_USAGEFAULT, arm_usagefault, NULL);
+#endif
   irq_attach(STM32_IRQ_PENDSV, stm32_pendsv, NULL);
   arm_enable_dbgmonitor();
   irq_attach(STM32_IRQ_DBGMONITOR, arm_dbgmonitor, NULL);
   irq_attach(STM32_IRQ_RESERVED, stm32_reserved, NULL);
+#endif
+
+#ifdef CONFIG_ARCH_BOARD_STM32N6570_DK
+  putreg32(NVIC_INTCTRL_PENDSTCLR | NVIC_INTCTRL_PENDSVCLR,
+           NVIC_INTCTRL);
 #endif
 
   stm32_dumpnvic("initial", NR_IRQS);

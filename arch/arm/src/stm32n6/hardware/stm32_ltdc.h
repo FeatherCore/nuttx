@@ -14,13 +14,11 @@
 
 #include <nuttx/config.h>
 
-#include "hardware/stm32n6_memorymap.h"
+#include "hardware/stm32n6xxx_memorymap.h"
 
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
-
-#define STM32_LTDC_BASE               STM32N6_LTDC_BASE
 
 #define STM32_LTDC_SSCR               (STM32_LTDC_BASE + 0x0008)
 #define STM32_LTDC_BPCR               (STM32_LTDC_BASE + 0x000c)

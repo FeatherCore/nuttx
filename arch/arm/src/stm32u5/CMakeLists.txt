@@ -22,6 +22,7 @@
 
 set(SRCS
     stm32_allocateheap.c
+    stm32_addregion.c
     stm32_exti_gpio.c
     stm32_gpio.c
     stm32_irq.c

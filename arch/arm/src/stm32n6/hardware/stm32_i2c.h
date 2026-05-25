@@ -12,15 +12,11 @@
  * Included Files
  ****************************************************************************/
 
-#include "stm32n6_memorymap.h"
+#include "hardware/stm32n6xxx_memorymap.h"
 
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
-
-#ifndef STM32_I2C2_BASE
-#  define STM32_I2C2_BASE          STM32N6_I2C2_BASE
-#endif
 
 #define STM32_I2C_CR1_OFFSET       0x0000u
 #define STM32_I2C_CR2_OFFSET       0x0004u

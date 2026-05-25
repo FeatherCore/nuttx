@@ -390,6 +390,13 @@
 #define GPIO_AFR_SHIFT(n)          ((n) << 2)
 #define GPIO_AFR_MASK(n)           (15 << GPIO_AFR_SHIFT(n))
 
+/* Alternate function register values used by direct register setup paths */
+
+#define GPIO_AF_I2C2               (4)
+#define GPIO_AF_USART1             (7)
+#define GPIO_AF_XSPIM              (9)
+#define GPIO_AF_LCD                (14)
+
 #define GPIO_AFRL0_SHIFT           (0)
 #define GPIO_AFRL0_MASK            (15 << GPIO_AFRL0_SHIFT)
 #define GPIO_AFRL1_SHIFT           (4)

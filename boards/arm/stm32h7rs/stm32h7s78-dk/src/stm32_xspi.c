@@ -27,9 +27,9 @@
 
 #include "arm_internal.h"
 
-#include "hardware/stm32h7rs_gpio.h"
-#include "hardware/stm32h7rs_memorymap.h"
-#include "hardware/stm32h7rs_rcc.h"
+#include "hardware/stm32_gpio.h"
+#include "hardware/stm32_memorymap.h"
+#include "hardware/stm32_rcc.h"
 #include "hardware/stm32_xspi.h"
 
 #include "stm32_xspi.h"
@@ -39,12 +39,12 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define STM32H7S78_XSPI_STARTUP_PRESCALER       3u
-#define STM32H7S78_XSPI_NOR_OPTIONAL_PRESCALER  0u
-#define STM32H7S78_XSPI_PSRAM_OPTIONAL_PRESCALER \
+#define BOARD_XSPI_STARTUP_PRESCALER       3u
+#define BOARD_XSPI_NOR_OPTIONAL_PRESCALER  0u
+#define BOARD_XSPI_PSRAM_OPTIONAL_PRESCALER \
         0u
-#define STM32H7S78_XSPI_NOR_RESET_DELAY_MS      100u
-#define STM32H7S78_XSPI_STATUS_TIMEOUT          1000000u
+#define BOARD_XSPI_NOR_RESET_DELAY_MS      100u
+#define BOARD_XSPI_STATUS_TIMEOUT          1000000u
 
 #define MX66UW1G45G_RESET_ENABLE_CMD            0x66u
 #define MX66UW1G45G_RESET_MEMORY_CMD            0x99u
@@ -115,7 +115,7 @@ static uint32_t stm32_psram_refresh(uint32_t prescaler)
   uint32_t xspi_hz;
   uint32_t cycles;
 
-  xspi_hz = STM32H7RS_PLL2S_FREQUENCY / (prescaler + 1u);
+  xspi_hz = STM32_PLL2S_FREQUENCY / (prescaler + 1u);
   cycles = 2u * (xspi_hz / 1000000u);
 
   return cycles > 4u ? cycles - 4u : 0u;
@@ -127,9 +127,9 @@ static void stm32_xspi2_gpio_config(void)
                   (1u << 4) | (1u << 5) | (1u << 6) | (1u << 8) |
                   (1u << 9) | (1u << 10) | (1u << 11);
 
-  modifyreg32(STM32H7RS_RCC_AHB4ENR, 0, RCC_AHB4ENR_GPIONEN);
-  (void)getreg32(STM32H7RS_RCC_AHB4ENR);
-  stm32_xspi_config_gpio(STM32H7RS_GPION_BASE, pins, GPIO_AF_XSPIM_P2);
+  modifyreg32(STM32_RCC_AHB4ENR, 0, RCC_AHB4ENR_GPIONEN);
+  (void)getreg32(STM32_RCC_AHB4ENR);
+  stm32_xspi_config_gpio(STM32_GPION_BASE, pins, GPIO_AF_XSPIM_P2);
 }
 
 static void stm32_xspi1_gpio_config(void)
@@ -141,12 +141,12 @@ static void stm32_xspi1_gpio_config(void)
                         (1u << 11) | (1u << 12) | (1u << 13) |
                         (1u << 14) | (1u << 15);
 
-  modifyreg32(STM32H7RS_RCC_AHB4ENR, 0,
+  modifyreg32(STM32_RCC_AHB4ENR, 0,
               RCC_AHB4ENR_GPIOOEN | RCC_AHB4ENR_GPIOPEN);
-  (void)getreg32(STM32H7RS_RCC_AHB4ENR);
-  stm32_xspi_config_gpio(STM32H7RS_GPIOO_BASE, gpioo_pins,
+  (void)getreg32(STM32_RCC_AHB4ENR);
+  stm32_xspi_config_gpio(STM32_GPIOO_BASE, gpioo_pins,
                              GPIO_AF_XSPIM_P1);
-  stm32_xspi_config_gpio(STM32H7RS_GPIOP_BASE, gpiop_pins,
+  stm32_xspi_config_gpio(STM32_GPIOP_BASE, gpiop_pins,
                              GPIO_AF_XSPIM_P1);
 }
 
@@ -215,7 +215,7 @@ static int stm32_nor_read_status_octal(uint8_t *status)
 static int stm32_nor_wait_status(
   int (*read_status)(uint8_t *status), uint8_t mask, uint8_t value)
 {
-  uint32_t timeout = STM32H7S78_XSPI_STATUS_TIMEOUT;
+  uint32_t timeout = BOARD_XSPI_STATUS_TIMEOUT;
   uint8_t status;
   int ret;
 
@@ -367,7 +367,7 @@ static int stm32_xspi2_enter_memory_mapped(void)
   int ret;
 
   ret = stm32_xspi_set_prescaler(
-    base, STM32H7S78_XSPI_NOR_OPTIONAL_PRESCALER);
+    base, BOARD_XSPI_NOR_OPTIONAL_PRESCALER);
   if (ret < 0)
     {
       return ret;
@@ -469,14 +469,14 @@ static int stm32_xspi1_enter_memory_mapped(void)
   int ret;
 
   ret = stm32_xspi_set_prescaler(
-    base, STM32H7S78_XSPI_PSRAM_OPTIONAL_PRESCALER);
+    base, BOARD_XSPI_PSRAM_OPTIONAL_PRESCALER);
   if (ret < 0)
     {
       return ret;
     }
 
   putreg32(XSPI_DCR4_REFRESH(stm32_psram_refresh(
-             STM32H7S78_XSPI_PSRAM_OPTIONAL_PRESCALER)),
+             BOARD_XSPI_PSRAM_OPTIONAL_PRESCALER)),
            STM32_XSPI_DCR4(base));
 
   ccr = XSPI_CCR_IMODE_8_LINES | XSPI_CCR_ADMODE_8_LINES |
@@ -492,7 +492,7 @@ static int stm32_xspi1_enter_memory_mapped(void)
 
 static int stm32_psram_selftest(void)
 {
-  volatile uint32_t *mem = (volatile uint32_t *)STM32H7RS_XSPI1_MEM_BASE;
+  volatile uint32_t *mem = (volatile uint32_t *)STM32_XSPI1_MEM_BASE;
   const uint32_t offsets[] =
     {
       0x00000000u,
@@ -502,7 +502,7 @@ static int stm32_psram_selftest(void)
       0x00100000u,
       0x00ffffc0u,
       0x01ffffc0u,
-      STM32H7RS_XSPI1_PSRAM_SIZE - 0x20u
+      STM32_XSPI1_PSRAM_SIZE - 0x20u
     };
 
   const uint32_t alias_offsets[] =
@@ -579,7 +579,7 @@ static int stm32_psram_selftest(void)
         (volatile uint32_t *)((uintptr_t)mem + alias_offsets[alias]);
 
       alias_saved[alias] = *ptr;
-      *ptr = STM32H7RS_XSPI1_MEM_BASE + alias_offsets[alias];
+      *ptr = STM32_XSPI1_MEM_BASE + alias_offsets[alias];
     }
 
   stm32_psram_dcache_flush(mem, 0x300);
@@ -590,7 +590,7 @@ static int stm32_psram_selftest(void)
     {
       volatile uint32_t *ptr =
         (volatile uint32_t *)((uintptr_t)mem + alias_offsets[alias]);
-      uint32_t expected = STM32H7RS_XSPI1_MEM_BASE + alias_offsets[alias];
+      uint32_t expected = STM32_XSPI1_MEM_BASE + alias_offsets[alias];
 
       if (*ptr != expected)
         {
@@ -639,7 +639,7 @@ int stm32_xspi2_nor_initialize(void)
       .memory_type    = XSPI_DCR1_MTYP_MACRONIX,
       .device_size    = MX66UW1G45G_DEVSIZE,
       .csht           = MX66UW1G45G_CSHT,
-      .prescaler      = STM32H7S78_XSPI_STARTUP_PRESCALER,
+      .prescaler      = BOARD_XSPI_STARTUP_PRESCALER,
       .fifo_threshold = MX66UW1G45G_FIFO_THRESHOLD,
       .csbound        = 0,
       .maxtran        = 0,
@@ -692,7 +692,7 @@ int stm32_xspi2_nor_initialize(void)
       syslog(LOG_WARNING, "XSPI2 NOR octal reset failed: %d\n", ret);
     }
 
-  up_mdelay(STM32H7S78_XSPI_NOR_RESET_DELAY_MS);
+  up_mdelay(BOARD_XSPI_NOR_RESET_DELAY_MS);
 
   ret = stm32_xspi_command(STM32_XSPI2_BASE,
                                MX66UW1G45G_RESET_ENABLE_CMD,
@@ -714,7 +714,7 @@ int stm32_xspi2_nor_initialize(void)
       return ret;
     }
 
-  up_mdelay(STM32H7S78_XSPI_NOR_RESET_DELAY_MS);
+  up_mdelay(BOARD_XSPI_NOR_RESET_DELAY_MS);
 
   ret = stm32_nor_readid(id);
   if (ret < 0)
@@ -775,7 +775,7 @@ int stm32_xspi2_nor_initialize(void)
     }
 
   ret = stm32_xspi_set_prescaler(
-    STM32_XSPI2_BASE, STM32H7S78_XSPI_NOR_OPTIONAL_PRESCALER);
+    STM32_XSPI2_BASE, BOARD_XSPI_NOR_OPTIONAL_PRESCALER);
   if (ret < 0)
     {
       return ret;
@@ -817,9 +817,9 @@ int stm32_xspi2_nor_initialize(void)
       return ret;
     }
 
-  header = *(volatile uint32_t *)STM32H7RS_XSPI2_MEM_BASE;
+  header = *(volatile uint32_t *)STM32_XSPI2_MEM_BASE;
   syslog(LOG_INFO, "XSPI2 NOR mapped 0x%08x header[0]=0x%08" PRIx32 "\n",
-         STM32H7RS_XSPI2_MEM_BASE, header);
+         STM32_XSPI2_MEM_BASE, header);
   return OK;
 }
 
@@ -832,12 +832,12 @@ int stm32_xspi1_psram_initialize(void)
       .memory_type    = XSPI_DCR1_MTYP_APMEM_16BIT,
       .device_size    = APS256_DEVSIZE,
       .csht           = 5,
-      .prescaler      = STM32H7S78_XSPI_STARTUP_PRESCALER,
+      .prescaler      = BOARD_XSPI_STARTUP_PRESCALER,
       .fifo_threshold = APS256_FIFO_THRESHOLD,
       .csbound        = APS256_CSBOUND,
       .maxtran        = 0,
       .refresh        = stm32_psram_refresh(
-                           STM32H7S78_XSPI_STARTUP_PRESCALER)
+                           BOARD_XSPI_STARTUP_PRESCALER)
     };
 
   int ret;
@@ -918,7 +918,7 @@ int stm32_xspi1_psram_initialize(void)
     }
 
   syslog(LOG_INFO, "XSPI1 PSRAM mapped at 0x%08x refresh=%" PRIu32 "\n",
-         STM32H7RS_XSPI1_MEM_BASE,
+         STM32_XSPI1_MEM_BASE,
          getreg32(STM32_XSPI_DCR4(STM32_XSPI1_BASE)));
   return OK;
 }

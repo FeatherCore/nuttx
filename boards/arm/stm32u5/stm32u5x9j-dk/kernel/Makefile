@@ -22,7 +22,7 @@ USER_LDFLAGS += $(foreach script,$(addsuffix .tmp,$(USER_LDSCRIPT)),-T $(script)
 USER_LDLIBS = $(patsubst lib%,-l%,$(basename $(notdir $(USERLIBS))))
 USER_LIBGCC = "${shell "$(CC)" $(ARCHCPUFLAGS) -print-libgcc-file-name}"
 
-CSRCS = stm32u5_userspace.c
+CSRCS = stm32_userspace.c
 COBJS = $(CSRCS:.c=$(OBJEXT))
 OBJS  = $(COBJS)
 

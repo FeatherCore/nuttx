@@ -27,10 +27,10 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define STM32U5X9J_SITRONIX_ADDR      0x70
-#define STM32U5X9J_SITRONIX_POLL_MSEC 30
-#define STM32U5X9J_SITRONIX_XRES      480
-#define STM32U5X9J_SITRONIX_YRES      480
+#define BOARD_SITRONIX_ADDR      0x70
+#define BOARD_SITRONIX_POLL_MSEC 30
+#define BOARD_SITRONIX_XRES      480
+#define BOARD_SITRONIX_YRES      480
 
 /****************************************************************************
  * Private Functions
@@ -51,11 +51,11 @@ int stm32_touchscreen_initialize(FAR struct i2c_master_s *i2c5)
 {
   static const struct sitronix_config_s config =
     {
-      .address   = STM32U5X9J_SITRONIX_ADDR,
+      .address   = BOARD_SITRONIX_ADDR,
       .frequency = I2C_SPEED_FAST,
-      .xres      = STM32U5X9J_SITRONIX_XRES,
-      .yres      = STM32U5X9J_SITRONIX_YRES,
-      .poll_ms   = STM32U5X9J_SITRONIX_POLL_MSEC,
+      .xres      = BOARD_SITRONIX_XRES,
+      .yres      = BOARD_SITRONIX_YRES,
+      .poll_ms   = BOARD_SITRONIX_POLL_MSEC,
       .attach    = stm32_touch_attach,
     };
 

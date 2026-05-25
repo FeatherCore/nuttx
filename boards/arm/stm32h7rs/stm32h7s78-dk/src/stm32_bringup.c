@@ -30,9 +30,9 @@
 #endif
 
 #ifdef CONFIG_NXBOOT_BOOTLOADER
-#  define STM32H7S78_IMAGE_ROLE "nxboot"
+#  define BOARD_IMAGE_ROLE "nxboot"
 #else
-#  define STM32H7S78_IMAGE_ROLE "app"
+#  define BOARD_IMAGE_ROLE "app"
 #endif
 
 /****************************************************************************
@@ -47,13 +47,13 @@ static void stm32_build_log(void)
     {
       syslog(LOG_WARNING,
              "stm32h7s78-dk: image=%s build unavailable errno=%d\n",
-             STM32H7S78_IMAGE_ROLE, errno);
+             BOARD_IMAGE_ROLE, errno);
       return;
     }
 
   syslog(LOG_INFO,
          "stm32h7s78-dk: image=%s version=%s %s %s %s\n",
-         STM32H7S78_IMAGE_ROLE, name.sysname, name.release, name.version,
+         BOARD_IMAGE_ROLE, name.sysname, name.release, name.version,
          name.machine);
 }
 
@@ -70,7 +70,7 @@ void board_late_initialize(void)
 {
   int ret;
 
-  syslog(LOG_INFO, "STM32H7S78-DK bring-up skeleton\n");
+  syslog(LOG_INFO, "stm32h7s78-dk: board initialization\n");
   stm32_build_log();
 
 #ifdef CONFIG_STM32H7RS_XSPI

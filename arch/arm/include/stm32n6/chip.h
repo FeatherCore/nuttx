@@ -58,19 +58,19 @@
  * match the STM32CubeN6 Template_FSBL_XIP_Custom layout.
  */
 
-#define STM32N6_SRAM_SIZE         (4 * 1024 * 1024)  /* 4194304 bytes (4 MiB) */
+#define STM32_SRAM_SIZE           (4 * 1024 * 1024)  /* 4194304 bytes (4 MiB) */
 
-#define STM32N6_AXISRAM_SIZE      (0x003ca000u)
-#define STM32N6_AHBSRAM_SIZE      (32 * 1024u)
-#define STM32N6_FSBL_RAM_SIZE     (511 * 1024u)
-#define STM32N6_APP_RAM_SIZE      (2 * 1024 * 1024u)
-#define STM32N6_XSPI2_NOR_SIZE    (128 * 1024 * 1024u)
-#define STM32N6_XSPI1_PSRAM_SIZE  (32 * 1024 * 1024u)
+#define STM32_AXISRAM_SIZE        (0x003ca000u)
+#define STM32_AHBSRAM_SIZE        (32 * 1024u)
+#define STM32_FSBL_RAM_SIZE       (511 * 1024u)
+#define STM32_APP_RAM_SIZE        (2 * 1024 * 1024u)
+#define STM32_XSPI2_NOR_SIZE      (128 * 1024 * 1024u)
+#define STM32_XSPI1_PSRAM_SIZE    (32 * 1024 * 1024u)
 
-#define STM32N6_NPORTS            (12) /* GPIO ports A-H and N-Q */
-#define STM32N6_NGPIO             STM32N6_NPORTS
-#define STM32N6_NUSART            (10)
-#define STM32N6_NXSPI             (3)
+#define STM32_NPORTS              (12) /* GPIO ports A-H and N-Q */
+#define STM32_NGPIO               STM32_NPORTS
+#define STM32_NUSART              (10)
+#define STM32_NXSPI               (3)
 
 /* NVIC priority levels *****************************************************/
 

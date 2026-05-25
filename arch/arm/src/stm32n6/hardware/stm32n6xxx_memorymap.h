@@ -24,6 +24,12 @@
 #define __ARCH_ARM_SRC_STM32N6_HARDWARE_STM32N6XXX_MEMORYMAP_H
 
 /****************************************************************************
+ * Included Files
+ ****************************************************************************/
+
+#include <stdint.h>
+
+/****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
 
@@ -41,6 +47,7 @@
 
 #define STM32_SRAM1_BASE      0x34000000    /* SRAM1 base */
 #define STM32_SRAM2_BASE      0x34100000    /* SRAM2 base */
+#define STM32_AHBSRAM_BASE    0x38000000    /* AHB SRAM base */
 
 /* External Memory **********************************************************/
 
@@ -66,7 +73,11 @@
  */
 
 #define STM32_APB1_BASE       0x50000000    /* APB1 (Secure) */
+#define STM32_AHB1_BASE       0x50020000    /* AHB1 (Secure) */
 #define STM32_APB2_BASE       0x52000000    /* APB2 (Secure) */
+#define STM32_AHB2_BASE       0x52020000    /* AHB2 (Secure) */
+#define STM32_APB3_BASE       0x54000000    /* APB3 (Secure) */
+#define STM32_AHB3_BASE       0x54020000    /* AHB3 (Secure) */
 #define STM32_APB4_BASE       0x56000000    /* APB4 (Secure) */
 #define STM32_APB5_BASE       0x58000000    /* APB5 (Secure) - LTDC/DCMIPP/CSI2/GFXTIM/VENC */
 #define STM32_AHB4_BASE       0x56020000    /* AHB4 (Secure) */
@@ -119,6 +130,10 @@
 #define STM32_BSEC_BASE       0x56009000
 #define STM32_DTS_BASE        0x5600a000
 
+/* APB5 peripherals *********************************************************/
+
+#define STM32_LTDC_BASE       0x58001000    /* LTDC (APB5, Secure) */
+
 /* AHB4 peripherals *********************************************************/
 
 #define STM32_GPIOA_BASE      0x56020000
@@ -159,6 +174,7 @@
 
 #define STM32_AHB5_BASE       0x58020000    /* AHB5 (Secure) */
 #define STM32_HPDMA1_BASE     0x58020000    /* HPDMA1 (AHB5, Secure) */
+#define STM32_XSPI1_BASE      0x58025000    /* XSPI1 controller (AHB5, Secure) */
 #define STM32_XSPI2_BASE      0x5802A000    /* XSPI2 controller (AHB5, Secure) */
 #define STM32_XSPIM_BASE      0x5802B400    /* XSPIM IO Manager (AHB5, Secure) */
 #define STM32_USB1_HS_PHYC_BASE 0x5803FC00  /* USB1 HS PHY controller (Secure) */

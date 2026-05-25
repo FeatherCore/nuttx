@@ -28,8 +28,8 @@
 
 #include "arm_internal.h"
 #include "chip.h"
-#include "hardware/stm32h7rs_memorymap.h"
-#include "stm32h7rs_mpuinit.h"
+#include "hardware/stm32_memorymap.h"
+#include "stm32_mpuinit.h"
 
 #include "stm32h7s78-dk.h"
 
@@ -39,24 +39,24 @@
 
 #if defined(CONFIG_STM32H7RS_PSRAM_HEAP) && CONFIG_MM_REGIONS < 2 && \
     (!defined(CONFIG_BUILD_PROTECTED) || !defined(CONFIG_MM_KERNEL_HEAP))
-#  error CONFIG_MM_REGIONS must be at least 2 with STM32H7RS_PSRAM_HEAP
+#  error CONFIG_MM_REGIONS must be at least 2 with CONFIG_STM32H7RS_PSRAM_HEAP
 #endif
 
 #ifdef CONFIG_STM32H7RS_PSRAM_HEAP
-#  if CONFIG_STM32H7RS_PSRAM_HEAP_OFFSET >= STM32H7RS_XSPI1_PSRAM_SIZE
+#  if CONFIG_STM32H7RS_PSRAM_HEAP_OFFSET >= STM32_XSPI1_PSRAM_SIZE
 #    error CONFIG_STM32H7RS_PSRAM_HEAP_OFFSET must be smaller than PSRAM size
 #  endif
-#  define STM32H7S78_PSRAM_HEAP_BASE \
-          (STM32H7RS_XSPI1_MEM_BASE + CONFIG_STM32H7RS_PSRAM_HEAP_OFFSET)
-#  define STM32H7S78_PSRAM_HEAP_SIZE \
-          (STM32H7RS_XSPI1_PSRAM_SIZE - CONFIG_STM32H7RS_PSRAM_HEAP_OFFSET)
+#  define BOARD_PSRAM_HEAP_BASE \
+          (STM32_XSPI1_MEM_BASE + CONFIG_STM32H7RS_PSRAM_HEAP_OFFSET)
+#  define BOARD_PSRAM_HEAP_SIZE \
+          (STM32_XSPI1_PSRAM_SIZE - CONFIG_STM32H7RS_PSRAM_HEAP_OFFSET)
 #endif
 
 #if defined(CONFIG_BUILD_PROTECTED) && defined(CONFIG_MM_KERNEL_HEAP)
 #  ifndef CONFIG_STM32H7RS_PROTECTED_USRAM_BASE
 #    error CONFIG_STM32H7RS_PROTECTED_USRAM_BASE is required
 #  endif
-#  define STM32H7S78_KERNEL_HEAP_END CONFIG_STM32H7RS_PROTECTED_USRAM_BASE
+#  define BOARD_KERNEL_HEAP_END CONFIG_STM32H7RS_PROTECTED_USRAM_BASE
 #endif
 
 /****************************************************************************
@@ -87,15 +87,15 @@ void up_allocate_heap(void **heap_start, size_t *heap_size)
     }
 
   board_autoled_on(LED_HEAPALLOCATE);
-  stm32h7rs_mpu_uheap(STM32H7S78_PSRAM_HEAP_BASE,
-                      STM32H7S78_PSRAM_HEAP_SIZE);
+  stm32_mpu_uheap(BOARD_PSRAM_HEAP_BASE,
+                  BOARD_PSRAM_HEAP_SIZE);
 
-  *heap_start = (FAR void *)STM32H7S78_PSRAM_HEAP_BASE;
-  *heap_size  = STM32H7S78_PSRAM_HEAP_SIZE;
+  *heap_start = (FAR void *)BOARD_PSRAM_HEAP_BASE;
+  *heap_size  = BOARD_PSRAM_HEAP_SIZE;
 
   finfo("user PSRAM heap base=0x%08" PRIx32 " size=0x%08" PRIx32 "\n",
-        (uint32_t)STM32H7S78_PSRAM_HEAP_BASE,
-        (uint32_t)STM32H7S78_PSRAM_HEAP_SIZE);
+        (uint32_t)BOARD_PSRAM_HEAP_BASE,
+        (uint32_t)BOARD_PSRAM_HEAP_SIZE);
 }
 
 /****************************************************************************
@@ -109,11 +109,11 @@ void up_allocate_heap(void **heap_start, size_t *heap_size)
 
 void up_allocate_kheap(void **heap_start, size_t *heap_size)
 {
-  DEBUGASSERT(g_idle_topstack < STM32H7S78_KERNEL_HEAP_END);
+  DEBUGASSERT(g_idle_topstack < BOARD_KERNEL_HEAP_END);
 
   board_autoled_on(LED_HEAPALLOCATE);
   *heap_start = (FAR void *)g_idle_topstack;
-  *heap_size  = STM32H7S78_KERNEL_HEAP_END - g_idle_topstack;
+  *heap_size  = BOARD_KERNEL_HEAP_END - g_idle_topstack;
 
   finfo("kernel SRAM heap base=0x%08" PRIx32 " size=0x%08" PRIx32 "\n",
         (uint32_t)g_idle_topstack, (uint32_t)*heap_size);
@@ -142,11 +142,11 @@ void arm_addregion(void)
       return;
     }
 
-  kumm_addregion((FAR void *)STM32H7S78_PSRAM_HEAP_BASE,
-                 STM32H7S78_PSRAM_HEAP_SIZE);
+  kumm_addregion((FAR void *)BOARD_PSRAM_HEAP_BASE,
+                 BOARD_PSRAM_HEAP_SIZE);
   finfo("added PSRAM heap base=0x%08" PRIx32 " size=0x%08" PRIx32 "\n",
-        (uint32_t)STM32H7S78_PSRAM_HEAP_BASE,
-        (uint32_t)STM32H7S78_PSRAM_HEAP_SIZE);
+        (uint32_t)BOARD_PSRAM_HEAP_BASE,
+        (uint32_t)BOARD_PSRAM_HEAP_SIZE);
 #endif
 }
 #endif

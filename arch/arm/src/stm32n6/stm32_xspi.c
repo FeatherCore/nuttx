@@ -23,14 +23,13 @@
 
 #include "arm_internal.h"
 
-#include "hardware/stm32n6_bsec.h"
-#include "hardware/stm32n6_gpio.h"
-#include "hardware/stm32n6_memorymap.h"
-#include "hardware/stm32n6_pwr.h"
-#include "hardware/stm32n6_rcc.h"
+#include "hardware/stm32n6xxx_bsec.h"
+#include "hardware/stm32n6xxx_memorymap.h"
+#include "hardware/stm32n6xxx_pwr.h"
+#include "hardware/stm32n6xxx_rcc.h"
+#include "hardware/stm32n6xxx_gpio.h"
 #include "hardware/stm32_xspi.h"
 
-#include "stm32n6.h"
 #include "stm32_xspi.h"
 
 /****************************************************************************
@@ -44,9 +43,9 @@
 #define STM32_XSPI_IC3_50MHZ_DIV       16u
 
 #ifdef CONFIG_ARCH_RAMFUNCS
-#  define STM32N6_RAMFUNC locate_code(".ramfunc") noinline_function
+#  define STM32_RAMFUNC locate_code(".ramfunc") noinline_function
 #else
-#  define STM32N6_RAMFUNC
+#  define STM32_RAMFUNC
 #endif
 
 /****************************************************************************
@@ -57,14 +56,20 @@ static bool g_xspi_common_done;
 static bool g_xspi_clock_state_valid;
 static bool g_vddio2_hslv;
 static bool g_vddio3_hslv;
-static uint32_t g_xspi1_source_hz = STM32N6_HCLK_FREQUENCY;
+static uint32_t g_xspi1_source_hz = STM32_HCLK_FREQUENCY;
 static uint32_t g_xspi2_source_hz = STM32_XSPI_50MHZ;
+
+/****************************************************************************
+ * Public Function Prototypes
+ ****************************************************************************/
+
+void stm32_power_config(void);
 
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
 
-static STM32N6_RAMFUNC int stm32_xspi_wait_reg(uintptr_t addr,
+static STM32_RAMFUNC int stm32_xspi_wait_reg(uintptr_t addr,
                                                uint32_t mask,
                                                uint32_t value)
 {
@@ -81,7 +86,7 @@ static STM32N6_RAMFUNC int stm32_xspi_wait_reg(uintptr_t addr,
   return OK;
 }
 
-static STM32N6_RAMFUNC int stm32_xspi_wait_reg_trace(
+static STM32_RAMFUNC int stm32_xspi_wait_reg_trace(
   uintptr_t addr, uint32_t mask, uint32_t value, FAR const char *name)
 {
   int ret;
@@ -101,7 +106,7 @@ static STM32N6_RAMFUNC int stm32_xspi_wait_reg_trace(
   return ret;
 }
 
-static STM32N6_RAMFUNC int stm32_xspi_wait_flag(uintptr_t base,
+static STM32_RAMFUNC int stm32_xspi_wait_flag(uintptr_t base,
                                                 uint32_t mask)
 {
   uint32_t timeout = STM32_XSPI_TIMEOUT;
@@ -133,14 +138,14 @@ static void stm32_xspi_read_hslv_otp(void)
   uint32_t fuse;
 
   putreg32(RCC_APB4ENSR2_SYSCFGENS | RCC_APB4ENSR2_BSECENS,
-           STM32N6_RCC_APB4ENSR2);
-  (void)getreg32(STM32N6_RCC_APB4ENR2);
+           STM32_RCC_APB4ENSR2);
+  (void)getreg32(STM32_RCC_APB4ENR2);
 
-  fuse = getreg32(STM32N6_BSEC_FVR(STM32N6_BSEC_HSLV_FUSE));
-  g_vddio3_hslv = (fuse & STM32N6_BSEC_HSLV_VDDIO3) != 0;
-  g_vddio2_hslv = (fuse & STM32N6_BSEC_HSLV_VDDIO2) != 0;
+  fuse = getreg32(STM32_BSEC_FVR(STM32_BSEC_HSLV_FUSE));
+  g_vddio3_hslv = (fuse & STM32_BSEC_HSLV_VDDIO3) != 0;
+  g_vddio2_hslv = (fuse & STM32_BSEC_HSLV_VDDIO2) != 0;
 
-  g_xspi1_source_hz = STM32N6_HCLK_FREQUENCY;
+  g_xspi1_source_hz = STM32_HCLK_FREQUENCY;
   g_xspi2_source_hz = g_vddio3_hslv ? STM32_XSPI_200MHZ :
                                       STM32_XSPI_50MHZ;
 
@@ -172,8 +177,8 @@ static void stm32_xspi_config_ic3(void)
   uint32_t div = g_vddio3_hslv ? STM32_XSPI_IC3_200MHZ_DIV :
                                  STM32_XSPI_IC3_50MHZ_DIV;
 
-  putreg32(RCC_ICCFGR(RCC_ICCFGR_SEL_PLL1, div), STM32N6_RCC_IC3CFGR);
-  putreg32(RCC_DIVENSR_IC3ENS, STM32N6_RCC_DIVENSR);
+  putreg32(RCC_ICCFGR(RCC_ICCFGR_SEL_PLL1, div), STM32_RCC_IC3CFGR);
+  putreg32(RCC_DIVENSR_IC3ENS, STM32_RCC_DIVENSR);
 }
 
 /****************************************************************************
@@ -232,7 +237,7 @@ bool stm32_xspi_is_mapped(uintptr_t base)
          (regval & XSPI_CR_FMODE_MASK) == XSPI_CR_FMODE_MEMORY_MAPPED;
 }
 
-STM32N6_RAMFUNC int stm32_xspi_wait_idle(uintptr_t base)
+STM32_RAMFUNC int stm32_xspi_wait_idle(uintptr_t base)
 {
   return stm32_xspi_wait_reg_trace(STM32_XSPI_SR(base),
                                    XSPI_SR_BUSY, 0, "idle");
@@ -243,47 +248,48 @@ void stm32_xspi_config_gpio(uintptr_t portbase, uint32_t pins,
 {
   uint32_t regval;
   int pin;
+  int pos;
 
-  regval = getreg32(STM32N6_GPIO_MODER(portbase));
+  regval = getreg32(portbase + STM32_GPIO_MODER_OFFSET);
   for (pin = 0; pin <= 15; pin++)
     {
       if ((pins & (1u << pin)) != 0)
         {
-          regval &= ~GPIO_MODE_MASK(pin);
-          regval |= GPIO_MODE_ALT << GPIO_MODE_SHIFT(pin);
+          regval &= ~GPIO_MODER_MASK(pin);
+          regval |= GPIO_MODER_ALT << GPIO_MODER_SHIFT(pin);
         }
     }
 
-  putreg32(regval, STM32N6_GPIO_MODER(portbase));
+  putreg32(regval, portbase + STM32_GPIO_MODER_OFFSET);
 
-  regval = getreg32(STM32N6_GPIO_OTYPER(portbase));
+  regval = getreg32(portbase + STM32_GPIO_OTYPER_OFFSET);
   regval &= ~pins;
-  putreg32(regval, STM32N6_GPIO_OTYPER(portbase));
+  putreg32(regval, portbase + STM32_GPIO_OTYPER_OFFSET);
 
-  regval = getreg32(STM32N6_GPIO_OSPEEDR(portbase));
+  regval = getreg32(portbase + STM32_GPIO_OSPEED_OFFSET);
   for (pin = 0; pin <= 15; pin++)
     {
       if ((pins & (1u << pin)) != 0)
         {
-          regval &= ~GPIO_SPEED_MASK(pin);
-          regval |= GPIO_SPEED_VERYHIGH << GPIO_SPEED_SHIFT(pin);
+          regval &= ~GPIO_OSPEED_MASK(pin);
+          regval |= GPIO_OSPEED_100MHZ << GPIO_OSPEED_SHIFT(pin);
         }
     }
 
-  putreg32(regval, STM32N6_GPIO_OSPEEDR(portbase));
+  putreg32(regval, portbase + STM32_GPIO_OSPEED_OFFSET);
 
-  regval = getreg32(STM32N6_GPIO_PUPDR(portbase));
+  regval = getreg32(portbase + STM32_GPIO_PUPDR_OFFSET);
   for (pin = 0; pin <= 15; pin++)
     {
       if ((pins & (1u << pin)) != 0)
         {
-          regval &= ~GPIO_PUPD_MASK(pin);
+          regval &= ~GPIO_PUPDR_MASK(pin);
         }
     }
 
-  putreg32(regval, STM32N6_GPIO_PUPDR(portbase));
+  putreg32(regval, portbase + STM32_GPIO_PUPDR_OFFSET);
 
-  regval = getreg32(STM32N6_GPIO_AFRL(portbase));
+  regval = getreg32(portbase + STM32_GPIO_AFRL_OFFSET);
   for (pin = 0; pin <= 7; pin++)
     {
       if ((pins & (1u << pin)) != 0)
@@ -293,19 +299,20 @@ void stm32_xspi_config_gpio(uintptr_t portbase, uint32_t pins,
         }
     }
 
-  putreg32(regval, STM32N6_GPIO_AFRL(portbase));
+  putreg32(regval, portbase + STM32_GPIO_AFRL_OFFSET);
 
-  regval = getreg32(STM32N6_GPIO_AFRH(portbase));
+  regval = getreg32(portbase + STM32_GPIO_AFRH_OFFSET);
   for (pin = 8; pin <= 15; pin++)
     {
       if ((pins & (1u << pin)) != 0)
         {
-          regval &= ~GPIO_AFR_MASK(pin);
-          regval |= af << GPIO_AFR_SHIFT(pin);
+          pos = pin - 8;
+          regval &= ~GPIO_AFR_MASK(pos);
+          regval |= af << GPIO_AFR_SHIFT(pos);
         }
     }
 
-  putreg32(regval, STM32N6_GPIO_AFRH(portbase));
+  putreg32(regval, portbase + STM32_GPIO_AFRH_OFFSET);
 }
 
 int stm32_xspi_common_setup(void)
@@ -315,22 +322,22 @@ int stm32_xspi_common_setup(void)
       return OK;
     }
 
-  stm32n6_power_config();
+  stm32_power_config();
   stm32_xspi_probe_clock_state();
   stm32_xspi_config_ic3();
 
-  putreg32(RCC_MISCENSR_XSPIPHYCOMPENS, STM32N6_RCC_MISCENSR);
-  modifyreg32(STM32N6_RCC_CCIPR6,
+  putreg32(RCC_MISCENSR_XSPIPHYCOMPENS, STM32_RCC_MISCENSR);
+  modifyreg32(STM32_RCC_CCIPR6,
               RCC_CCIPR6_XSPI1SEL_MASK | RCC_CCIPR6_XSPI2SEL_MASK,
               RCC_CCIPR6_XSPI1SEL_HCLK | RCC_CCIPR6_XSPI2SEL_IC3);
   putreg32(RCC_AHB5ENSR_XSPI1ENS | RCC_AHB5ENSR_XSPI2ENS |
-           RCC_AHB5ENSR_XSPIMENS, STM32N6_RCC_AHB5ENSR);
-  (void)getreg32(STM32N6_RCC_AHB5ENR);
+           RCC_AHB5ENSR_XSPIMENS, STM32_RCC_AHB5ENSR);
+  (void)getreg32(STM32_RCC_AHB5ENR);
 
   modifyreg32(STM32_XSPI_CR(STM32_XSPI1_BASE), XSPI_CR_EN, 0);
   modifyreg32(STM32_XSPI_CR(STM32_XSPI2_BASE), XSPI_CR_EN, 0);
-  putreg32(RCC_AHB5RSTR_XSPIMRST, STM32N6_RCC_AHB5RSTSR);
-  putreg32(RCC_AHB5RSTR_XSPIMRST, STM32N6_RCC_AHB5RSTCR);
+  putreg32(RCC_AHB5RSTR_XSPIMRST, STM32_RCC_AHB5RSTSR);
+  putreg32(RCC_AHB5RSTR_XSPIMRST, STM32_RCC_AHB5RSTCR);
 
   putreg32(XSPIM_CR_CSSEL_OVR_EN | XSPIM_CR_REQ2ACK_TIME(1),
            STM32_XSPIM_CR);
@@ -339,7 +346,7 @@ int stm32_xspi_common_setup(void)
   return OK;
 }
 
-STM32N6_RAMFUNC int stm32_xspi_command(uintptr_t base,
+STM32_RAMFUNC int stm32_xspi_command(uintptr_t base,
                                        uint32_t instruction,
                                        uint32_t ccr)
 {
@@ -361,7 +368,7 @@ STM32N6_RAMFUNC int stm32_xspi_command(uintptr_t base,
   return ret;
 }
 
-STM32N6_RAMFUNC int stm32_xspi_command_addr(
+STM32_RAMFUNC int stm32_xspi_command_addr(
   uintptr_t base, uint32_t instruction, uint32_t address, uint32_t ccr,
   uint32_t tcr)
 {
@@ -384,7 +391,7 @@ STM32N6_RAMFUNC int stm32_xspi_command_addr(
   return ret;
 }
 
-STM32N6_RAMFUNC int stm32_xspi_read_data(
+STM32_RAMFUNC int stm32_xspi_read_data(
   uintptr_t base, uint32_t instruction, uint32_t address, uint32_t ccr,
   uint32_t tcr, size_t nbytes, FAR uint8_t *buffer)
 {
@@ -431,7 +438,7 @@ STM32N6_RAMFUNC int stm32_xspi_read_data(
   return ret;
 }
 
-STM32N6_RAMFUNC int stm32_xspi_write_data(
+STM32_RAMFUNC int stm32_xspi_write_data(
   uintptr_t base, uint32_t instruction, uint32_t address, uint32_t ccr,
   uint32_t tcr, uint8_t value, size_t nbytes, bool repeat)
 {
@@ -469,7 +476,7 @@ STM32N6_RAMFUNC int stm32_xspi_write_data(
   return ret;
 }
 
-STM32N6_RAMFUNC int stm32_xspi_write_buffer(
+STM32_RAMFUNC int stm32_xspi_write_buffer(
   uintptr_t base, uint32_t instruction, uint32_t address, uint32_t ccr,
   uint32_t tcr, FAR const uint8_t *buffer, size_t nbytes)
 {
@@ -514,8 +521,8 @@ void stm32_xspi_controller_config(
 
   fthreshold = config->fifo_threshold > 0 ? config->fifo_threshold - 1u : 0;
 
-  putreg32(config->reset, STM32N6_RCC_AHB5RSTSR);
-  putreg32(config->reset, STM32N6_RCC_AHB5RSTCR);
+  putreg32(config->reset, STM32_RCC_AHB5RSTSR);
+  putreg32(config->reset, STM32_RCC_AHB5RSTCR);
 
   putreg32(0, STM32_XSPI_CR(config->base));
   putreg32(config->memory_type | XSPI_DCR1_DEVSIZE(config->device_size) |
@@ -531,7 +538,7 @@ void stm32_xspi_controller_config(
   modifyreg32(STM32_XSPI_CR(config->base), 0, XSPI_CR_EN);
 }
 
-STM32N6_RAMFUNC int stm32_xspi_set_prescaler(uintptr_t base,
+STM32_RAMFUNC int stm32_xspi_set_prescaler(uintptr_t base,
                                              uint32_t prescaler)
 {
   int ret;
@@ -547,7 +554,7 @@ STM32N6_RAMFUNC int stm32_xspi_set_prescaler(uintptr_t base,
   return OK;
 }
 
-STM32N6_RAMFUNC int stm32_xspi_abort_memory_mapped(uintptr_t base)
+STM32_RAMFUNC int stm32_xspi_abort_memory_mapped(uintptr_t base)
 {
   int ret;
 
@@ -570,7 +577,7 @@ STM32N6_RAMFUNC int stm32_xspi_abort_memory_mapped(uintptr_t base)
   return stm32_xspi_wait_idle(base);
 }
 
-STM32N6_RAMFUNC int stm32_xspi_enter_memory_mapped(
+STM32_RAMFUNC int stm32_xspi_enter_memory_mapped(
   uintptr_t base, uint32_t read_ccr, uint32_t read_tcr,
   uint32_t read_instruction, uint32_t write_ccr, uint32_t write_tcr,
   uint32_t write_instruction)
