@@ -25,6 +25,16 @@
 
 #define STM32_USART1_FREQUENCY         STM32_PCLK2_FREQUENCY
 
+/* GPIO port E (USART1 TX/RX), GPIO N/P/Q, and the external memory pins used
+ * by STM32N6570-DK live on the VDDIO2/VDDIO3 1.8 V domains.  Mark both
+ * domains supply-valid before any GPIO pad is configured.
+ */
+
+#define BOARD_PWR_VDDIO                (PWR_SVMCR3_VDDIO2SV | \
+                                        PWR_SVMCR3_VDDIO3SV | \
+                                        PWR_SVMCR3_VDDIO2VRSEL | \
+                                        PWR_SVMCR3_VDDIO3VRSEL)
+
 #define BOARD_FSBL_LOAD_BASE           0x34180400u
 #define BOARD_APP_RAM_BASE             0x34000000u
 #define BOARD_APP_RAM_SIZE             (2 * 1024 * 1024u)
