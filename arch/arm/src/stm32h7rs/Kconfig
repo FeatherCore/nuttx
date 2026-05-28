@@ -87,6 +87,12 @@ config STM32H7RS_DISPLAY
 	---help---
 		Enable the STM32H7RS LTDC framebuffer lower-half.
 
+config STM32H7RS_GPU2D
+	bool "GPU2D"
+	default n
+	---help---
+		Enable the STM32H7RS GPU2D/NemaP command-list backend.
+
 config STM32H7RS_LTDC_FB_DOUBLE_BUFFER
 	bool "LTDC double framebuffer"
 	default n

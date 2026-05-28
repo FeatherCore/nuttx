@@ -177,6 +177,7 @@
 #define STM32_XSPI1_BASE      0x58025000    /* XSPI1 controller (AHB5, Secure) */
 #define STM32_XSPI2_BASE      0x5802A000    /* XSPI2 controller (AHB5, Secure) */
 #define STM32_XSPIM_BASE      0x5802B400    /* XSPIM IO Manager (AHB5, Secure) */
+#define STM32_GPU2D_BASE      0x58034000    /* GPU2D (AHB5, Secure) */
 #define STM32_USB1_HS_PHYC_BASE 0x5803FC00  /* USB1 HS PHY controller (Secure) */
 #define STM32_USB1_OTG_HS_BASE  0x58040000  /* USB1 OTG HS (Secure) */
 #define STM32_USB2_OTG_HS_BASE  0x58080000  /* USB2 OTG HS (Secure) */

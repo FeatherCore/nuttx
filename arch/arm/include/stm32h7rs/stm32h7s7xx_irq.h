@@ -40,6 +40,8 @@
 #define STM32_IRQ_SDMMC1          (STM32_IRQ_FIRST + 108)
 #define STM32_IRQ_SDMMC2          (STM32_IRQ_FIRST + 109)
 
+#define STM32_IRQ_GPU2D           (STM32_IRQ_FIRST + 149)
+#define STM32_IRQ_GPU2D_ER        (STM32_IRQ_FIRST + 150)
 #define STM32_IRQ_NEXTINTS        156
 #define NR_IRQS                   (STM32_IRQ_FIRST + STM32_IRQ_NEXTINTS)
 

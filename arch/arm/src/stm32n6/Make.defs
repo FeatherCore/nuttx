@@ -55,6 +55,10 @@ ifeq ($(CONFIG_STM32N6_DISPLAY),y)
 CHIP_CSRCS += stm32_ltdc.c
 endif
 
+ifeq ($(CONFIG_STM32N6_GPU2D),y)
+CHIP_CSRCS += stm32_gpu2d.c
+endif
+
 ifeq ($(CONFIG_STM32N6_I2C),y)
 CHIP_CSRCS += stm32_i2c.c
 endif

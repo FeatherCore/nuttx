@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/src/stm32u5/stm32_gpu2d.c
+ * arch/arm/src/stm32h7rs/stm32_gpu2d.c
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -24,9 +24,9 @@
 #include "stm32_gpu2d.h"
 
 #include "hardware/stm32_gpu2d.h"
-#include "hardware/stm32u5xx_rcc.h"
+#include "hardware/stm32_rcc.h"
 
-#ifdef CONFIG_STM32U5_GPU2D
+#ifdef CONFIG_STM32H7RS_GPU2D
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -43,11 +43,11 @@
 
 static sem_t g_gpu2d_sem;
 static volatile uint32_t g_gpu2d_last_clid;
+static uint32_t g_gpu2d_next_clid;
 static volatile uint32_t g_gpu2d_last_syserror;
 static volatile uint32_t g_gpu2d_last_cmdstatus;
 static volatile uint32_t g_gpu2d_last_status;
 static volatile uint32_t g_gpu2d_last_interrupt;
-static uint32_t g_gpu2d_next_clid;
 static bool g_gpu2d_initialized;
 
 /****************************************************************************
@@ -186,13 +186,12 @@ int stm32_gpu2dinitialize(void)
       return OK;
     }
 
-  modifyreg32(STM32_RCC_AHB1ENR, 0,
-              RCC_AHB1ENR_GPU2DEN | RCC_AHB1ENR_DCACHE2EN);
-
-#ifdef RCC_AHB1RSTR_GPU2DRST
-  modifyreg32(STM32_RCC_AHB1RSTR, 0, RCC_AHB1RSTR_GPU2DRST);
-  modifyreg32(STM32_RCC_AHB1RSTR, RCC_AHB1RSTR_GPU2DRST, 0);
-#endif
+  modifyreg32(STM32_RCC_AHB5ENR, 0, RCC_AHB5ENR_GPU2DEN);
+  UP_DSB();
+  modifyreg32(STM32_RCC_AHB5RSTR, 0, RCC_AHB5RSTR_GPU2DRST);
+  UP_DSB();
+  modifyreg32(STM32_RCC_AHB5RSTR, RCC_AHB5RSTR_GPU2DRST, 0);
+  UP_DSB();
 
   nxsem_init(&g_gpu2d_sem, 0, 0);
   nxsem_set_protocol(&g_gpu2d_sem, SEM_PRIO_NONE);
@@ -204,11 +203,11 @@ int stm32_gpu2dinitialize(void)
   putreg32(0x7e, STM32_GPU2D_SYS_ERROR_MASK);
 
   g_gpu2d_last_clid = 0;
+  g_gpu2d_next_clid = 0;
   g_gpu2d_last_syserror = 0;
   g_gpu2d_last_cmdstatus = 0;
   g_gpu2d_last_status = 0;
   g_gpu2d_last_interrupt = 0;
-  g_gpu2d_next_clid = 0;
 
   ret = irq_attach(STM32_IRQ_GPU2D, stm32_gpu2d_irq, NULL);
   if (ret < 0)
@@ -245,8 +244,6 @@ void stm32_gpu2duninitialize(void)
   irq_detach(STM32_IRQ_GPU2D_ER);
   nxsem_destroy(&g_gpu2d_sem);
 
-  modifyreg32(STM32_RCC_AHB1ENR,
-              RCC_AHB1ENR_GPU2DEN | RCC_AHB1ENR_DCACHE2EN, 0);
   g_gpu2d_initialized = false;
 }
 
@@ -534,4 +531,4 @@ int stm32_gpu2d_wait(uint32_t submit_id, uint32_t timeout_ms)
   return OK;
 }
 
-#endif /* CONFIG_STM32U5_GPU2D */
+#endif /* CONFIG_STM32H7RS_GPU2D */

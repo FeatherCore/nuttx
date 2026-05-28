@@ -1,12 +1,12 @@
 /****************************************************************************
- * arch/arm/src/stm32u5/stm32_gpu2d.h
+ * arch/arm/src/stm32n6/stm32_gpu2d.h
  *
  * SPDX-License-Identifier: Apache-2.0
  *
  ****************************************************************************/
 
-#ifndef __ARCH_ARM_SRC_STM32U5_STM32_GPU2D_H
-#define __ARCH_ARM_SRC_STM32U5_STM32_GPU2D_H
+#ifndef __ARCH_ARM_SRC_STM32N6_STM32_GPU2D_H
+#define __ARCH_ARM_SRC_STM32N6_STM32_GPU2D_H
 
 /****************************************************************************
  * Included Files
@@ -20,7 +20,7 @@
  * Public Types
  ****************************************************************************/
 
-#ifdef CONFIG_STM32U5_GPU2D
+#ifdef CONFIG_STM32N6_GPU2D
 struct stm32_gpu2d_cmdlist_s
 {
   FAR uint32_t *buffer;
@@ -79,6 +79,6 @@ int stm32_gpu2d_submit(FAR struct stm32_gpu2d_ring_s *ring,
                        FAR uint32_t *submit_id);
 int stm32_gpu2d_wait(uint32_t submit_id, uint32_t timeout_ms);
 
-#endif /* CONFIG_STM32U5_GPU2D */
+#endif /* CONFIG_STM32N6_GPU2D */
 
-#endif /* __ARCH_ARM_SRC_STM32U5_STM32_GPU2D_H */
+#endif /* __ARCH_ARM_SRC_STM32N6_STM32_GPU2D_H */

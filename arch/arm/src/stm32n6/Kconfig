@@ -158,6 +158,13 @@ config STM32N6_DISPLAY
 	bool "Display controller block"
 	default n
 
+config STM32N6_GPU2D
+	bool "GPU2D/NemaP"
+	default n
+	---help---
+		Enable the STM32N6 GPU2D/NemaP low-level register and
+		command-list backend.
+
 config STM32N6_LTDC_FB_DOUBLE_BUFFER
 	bool "LTDC framebuffer double buffering"
 	default n

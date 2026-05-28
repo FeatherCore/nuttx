@@ -215,6 +215,7 @@
 
 #define RCC_AHB5RSTR_XSPI1RST            (1u << 5)
 #define RCC_AHB5RSTR_XSPI2RST            (1u << 12)
+#define RCC_AHB5RSTR_GPU2DRST            (1u << 20)
 
 #define RCC_APB1RSTR1_LPTIM1RST          (1u << 9)
 #define RCC_APB1RSTR1_I2C1RST            (1u << 21)
@@ -234,6 +235,7 @@
 #define RCC_AHB5ENR_XSPI1EN              (1u << 5)
 #define RCC_AHB5ENR_XSPI2EN              (1u << 12)
 #define RCC_AHB5ENR_XSPIMEN              (1u << 14)
+#define RCC_AHB5ENR_GPU2DEN              (1u << 20)
 
 #define RCC_APB1ENR1_LPTIM1EN            (1u << 9)
 #define RCC_APB1ENR1_UART4EN             (1u << 19)

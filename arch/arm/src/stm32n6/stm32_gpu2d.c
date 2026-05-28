@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/src/stm32u5/stm32_gpu2d.c
+ * arch/arm/src/stm32n6/stm32_gpu2d.c
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -24,9 +24,9 @@
 #include "stm32_gpu2d.h"
 
 #include "hardware/stm32_gpu2d.h"
-#include "hardware/stm32u5xx_rcc.h"
+#include "hardware/stm32n6xxx_rcc.h"
 
-#ifdef CONFIG_STM32U5_GPU2D
+#ifdef CONFIG_STM32N6_GPU2D
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -37,22 +37,58 @@
 #define GPU2D_RING_ALIGN_WORDS    4
 #define GPU2D_SUBMIT_WORDS        8
 
+#define RIFSC_RISC_SECCFGR(n)     (STM32_RIFSC_BASE + 0x0010 + \
+                                   ((uintptr_t)(n) << 2))
+#define RIFSC_RISC_PRIVCFGR(n)    (STM32_RIFSC_BASE + 0x0030 + \
+                                   ((uintptr_t)(n) << 2))
+#define RIFSC_RIMC_ATTR(n)        (STM32_RIFSC_BASE + 0x0c10 + \
+                                   ((uintptr_t)(n) << 2))
+
+#define RIF_MASTER_GPU2D          7
+#define RIF_MCID_1                (1 << 4)
+#define RIF_MCID_MASK             (7 << 4)
+#define RIF_MSEC                  (1 << 8)
+#define RIF_MPRIV                 (1 << 9)
+#define RIF_RIMC_SEC_PRIV_MASK    (RIF_MCID_MASK | RIF_MSEC | RIF_MPRIV)
+#define RIF_RISC_GPU2D_REG        3
+#define RIF_RISC_GPU2D_BIT        (1 << 3)
+
 /****************************************************************************
  * Private Data
  ****************************************************************************/
 
 static sem_t g_gpu2d_sem;
 static volatile uint32_t g_gpu2d_last_clid;
+static uint32_t g_gpu2d_next_clid;
 static volatile uint32_t g_gpu2d_last_syserror;
 static volatile uint32_t g_gpu2d_last_cmdstatus;
 static volatile uint32_t g_gpu2d_last_status;
 static volatile uint32_t g_gpu2d_last_interrupt;
-static uint32_t g_gpu2d_next_clid;
 static bool g_gpu2d_initialized;
 
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
+
+static void stm32_gpu2d_rif_master_config(uint32_t master)
+{
+  uint32_t regval;
+
+  regval = getreg32(RIFSC_RIMC_ATTR(master));
+  regval &= ~RIF_RIMC_SEC_PRIV_MASK;
+  regval |= RIF_MCID_1 | RIF_MSEC | RIF_MPRIV;
+  putreg32(regval, RIFSC_RIMC_ATTR(master));
+}
+
+static void stm32_gpu2d_rif_config(void)
+{
+  putreg32(RCC_AHB3ENSR_RIFSCENS, STM32_RCC_AHB3ENSR);
+  stm32_gpu2d_rif_master_config(RIF_MASTER_GPU2D);
+  modifyreg32(RIFSC_RISC_SECCFGR(RIF_RISC_GPU2D_REG), 0,
+              RIF_RISC_GPU2D_BIT);
+  modifyreg32(RIFSC_RISC_PRIVCFGR(RIF_RISC_GPU2D_REG), 0,
+              RIF_RISC_GPU2D_BIT);
+}
 
 static int stm32_gpu2d_irq(int irq, FAR void *context, FAR void *arg)
 {
@@ -186,13 +222,10 @@ int stm32_gpu2dinitialize(void)
       return OK;
     }
 
-  modifyreg32(STM32_RCC_AHB1ENR, 0,
-              RCC_AHB1ENR_GPU2DEN | RCC_AHB1ENR_DCACHE2EN);
-
-#ifdef RCC_AHB1RSTR_GPU2DRST
-  modifyreg32(STM32_RCC_AHB1RSTR, 0, RCC_AHB1RSTR_GPU2DRST);
-  modifyreg32(STM32_RCC_AHB1RSTR, RCC_AHB1RSTR_GPU2DRST, 0);
-#endif
+  stm32_gpu2d_rif_config();
+  putreg32(RCC_AHB5ENSR_GPU2DENS, STM32_RCC_AHB5ENSR);
+  putreg32(RCC_AHB5RSTSR_GPU2DRSTS, STM32_RCC_AHB5RSTSR);
+  putreg32(RCC_AHB5RSTCR_GPU2DRSTC, STM32_RCC_AHB5RSTCR);
 
   nxsem_init(&g_gpu2d_sem, 0, 0);
   nxsem_set_protocol(&g_gpu2d_sem, SEM_PRIO_NONE);
@@ -204,11 +237,11 @@ int stm32_gpu2dinitialize(void)
   putreg32(0x7e, STM32_GPU2D_SYS_ERROR_MASK);
 
   g_gpu2d_last_clid = 0;
+  g_gpu2d_next_clid = 0;
   g_gpu2d_last_syserror = 0;
   g_gpu2d_last_cmdstatus = 0;
   g_gpu2d_last_status = 0;
   g_gpu2d_last_interrupt = 0;
-  g_gpu2d_next_clid = 0;
 
   ret = irq_attach(STM32_IRQ_GPU2D, stm32_gpu2d_irq, NULL);
   if (ret < 0)
@@ -245,8 +278,6 @@ void stm32_gpu2duninitialize(void)
   irq_detach(STM32_IRQ_GPU2D_ER);
   nxsem_destroy(&g_gpu2d_sem);
 
-  modifyreg32(STM32_RCC_AHB1ENR,
-              RCC_AHB1ENR_GPU2DEN | RCC_AHB1ENR_DCACHE2EN, 0);
   g_gpu2d_initialized = false;
 }
 
@@ -534,4 +565,4 @@ int stm32_gpu2d_wait(uint32_t submit_id, uint32_t timeout_ms)
   return OK;
 }
 
-#endif /* CONFIG_STM32U5_GPU2D */
+#endif /* CONFIG_STM32N6_GPU2D */

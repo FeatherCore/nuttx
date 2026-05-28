@@ -50,3 +50,7 @@ endif
 ifeq ($(CONFIG_STM32H7RS_DISPLAY),y)
 CHIP_CSRCS += stm32_ltdc.c
 endif
+
+ifeq ($(CONFIG_STM32H7RS_GPU2D),y)
+CHIP_CSRCS += stm32_gpu2d.c
+endif

@@ -1,12 +1,12 @@
 /****************************************************************************
- * arch/arm/src/stm32u5/hardware/stm32_gpu2d.h
+ * arch/arm/src/stm32h7rs/hardware/stm32_gpu2d.h
  *
  * SPDX-License-Identifier: Apache-2.0
  *
  ****************************************************************************/
 
-#ifndef __ARCH_ARM_SRC_STM32U5_HARDWARE_STM32_GPU2D_H
-#define __ARCH_ARM_SRC_STM32U5_HARDWARE_STM32_GPU2D_H
+#ifndef __ARCH_ARM_SRC_STM32H7RS_HARDWARE_STM32_GPU2D_H
+#define __ARCH_ARM_SRC_STM32H7RS_HARDWARE_STM32_GPU2D_H
 
 /****************************************************************************
  * Included Files
@@ -20,9 +20,9 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-/* STM32U5G9 GPU2D/NemaP register offsets.  The STM32 HAL exposes only the
- * generic access model; these offsets are from the U5G9 TouchGFX/NemaGFX
- * integration and the NemaP command/register documentation.
+/* STM32H7RS GPU2D/NemaP register offsets.  The STM32H7RS HAL exposes GPU2D as a
+ * raw base address plus offset; the offsets match the NemaP register map used
+ * by the STM32U5 integration and the H21.11 reference surface.
  */
 
 #define STM32_GPU2D_TEX0_BASE             (STM32_GPU2D_BASE + 0x000)
@@ -168,4 +168,4 @@
                                            ((flags) & ~GPU2D_CL_REG_MASK))
 #define GPU2D_IS_ALIGNED_8(addr)          ((((uintptr_t)(addr)) & 7) == 0)
 
-#endif /* __ARCH_ARM_SRC_STM32U5_HARDWARE_STM32_GPU2D_H */
+#endif /* __ARCH_ARM_SRC_STM32H7RS_HARDWARE_STM32_GPU2D_H */
