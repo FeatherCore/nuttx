@@ -183,7 +183,6 @@ config STM32U5X9J_DK_LCD
 	default y
 	select DRIVERS_VIDEO
 	select VIDEO_FB
-	select LCD_HX8379C
 	select FB_UPDATE
 	select FB_SYNC
 	select STM32U5_DMA2D
@@ -192,7 +191,39 @@ config STM32U5X9J_DK_LCD
 	select STM32U5_LTDC
 	select STM32U5_LTDC_FB_DOUBLE_BUFFER
 	---help---
-		Register a 480x480 double framebuffer at /dev/fb0.
+		Register a DSI LCD double framebuffer at /dev/fb0.
+
+choice
+	prompt "LCD panel"
+	default STM32U5X9J_DK_LCD_HX8379C
+	depends on STM32U5X9J_DK_LCD
+	---help---
+		Select the panel initialization sequence and DSI video timing used
+		by the STM32U5x9J-DK LCD path.
+
+config STM32U5X9J_DK_LCD_HX8379C
+	bool "Board HX8379C-compatible 480x480 DSI panel"
+	select LCD_HX8379C
+	---help---
+		Use the original STM32U5x9J-DK 480x480 DSI panel path.
+
+config STM32U5X9J_DK_LCD_CO5300
+	bool "External CO5300 1.73-inch 466x466 AMOLED panel"
+	select LCD_CO5300
+	---help---
+		Use the external YuYing 1.73-inch 466x466 CO5300 AMOLED panel
+		through the MIPI adapter. This panel uses DSI clock lane + D0
+		single data lane for first bring-up.
+
+config STM32U5X9J_DK_LCD_ST7801
+	bool "External ST7801 2.13-inch 410x502 AMOLED panel"
+	select LCD_ST7801
+	---help---
+		Use the external YuYing 2.13-inch 410x502 ST7801 AMOLED panel
+		through the MIPI adapter. This panel uses DSI clock lane + D0
+		single data lane for first bring-up.
+
+endchoice
 
 choice
 	prompt "LCD framebuffer pixel format"
@@ -209,6 +240,7 @@ config STM32U5X9J_DK_LCD_RGB565
 
 config STM32U5X9J_DK_LCD_XRGB8888
 	bool "XRGB8888 (32-bit LTDC ARGB8888)"
+	depends on !STM32U5X9J_DK_LCD_CO5300 && !STM32U5X9J_DK_LCD_ST7801
 	---help---
 		Expose /dev/fb0 as FB_FMT_RGB32/XRGB8888.  The LTDC layer
 		still uses the STM32 ARGB8888 pixel-format packing, but the
@@ -254,14 +286,6 @@ config STM32U5X9J_DK_LCD_COLORBAR
 	---help---
 		Fill the framebuffer with vertical color bars after LCD
 		initialization.
-
-config STM32U5X9J_DK_LCD_PATTERN
-	bool "Draw extended LCD static pattern during initialization"
-	default n
-	depends on STM32U5X9J_DK_LCD_COLORBAR
-	---help---
-		Draw a non-interactive framebuffer smoke pattern by overlaying
-		basic RGB rectangles on top of the vertical color bars.
 
 config STM32U5X9J_DK_TOUCH
 	bool "Sitronix touchscreen"

@@ -43,10 +43,12 @@
 #define STM32_DSI_PHY_PLL_ODF         2
 #define STM32_DSI_PHY_BYTE_DIV        8
 
+#define STM32_DSI_MAX_RETURN_PKT_SIZE 0x37
+
 #define RCC_PLL3CFGR_PLL3SRC_SHIFT    0
 #define RCC_PLL3CFGR_PLL3SRC_HSE      (3 << RCC_PLL3CFGR_PLL3SRC_SHIFT)
 #define RCC_PLL3CFGR_PLL3RGE_SHIFT    2
-#define RCC_PLL3CFGR_PLL3RGE_CUBE     (3 << RCC_PLL3CFGR_PLL3RGE_SHIFT)
+#define RCC_PLL3CFGR_PLL3RGE_4_8MHZ   (0 << RCC_PLL3CFGR_PLL3RGE_SHIFT)
 #define RCC_PLL3CFGR_PLL3M_SHIFT      8
 #define RCC_PLL3CFGR_PLL3M(n)         (((n) - 1) << RCC_PLL3CFGR_PLL3M_SHIFT)
 #define RCC_PLL3CFGR_PLL3PEN          (1 << 16)
@@ -114,27 +116,135 @@ static uint8_t stm32_dsi_bytespp(uint8_t bpp)
   return bpp == 16 ? 2 : 3;
 }
 
-static uint64_t stm32_dsi_pixel_hz(void)
+static uint16_t stm32_dsi_pixel_pll_n(
+    FAR const struct stm32_dsi_video_config_s *cfg)
 {
-  return STM32_DSI_HSE_HZ / STM32_DSI_PLL3_M * STM32_DSI_PLL3_N /
-         STM32_DSI_PLL3_R;
+  if (cfg != NULL && cfg->pixel_pll_n != 0)
+    {
+      return cfg->pixel_pll_n;
+    }
+
+  return STM32_DSI_PLL3_N;
 }
 
-static uint64_t stm32_dsi_lane_byte_hz(void)
+static uint8_t stm32_dsi_pixel_pll_r(
+    FAR const struct stm32_dsi_video_config_s *cfg)
+{
+  if (cfg != NULL && cfg->pixel_pll_r != 0)
+    {
+      return cfg->pixel_pll_r;
+    }
+
+  return STM32_DSI_PLL3_R;
+}
+
+static uint64_t stm32_dsi_pixel_hz_cfg(
+    FAR const struct stm32_dsi_video_config_s *cfg)
+{
+  return STM32_DSI_HSE_HZ / STM32_DSI_PLL3_M *
+         stm32_dsi_pixel_pll_n(cfg) / stm32_dsi_pixel_pll_r(cfg);
+}
+
+static uint16_t
+stm32_dsi_phy_ndiv(FAR const struct stm32_dsi_video_config_s *cfg)
+{
+  if (cfg != NULL && cfg->phy_ndiv != 0)
+    {
+      return cfg->phy_ndiv;
+    }
+
+  return STM32_DSI_PHY_PLL_NDIV;
+}
+
+static uint8_t
+stm32_dsi_phy_frange(FAR const struct stm32_dsi_video_config_s *cfg)
+{
+  if (cfg != NULL && cfg->phy_frange != 0)
+    {
+      return cfg->phy_frange;
+    }
+
+  return DSI_DPHY_FRANGE_450MHZ_510MHZ;
+}
+
+static uint64_t
+stm32_dsi_lane_byte_hz(FAR const struct stm32_dsi_video_config_s *cfg)
 {
   return STM32_DSI_HSE_HZ / STM32_DSI_PHY_PLL_IDF *
-         STM32_DSI_PHY_PLL_NDIV / STM32_DSI_PHY_BYTE_DIV;
+         stm32_dsi_phy_ndiv(cfg) / STM32_DSI_PHY_BYTE_DIV;
 }
 
-static uint32_t stm32_dsi_hscale(void)
+static uint32_t
+stm32_dsi_phy_vco_range(FAR const struct stm32_dsi_video_config_s *cfg)
 {
-  uint64_t pixel_hz = stm32_dsi_pixel_hz();
-  uint64_t lane_byte_hz = stm32_dsi_lane_byte_hz();
+  /* With HSE=16 MHz, IDF=4 and ODF=2, VCO is 8 * NDIV MHz.
+   * NDIV below 100 falls in the 500-800 MHz VCO band; NDIV 100 and above
+   * matches the 800 MHz-1 GHz band used by the stock/Cube 400-500 Mbps
+   * display configurations.
+   */
 
-  return (uint32_t)((lane_byte_hz + pixel_hz / 2) / pixel_hz);
+  if (stm32_dsi_phy_ndiv(cfg) < 100)
+    {
+      return 0;
+    }
+
+  return DSI_WRPCR_VCO_800_1GHZ;
 }
 
-static int stm32_dsi_config_pll3(void)
+static uint32_t
+stm32_dsi_hscale(FAR const struct stm32_dsi_video_config_s *cfg)
+{
+  uint64_t pixel_hz = stm32_dsi_pixel_hz_cfg(cfg);
+  uint64_t lane_byte_hz = stm32_dsi_lane_byte_hz(cfg);
+
+  if (cfg != NULL && cfg->hscale_num != 0 && cfg->hscale_den != 0)
+    {
+      return ((uint32_t)cfg->hscale_num << 16) / cfg->hscale_den;
+    }
+
+  if (cfg != NULL && cfg->hscale != 0)
+    {
+      return (uint32_t)cfg->hscale << 16;
+    }
+
+  return (uint32_t)((lane_byte_hz << 16) / pixel_hz);
+}
+
+static uint32_t stm32_dsi_hscale_apply(uint32_t pixels, uint32_t hscale)
+{
+  return (uint32_t)(((uint64_t)pixels * hscale) >> 16);
+}
+
+static uint32_t stm32_dsi_phy_swap(
+    FAR const struct stm32_dsi_video_config_s *cfg)
+{
+  uint32_t regval = 0;
+
+  if (cfg == NULL)
+    {
+      return 0;
+    }
+
+  if ((cfg->phy_swap & STM32_DSI_PHY_SWAP_CLK) != 0)
+    {
+      regval |= DSI_WPCR0_SWCL;
+    }
+
+  if ((cfg->phy_swap & STM32_DSI_PHY_SWAP_D0) != 0)
+    {
+      regval |= DSI_WPCR0_SWDL0;
+    }
+
+  if ((cfg->phy_swap & STM32_DSI_PHY_SWAP_D1) != 0)
+    {
+      regval |= DSI_WPCR0_SWDL1;
+    }
+
+  return regval;
+}
+
+static int stm32_dsi_config_pll3(
+    FAR const struct stm32_dsi_video_config_s *cfg)
 {
   uint32_t regval;
   int ret;
@@ -160,16 +270,16 @@ static int stm32_dsi_config_pll3(void)
     }
 
   regval = RCC_PLL3CFGR_PLL3SRC_HSE |
-           RCC_PLL3CFGR_PLL3RGE_CUBE |
+           RCC_PLL3CFGR_PLL3RGE_4_8MHZ |
            RCC_PLL3CFGR_PLL3M(STM32_DSI_PLL3_M) |
            RCC_PLL3CFGR_PLL3PEN |
            RCC_PLL3CFGR_PLL3REN;
   putreg32(regval, STM32_RCC_PLL3CFGR);
 
-  regval = RCC_PLL3DIVR_PLL3N(STM32_DSI_PLL3_N) |
+  regval = RCC_PLL3DIVR_PLL3N(stm32_dsi_pixel_pll_n(cfg)) |
            RCC_PLL3DIVR_PLL3P(STM32_DSI_PLL3_P) |
            RCC_PLL3DIVR_PLL3Q(STM32_DSI_PLL3_Q) |
-           RCC_PLL3DIVR_PLL3R(STM32_DSI_PLL3_R);
+           RCC_PLL3DIVR_PLL3R(stm32_dsi_pixel_pll_r(cfg));
   putreg32(regval, STM32_RCC_PLL3DIVR);
   putreg32(0, STM32_RCC_PLL3FRACR);
 
@@ -191,6 +301,7 @@ static int stm32_dsi_config_pll3(void)
 static int stm32_dsi_enable_phy(const struct stm32_dsi_video_config_s *cfg)
 {
   uint32_t stopmask = DSI_PSR_PSSC | DSI_PSR_PSS0;
+  uint8_t phy_frange = stm32_dsi_phy_frange(cfg);
   int ret;
 
   putreg32(DSI_BCFGR_PWRUP, STM32_DSI_BCFGR);
@@ -198,10 +309,10 @@ static int stm32_dsi_enable_phy(const struct stm32_dsi_video_config_s *cfg)
 
   modifyreg32(STM32_DSI_WRPCR, DSI_WRPCR_NDIV(0x1ff) |
               DSI_WRPCR_IDF(0x1ff) | DSI_WRPCR_ODF(0x1ff) | DSI_WRPCR_BC,
-              DSI_WRPCR_NDIV(STM32_DSI_PHY_PLL_NDIV) |
+              DSI_WRPCR_NDIV(stm32_dsi_phy_ndiv(cfg)) |
               DSI_WRPCR_IDF(STM32_DSI_PHY_PLL_IDF) |
               DSI_WRPCR_ODF(STM32_DSI_PHY_PLL_ODF) |
-              DSI_WRPCR_BC | DSI_WRPCR_PLLEN);
+              stm32_dsi_phy_vco_range(cfg) | DSI_WRPCR_PLLEN);
   putreg32(0, STM32_DSI_WPTR);
   up_mdelay(1);
 
@@ -220,15 +331,14 @@ static int stm32_dsi_enable_phy(const struct stm32_dsi_video_config_s *cfg)
   modifyreg32(STM32_DSI_CR, 0, DSI_CR_EN);
   putreg32(DSI_CCR_TXECKDIV(4) | DSI_CCR_TOCKDIV(1), STM32_DSI_CCR);
 
+  modifyreg32(STM32_DSI_WPCR0, DSI_WPCR0_SWAP_MASK,
+              stm32_dsi_phy_swap(cfg));
   putreg32(DSI_PCTLR_DEN, STM32_DSI_PCTLR);
-  putreg32(DSI_DPCBCR_FRANGE(DSI_DPHY_FRANGE_450MHZ_510MHZ),
-           STM32_DSI_DPCBCR);
+  putreg32(DSI_DPCBCR_FRANGE(phy_frange), STM32_DSI_DPCBCR);
   putreg32(DSI_DPCSRCR_SLEW(DSI_DPHY_SLEW_HS_TX_SPEED),
            STM32_DSI_DPCSRCR);
-  putreg32(DSI_DPDL_BCR(DSI_DPHY_FRANGE_450MHZ_510MHZ),
-           STM32_DSI_DPDL0BCR);
-  putreg32(DSI_DPDL_BCR(DSI_DPHY_FRANGE_450MHZ_510MHZ),
-           STM32_DSI_DPDL1BCR);
+  putreg32(DSI_DPDL_BCR(phy_frange), STM32_DSI_DPDL0BCR);
+  putreg32(DSI_DPDL_BCR(phy_frange), STM32_DSI_DPDL1BCR);
   putreg32(DSI_DPDL_SRCR(DSI_DPHY_SLEW_HS_TX_SPEED),
            STM32_DSI_DPDL0SRCR);
   putreg32(DSI_DPDL_SRCR(DSI_DPHY_SLEW_HS_TX_SPEED),
@@ -270,32 +380,46 @@ static int stm32_dsi_enable_phy(const struct stm32_dsi_video_config_s *cfg)
   return OK;
 }
 
-static void stm32_dsi_video_config(const struct stm32_dsi_video_config_s *cfg)
+static void
+stm32_dsi_video_config(FAR const struct stm32_dsi_video_config_s *cfg)
 {
   uint32_t colorcoding = stm32_dsi_colorcoding(cfg->bpp);
   uint32_t total_pixels;
   uint32_t bytespp = stm32_dsi_bytespp(cfg->bpp);
-  uint32_t hscale = stm32_dsi_hscale();
+  uint32_t hscale = stm32_dsi_hscale(cfg);
   uint64_t pixel_hz;
   uint64_t lane_byte_hz;
   uint64_t refresh_x100;
 
-  pixel_hz = stm32_dsi_pixel_hz();
-  lane_byte_hz = stm32_dsi_lane_byte_hz();
+  pixel_hz = stm32_dsi_pixel_hz_cfg(cfg);
+  lane_byte_hz = stm32_dsi_lane_byte_hz(cfg);
   total_pixels = (cfg->width + cfg->hsync + cfg->hbp + cfg->hfp) *
                  (cfg->vactive + cfg->vsync + cfg->vbp + cfg->vfp);
   refresh_x100 = pixel_hz * 100 / total_pixels;
 
   syslog(LOG_INFO,
          "stm32u5: DSI video bpp=%u colorcoding=%s bytespp=%lu"
-         " pclk=%" PRIu64 "Hz lane-byte=%" PRIu64 "Hz hscale=%lu"
-         " refresh=%" PRIu64 ".%02" PRIu64 "Hz\n",
+         " pclk=%" PRIu64 "Hz lane-byte=%" PRIu64 "Hz hscale=%lu.%03lu"
+         " refresh=%" PRIu64 ".%02" PRIu64 "Hz pixel-pll-n=%u"
+         " pixel-pll-r=%u phy-ndiv=%u phy-frange=%u phy-swap=%02x"
+         " video-mode=%u phy-vco=%s\n",
          (unsigned int)cfg->bpp, cfg->bpp == 16 ? "RGB565" : "RGB888",
          (unsigned long)bytespp, pixel_hz, lane_byte_hz,
-         (unsigned long)hscale, refresh_x100 / 100, refresh_x100 % 100);
+         (unsigned long)(hscale >> 16),
+         (unsigned long)(((hscale & 0xffff) * 1000) >> 16),
+         refresh_x100 / 100, refresh_x100 % 100,
+         (unsigned int)stm32_dsi_pixel_pll_n(cfg),
+         (unsigned int)stm32_dsi_pixel_pll_r(cfg),
+         (unsigned int)stm32_dsi_phy_ndiv(cfg),
+         (unsigned int)stm32_dsi_phy_frange(cfg),
+         (unsigned int)cfg->phy_swap,
+         (unsigned int)(cfg->video_mode & DSI_VMCR_VMT_MASK),
+         stm32_dsi_phy_vco_range(cfg) != 0 ? "800-1000MHz" :
+         "500-800MHz");
 
   putreg32(0, STM32_DSI_MCR);
-  putreg32(DSI_VMCR_BURST | DSI_VMCR_LPCE | DSI_VMCR_LPHFPE |
+  putreg32((cfg->video_mode & DSI_VMCR_VMT_MASK) |
+           DSI_VMCR_LPCE | DSI_VMCR_LPHFPE |
            DSI_VMCR_LPHBPE | DSI_VMCR_LPVAE | DSI_VMCR_LPVFPE |
            DSI_VMCR_LPVBPE | DSI_VMCR_LPVSAE | DSI_VMCR_FBTAAE,
            STM32_DSI_VMCR);
@@ -305,9 +429,12 @@ static void stm32_dsi_video_config(const struct stm32_dsi_video_config_s *cfg)
   putreg32(0, STM32_DSI_LVCIDR);
   putreg32(colorcoding, STM32_DSI_LCOLCR);
   putreg32(0, STM32_DSI_LPCR);
-  putreg32(cfg->hsync * hscale, STM32_DSI_VHSACR);
-  putreg32(cfg->hbp * hscale, STM32_DSI_VHBPCR);
-  putreg32((cfg->width + cfg->hsync + cfg->hbp + cfg->hfp) * hscale,
+  putreg32(stm32_dsi_hscale_apply(cfg->hsync, hscale),
+           STM32_DSI_VHSACR);
+  putreg32(stm32_dsi_hscale_apply(cfg->hbp, hscale),
+           STM32_DSI_VHBPCR);
+  putreg32(stm32_dsi_hscale_apply(cfg->width + cfg->hsync +
+                                  cfg->hbp + cfg->hfp, hscale),
            STM32_DSI_VLCR);
   putreg32(cfg->vsync, STM32_DSI_VVSACR);
   putreg32(cfg->vbp, STM32_DSI_VVBPCR);
@@ -323,7 +450,7 @@ static void stm32_dsi_video_config(const struct stm32_dsi_video_config_s *cfg)
   putreg32(0, STM32_DSI_TCCR(3));
   putreg32(0, STM32_DSI_TCCR(4));
   putreg32(0, STM32_DSI_TCCR(5));
-  putreg32(DSI_PCR_BTAE, STM32_DSI_PCR);
+  putreg32(cfg->bta ? DSI_PCR_BTAE : 0, STM32_DSI_PCR);
   modifyreg32(STM32_DSI_WCFGR, DSI_WCFGR_DSIM | DSI_WCFGR_COLMUX(7),
               DSI_WCFGR_COLMUX(colorcoding));
 }
@@ -342,7 +469,7 @@ int stm32_dsiinitialize(const struct stm32_dsi_video_config_s *config)
       return -EINVAL;
     }
 
-  ret = stm32_dsi_config_pll3();
+  ret = stm32_dsi_config_pll3(config);
   if (ret < 0)
     {
       syslog(LOG_ERR, "stm32u5: DSI PLL3 clock setup failed: %d\n", ret);
@@ -365,7 +492,8 @@ int stm32_dsiinitialize(const struct stm32_dsi_video_config_s *config)
 
   putreg32(0, STM32_DSI_GVCIDR);
   putreg32(0, STM32_DSI_PCR);
-  putreg32(0, STM32_DSI_CMCR);
+  putreg32(config->lp_cmd ? (DSI_CMCR_DSW0TX | DSI_CMCR_DSW1TX |
+           DSI_CMCR_DLWTX) : 0, STM32_DSI_CMCR);
 
   stm32_dsi_video_config(config);
 
@@ -409,6 +537,77 @@ int stm32_dsishortwrite(uint8_t datatype, uint8_t command, uint8_t param)
 
   putreg32(DSI_GHCR_DT(datatype) | DSI_GHCR_VCID(0) |
            DSI_GHCR_WC(command | (param << 8)), STM32_DSI_GHCR);
+
+  return OK;
+}
+
+int stm32_dsiread(uint8_t datatype, uint8_t command, FAR uint8_t *buffer,
+                  uint16_t len)
+{
+  uint32_t fifoword;
+  uint32_t timeout;
+  uint16_t remaining;
+  uint16_t copied;
+  uint16_t i;
+  int ret;
+
+  if (buffer == NULL || len == 0)
+    {
+      return -EINVAL;
+    }
+
+  if (len > 2)
+    {
+      ret = stm32_dsishortwrite(STM32_DSI_MAX_RETURN_PKT_SIZE,
+                                len & 0xff, len >> 8);
+      if (ret < 0)
+        {
+          return ret;
+        }
+    }
+
+  ret = stm32_dsi_wait_cmd_fifo();
+  if (ret < 0)
+    {
+      return ret;
+    }
+
+  putreg32(DSI_GHCR_DT(datatype) | DSI_GHCR_VCID(0) |
+           DSI_GHCR_WC(command), STM32_DSI_GHCR);
+
+  remaining = len;
+  copied = 0;
+  timeout = STM32_DSI_TIMEOUT_US;
+
+  while (remaining > 0)
+    {
+      if ((getreg32(STM32_DSI_GPSR) & DSI_GPSR_PRDFE) == 0)
+        {
+          fifoword = getreg32(STM32_DSI_GPDR);
+
+          for (i = 0; i < 4 && remaining > 0; i++)
+            {
+              buffer[copied++] = (fifoword >> (8 * i)) & 0xff;
+              remaining--;
+            }
+
+          timeout = STM32_DSI_TIMEOUT_US;
+          continue;
+        }
+
+      if (((getreg32(STM32_DSI_GPSR) & DSI_GPSR_RCB) == 0) &&
+          ((getreg32(STM32_DSI_ISR(1)) & DSI_ISR1_PSE) != 0))
+        {
+          return -EIO;
+        }
+
+      up_udelay(1);
+      timeout--;
+      if (timeout == 0)
+        {
+          return -ETIMEDOUT;
+        }
+    }
 
   return OK;
 }

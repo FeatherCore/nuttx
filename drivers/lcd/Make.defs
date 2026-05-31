@@ -180,6 +180,14 @@ ifeq ($(CONFIG_LCD_HX8379C),y)
   CSRCS += hx8379c.c
 endif
 
+ifeq ($(CONFIG_LCD_CO5300),y)
+  CSRCS += co5300.c
+endif
+
+ifeq ($(CONFIG_LCD_ST7801),y)
+  CSRCS += st7801.c
+endif
+
 ifeq ($(CONFIG_LCD_TDA19988),y)
   CSRCS += tda19988.c
 endif

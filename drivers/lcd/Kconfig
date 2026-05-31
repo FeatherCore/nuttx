@@ -2060,6 +2060,24 @@ config LCD_HX8379C
 		mode initialization sequence. The board supplies the DSI packet
 		write operations.
 
+config LCD_CO5300
+	bool "CO5300 AMOLED MIPI DSI panel"
+	default n
+	select LCD_OTHER
+	---help---
+		Enable support for the CO5300 AMOLED MIPI DSI command mode
+		initialization sequence used by the 1.73-inch 466x466 panel. The
+		board supplies the DSI packet write operations.
+
+config LCD_ST7801
+	bool "ST7801 AMOLED MIPI DSI panel"
+	default n
+	select LCD_OTHER
+	---help---
+		Enable support for the ST7801 AMOLED MIPI DSI command mode
+		initialization sequence used by the 2.13-inch 410x502 panel. The
+		board supplies the DSI packet write operations.
+
 config LCD_TDA19988
 	bool "TDA19988 HDMI Encoder"
 	default n

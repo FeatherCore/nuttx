@@ -26,9 +26,9 @@ struct stm32_ltdc_config_s
 {
   uintptr_t fb_base;
 
-  /* fb1_base is optional.  When it is zero, the second framebuffer is assumed
-   * to be contiguous after fb_base.  Boards with non-linear or externally
-   * placed framebuffers may provide explicit non-zero addresses.
+  /* fb1_base is optional.  When it is zero, the second framebuffer is
+   * assumed to be contiguous after fb_base.  Boards with non-linear or
+   * externally placed framebuffers may provide explicit non-zero addresses.
    */
 
   uintptr_t fb1_base;

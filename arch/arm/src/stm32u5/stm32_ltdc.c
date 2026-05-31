@@ -793,6 +793,7 @@ int stm32_ltdcinitialize(const struct stm32_ltdc_config_s *config)
   putreg32(stm32_ltdc_format(config->bpp), STM32_LTDC_L1PFCR);
   putreg32(LTDC_LXCACR_CONSTA(0xff), STM32_LTDC_L1CACR);
   putreg32(0, STM32_LTDC_L1DCCR);
+
   /* The framebuffer is the final display surface, so ignore pixel alpha. */
 
   putreg32(LTDC_LXBFCR_BF1(LTDC_LXBFCR_CA) |

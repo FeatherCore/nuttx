@@ -49,8 +49,10 @@
 #define STM32_DSI_PCTLR        (STM32_DSI_BASE + 0x00a0)
 #define STM32_DSI_PCONFR       (STM32_DSI_BASE + 0x00a4)
 #define STM32_DSI_PSR          (STM32_DSI_BASE + 0x00b0)
+#define STM32_DSI_ISR(n)       (STM32_DSI_BASE + 0x00bc + ((n) * 4))
 #define STM32_DSI_IER(n)       (STM32_DSI_BASE + 0x00c4 + ((n) * 4))
 #define STM32_DSI_DLTRCR       (STM32_DSI_BASE + 0x00f4)
+#define STM32_DSI_FBSR         (STM32_DSI_BASE + 0x0168)
 #define STM32_DSI_WCFGR        (STM32_DSI_BASE + 0x0400)
 #define STM32_DSI_WCR          (STM32_DSI_BASE + 0x0404)
 #define STM32_DSI_WIER         (STM32_DSI_BASE + 0x0408)
@@ -81,7 +83,14 @@
 
 #define DSI_PCR_BTAE           (1 << 2)
 
+#define DSI_CMCR_DSW0TX        (1 << 16)
+#define DSI_CMCR_DSW1TX        (1 << 17)
+#define DSI_CMCR_DLWTX         (1 << 19)
+
 #define DSI_MCR_CMDM           (1 << 0)
+#define DSI_VMCR_VMT_MASK      3
+#define DSI_VMCR_SYNC_PULSES   0
+#define DSI_VMCR_SYNC_EVENTS   1
 #define DSI_VMCR_BURST         2
 #define DSI_VMCR_LPVSAE        (1 << 8)
 #define DSI_VMCR_LPVBPE        (1 << 9)
@@ -108,10 +117,14 @@
 #define DSI_GPSR_CMDFF         (1 << 1)
 #define DSI_GPSR_PWRFE         (1 << 2)
 #define DSI_GPSR_PWRFF         (1 << 3)
+#define DSI_GPSR_PRDFE         (1 << 4)
+#define DSI_GPSR_RCB           (1 << 6)
 
 #define DSI_GHCR_DT(n)         (((n) & 0x3f) << 0)
 #define DSI_GHCR_VCID(n)       (((n) & 3) << 6)
 #define DSI_GHCR_WC(n)         (((n) & 0xffff) << 8)
+
+#define DSI_ISR1_PSE           (1 << 5)
 
 #define DSI_WCFGR_DSIM         (1 << 0)
 #define DSI_WCFGR_COLMUX(n)    (((n) & 7) << 1)
@@ -131,8 +144,22 @@
 #define DSI_WIFCR_CPLLLIF      (1 << 9)
 #define DSI_WIFCR_CPLLUIF      (1 << 10)
 
+#define DSI_WPCR0_SWCL         (1 << 6)
+#define DSI_WPCR0_SWDL0        (1 << 7)
+#define DSI_WPCR0_SWDL1        (1 << 8)
+#define DSI_WPCR0_SWAP_MASK    (DSI_WPCR0_SWCL | DSI_WPCR0_SWDL0 | \
+                                DSI_WPCR0_SWDL1)
+
 #define DSI_BCFGR_PWRUP        (1 << 6)
 
+#define DSI_DPHY_FRANGE_80MHZ_100MHZ  0
+#define DSI_DPHY_FRANGE_100MHZ_120MHZ 1
+#define DSI_DPHY_FRANGE_120MHZ_160MHZ 2
+#define DSI_DPHY_FRANGE_160MHZ_200MHZ 3
+#define DSI_DPHY_FRANGE_200MHZ_240MHZ 4
+#define DSI_DPHY_FRANGE_240MHZ_320MHZ 5
+#define DSI_DPHY_FRANGE_320MHZ_390MHZ 6
+#define DSI_DPHY_FRANGE_390MHZ_450MHZ 7
 #define DSI_DPHY_FRANGE_450MHZ_510MHZ 8
 #define DSI_DPHY_SLEW_HS_TX_SPEED     0x0e
 #define DSI_HS_PREPARE_OFFSET2        2
@@ -150,5 +177,6 @@
 #define DSI_WRPCR_IDF(n)       (((n) & 0x1ff) << 11)
 #define DSI_WRPCR_ODF(n)       (((n) & 0x1ff) << 20)
 #define DSI_WRPCR_BC           (1 << 29)
+#define DSI_WRPCR_VCO_800_1GHZ DSI_WRPCR_BC
 
 #endif /* __ARCH_ARM_SRC_STM32U5_HARDWARE_STM32_DSI_H */

@@ -20,7 +20,13 @@
 
 #include <nuttx/arch.h>
 #include <nuttx/cache.h>
+#if defined(CONFIG_STM32U5X9J_DK_LCD_CO5300)
+#include <nuttx/lcd/co5300.h>
+#elif defined(CONFIG_STM32U5X9J_DK_LCD_ST7801)
+#include <nuttx/lcd/st7801.h>
+#else
 #include <nuttx/lcd/hx8379c.h>
+#endif
 #include <nuttx/video/fb.h>
 
 #include "stm32_gpio.h"
@@ -37,9 +43,94 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define BOARD_LCD_XRES      480
-#define BOARD_LCD_YRES      480
-#define BOARD_LCD_VACT      481
+#if defined(CONFIG_STM32U5X9J_DK_LCD_CO5300) || \
+    defined(CONFIG_STM32U5X9J_DK_LCD_ST7801)
+#  define BOARD_LCD_EXTERNAL_AMOLED 1
+#endif
+
+#ifdef CONFIG_STM32U5X9J_DK_LCD_CO5300
+#  define BOARD_LCD_XRES      466
+#  define BOARD_LCD_YRES      466
+#  define BOARD_LCD_VACT      466
+#  define BOARD_LCD_DSI_LANES 1
+#  define BOARD_LCD_DSI_BPP   16
+#  define BOARD_LCD_DSI_BTA   1
+#  define BOARD_LCD_DSI_LP_CMD 1
+#  define BOARD_LCD_DSI_HSCALE 2
+#  define BOARD_LCD_DSI_HSCALE_NUM 0
+#  define BOARD_LCD_DSI_HSCALE_DEN 0
+#  define BOARD_LCD_DSI_PIXEL_PLL_N 120
+#  define BOARD_LCD_DSI_PIXEL_PLL_R 30
+#  define BOARD_LCD_DSI_PHY_NDIV 100
+#  define BOARD_LCD_DSI_PHY_FRANGE STM32_DSI_DPHY_FRANGE_390MHZ_450MHZ
+#  define BOARD_LCD_DSI_PHY_SWAP STM32_DSI_PHY_SWAP_CLK
+#  define BOARD_LCD_DSI_VIDEO_MODE STM32_DSI_VIDEO_MODE_BURST
+#  define BOARD_LCD_DSI_FORMAT_NAME "RGB565"
+#  define BOARD_LCD_PANEL_COLMOD CO5300_PIXEL_FORMAT_RGB565
+#  define BOARD_LCD_PANEL_NAME "CO5300"
+#  define BOARD_LCD_LAYER_Y0  0
+#  define BOARD_LCD_VSYNC     4
+#  define BOARD_LCD_VBP       12
+#  define BOARD_LCD_VFP       18
+#  define BOARD_LCD_HSYNC     4
+#  define BOARD_LCD_HBP       32
+#  define BOARD_LCD_HFP       32
+#elif defined(CONFIG_STM32U5X9J_DK_LCD_ST7801)
+#  define BOARD_LCD_XRES      410
+#  define BOARD_LCD_YRES      502
+#  define BOARD_LCD_VACT      502
+#  define BOARD_LCD_DSI_LANES 1
+#  define BOARD_LCD_DSI_BPP   16
+#  define BOARD_LCD_DSI_BTA   1
+#  define BOARD_LCD_DSI_LP_CMD 1
+#  define BOARD_LCD_DSI_HSCALE 0
+#  define BOARD_LCD_DSI_HSCALE_NUM 7
+#  define BOARD_LCD_DSI_HSCALE_DEN 2
+#  define BOARD_LCD_DSI_PIXEL_PLL_N 120
+#  define BOARD_LCD_DSI_PIXEL_PLL_R 32
+#  define BOARD_LCD_DSI_PHY_NDIV 105
+#  define BOARD_LCD_DSI_PHY_FRANGE STM32_DSI_DPHY_FRANGE_390MHZ_450MHZ
+#  define BOARD_LCD_DSI_PHY_SWAP STM32_DSI_PHY_SWAP_CLK
+#  define BOARD_LCD_DSI_VIDEO_MODE STM32_DSI_VIDEO_MODE_SYNC_PULSES
+#  define BOARD_LCD_DSI_FORMAT_NAME "RGB565"
+#  define BOARD_LCD_PANEL_COLMOD ST7801_PIXEL_FORMAT_RGB565
+#  define BOARD_LCD_PANEL_NAME "ST7801"
+#  define BOARD_LCD_LAYER_Y0  0
+#  define BOARD_LCD_VSYNC     4
+#  define BOARD_LCD_VBP       20
+#  define BOARD_LCD_VFP       20
+#  define BOARD_LCD_HSYNC     4
+#  define BOARD_LCD_HBP       20
+#  define BOARD_LCD_HFP       20
+#else
+#  define BOARD_LCD_XRES      480
+#  define BOARD_LCD_YRES      480
+#  define BOARD_LCD_VACT      481
+#  define BOARD_LCD_DSI_LANES 2
+#  define BOARD_LCD_DSI_BPP   32
+#  define BOARD_LCD_DSI_BTA   1
+#  define BOARD_LCD_DSI_LP_CMD 0
+#  define BOARD_LCD_DSI_HSCALE 0
+#  define BOARD_LCD_DSI_HSCALE_NUM 0
+#  define BOARD_LCD_DSI_HSCALE_DEN 0
+#  define BOARD_LCD_DSI_PIXEL_PLL_N 0
+#  define BOARD_LCD_DSI_PIXEL_PLL_R 0
+#  define BOARD_LCD_DSI_PHY_NDIV 0
+#  define BOARD_LCD_DSI_PHY_FRANGE 0
+#  define BOARD_LCD_DSI_PHY_SWAP 0
+#  define BOARD_LCD_DSI_VIDEO_MODE STM32_DSI_VIDEO_MODE_BURST
+#  define BOARD_LCD_DSI_FORMAT_NAME "RGB888"
+#  define BOARD_LCD_PANEL_COLMOD HX8379C_PIXEL_FORMAT_RGB888
+#  define BOARD_LCD_PANEL_NAME "HX8379C"
+#  define BOARD_LCD_LAYER_Y0  1
+#  define BOARD_LCD_VSYNC     1
+#  define BOARD_LCD_VBP       12
+#  define BOARD_LCD_VFP       50
+#  define BOARD_LCD_HSYNC     2
+#  define BOARD_LCD_HBP       1
+#  define BOARD_LCD_HFP       1
+#endif
+
 #ifdef CONFIG_STM32U5X9J_DK_LCD_XRGB8888
 #  define BOARD_LCD_BPP     32
 #  define BOARD_LCD_FORMAT_NAME "XRGB8888"
@@ -47,9 +138,6 @@
 #  define BOARD_LCD_BPP     16
 #  define BOARD_LCD_FORMAT_NAME "RGB565"
 #endif
-#define BOARD_LCD_DSI_BPP     32
-#define BOARD_LCD_DSI_FORMAT_NAME "RGB888"
-#define BOARD_LCD_PANEL_COLMOD HX8379C_PIXEL_FORMAT_RGB888
 #define BOARD_LCD_BYTESPP   (BOARD_LCD_BPP / 8)
 #define BOARD_LCD_PHYS_STRIDE (BOARD_LCD_XRES * \
                                     BOARD_LCD_BYTESPP)
@@ -58,10 +146,10 @@
 #  define BOARD_LCD_USE_GFXMMU 1
 #endif
 
-/* GFXMMU is useful when the framebuffer is carved from scarce internal SRAM,
- * because it packs the visible 480x480 circular panel storage.  It is not used
- * for PSRAM framebuffer mode: direct linear PSRAM scanout avoids the extra
- * translation latency that caused LTDC FIFO underruns during LVGL refresh.
+/* GFXMMU is useful when the framebuffer is carved from scarce internal
+ * SRAM, because it packs the visible 480x480 circular panel storage.  It is
+ * not used for PSRAM framebuffer mode: direct linear PSRAM scanout avoids
+ * the extra translation latency that caused LTDC FIFO underruns.
  */
 
 #ifdef BOARD_LCD_USE_GFXMMU
@@ -84,7 +172,6 @@
 
 #define BOARD_LCD_LAYER_PIXELS \
   (BOARD_LCD_LAYER_STRIDE / BOARD_LCD_BYTESPP)
-#define BOARD_LCD_LAYER_Y0  1
 #define BOARD_LCD_FBLEN     (BOARD_LCD_PHYS_STRIDE * \
                                   BOARD_LCD_YRES)
 
@@ -116,13 +203,6 @@
 #endif
 #endif
 
-#define BOARD_LCD_VSYNC     1
-#define BOARD_LCD_VBP       12
-#define BOARD_LCD_VFP       50
-#define BOARD_LCD_HSYNC     2
-#define BOARD_LCD_HBP       1
-#define BOARD_LCD_HFP       1
-
 /****************************************************************************
  * Private Data
  ****************************************************************************/
@@ -143,8 +223,19 @@ static const struct stm32_dsi_video_config_s g_dsi_config =
   .vbp     = BOARD_LCD_VBP,
   .vfp     = BOARD_LCD_VFP,
   .vactive = BOARD_LCD_VACT,
-  .lanes   = 2,
+  .lanes   = BOARD_LCD_DSI_LANES,
   .bpp     = BOARD_LCD_DSI_BPP,
+  .hscale  = BOARD_LCD_DSI_HSCALE,
+  .hscale_num = BOARD_LCD_DSI_HSCALE_NUM,
+  .hscale_den = BOARD_LCD_DSI_HSCALE_DEN,
+  .pixel_pll_n = BOARD_LCD_DSI_PIXEL_PLL_N,
+  .pixel_pll_r = BOARD_LCD_DSI_PIXEL_PLL_R,
+  .phy_ndiv = BOARD_LCD_DSI_PHY_NDIV,
+  .phy_frange = BOARD_LCD_DSI_PHY_FRANGE,
+  .phy_swap = BOARD_LCD_DSI_PHY_SWAP,
+  .video_mode = BOARD_LCD_DSI_VIDEO_MODE,
+  .bta     = BOARD_LCD_DSI_BTA,
+  .lp_cmd  = BOARD_LCD_DSI_LP_CMD,
 };
 
 /****************************************************************************
@@ -207,8 +298,7 @@ static void stm32_lcd_clean_framebuffer(void)
 #endif
 }
 
-#if defined(CONFIG_STM32U5X9J_DK_LCD_PATTERN) || \
-    !defined(CONFIG_STM32U5X9J_DK_LCD_COLORBAR)
+#ifndef CONFIG_STM32U5X9J_DK_LCD_COLORBAR
 static void stm32_lcd_fill_frame(uintptr_t fbaddr, uint32_t color)
 {
   FAR stm32_lcd_pixel_t *fb =
@@ -225,10 +315,7 @@ static void stm32_lcd_fill_frame(uintptr_t fbaddr, uint32_t color)
         }
     }
 }
-#endif
 
-#if !defined(CONFIG_STM32U5X9J_DK_LCD_COLORBAR) && \
-    !defined(CONFIG_STM32U5X9J_DK_LCD_PATTERN)
 static void stm32_lcd_clear_framebuffer(void)
 {
   uint32_t i;
@@ -243,60 +330,7 @@ static void stm32_lcd_clear_framebuffer(void)
 }
 #endif
 
-#if defined(CONFIG_STM32U5X9J_DK_LCD_COLORBAR) || \
-    defined(CONFIG_STM32U5X9J_DK_LCD_PATTERN)
-#ifdef CONFIG_STM32U5X9J_DK_LCD_PATTERN
-static void stm32_lcd_fill_cpu(uint32_t color)
-{
-  stm32_lcd_fill_frame(BOARD_LCD_FB, color);
-}
-
-static void stm32_lcd_rect_cpu(uint32_t x0, uint32_t y0,
-                                    uint32_t width, uint32_t height,
-                                    uint32_t color)
-{
-  FAR stm32_lcd_pixel_t *fb =
-    (FAR stm32_lcd_pixel_t *)BOARD_LCD_FB;
-  stm32_lcd_pixel_t pixel = stm32_lcd_color(color);
-  uint32_t x1 = MIN(x0 + width, BOARD_LCD_XRES);
-  uint32_t y1 = MIN(y0 + height, BOARD_LCD_YRES);
-  uint32_t x;
-  uint32_t y;
-
-  for (y = y0; y < y1; y++)
-    {
-      for (x = x0; x < x1; x++)
-        {
-          fb[y * BOARD_LCD_LAYER_PIXELS + x] = pixel;
-        }
-    }
-}
-
-static void stm32_lcd_solidfill(uint32_t color)
-{
-#if BOARD_LCD_BPP == 32
-  int ret;
-
-  ret = stm32_dma2dfill(BOARD_LCD_FB, color,
-                        BOARD_LCD_XRES, BOARD_LCD_YRES,
-                        BOARD_LCD_LAYER_PIXELS);
-  if (ret < 0)
-    {
-      stm32_lcd_fill_cpu(color);
-    }
-#else
-  stm32_lcd_fill_cpu(color);
-#endif
-}
-
-static void stm32_lcd_rgbrect(void)
-{
-  stm32_lcd_rect_cpu(0, 0, 160, 160, 0xffff0000);
-  stm32_lcd_rect_cpu(160, 160, 160, 160, 0xff00ff00);
-  stm32_lcd_rect_cpu(320, 320, 160, 160, 0xff0000ff);
-}
-#endif
-
+#ifdef CONFIG_STM32U5X9J_DK_LCD_COLORBAR
 static void stm32_lcd_colorbar_frame(uintptr_t fbaddr)
 {
   static const uint32_t colors[8] =
@@ -304,6 +338,7 @@ static void stm32_lcd_colorbar_frame(uintptr_t fbaddr)
       0xffffffff, 0xffffff00, 0xff00ffff, 0xff00ff00,
       0xffff00ff, 0xffff0000, 0xff0000ff, 0xff000000
     };
+
   FAR stm32_lcd_pixel_t *fb =
     (FAR stm32_lcd_pixel_t *)fbaddr;
   uint32_t x;
@@ -331,31 +366,34 @@ static void stm32_lcd_colorbar(void)
 
   syslog(LOG_INFO, "stm32u5x9j: LCD framebuffer colorbar done\n");
 }
-
-#ifdef CONFIG_STM32U5X9J_DK_LCD_PATTERN
-static void stm32_lcd_pattern(void)
-{
-  stm32_lcd_solidfill(0xff000000);
-  stm32_lcd_colorbar();
-  stm32_lcd_rgbrect();
-  stm32_lcd_clean_framebuffer();
-  syslog(LOG_INFO, "stm32u5x9j: LCD static pattern done\n");
-}
-#endif /* CONFIG_STM32U5X9J_DK_LCD_PATTERN */
-#endif
+#endif /* CONFIG_STM32U5X9J_DK_LCD_COLORBAR */
 
 static int stm32_lcd_panel_short_write(uint8_t datatype,
                                             uint8_t command,
                                             uint8_t param)
 {
-  return stm32_dsishortwrite(datatype, command, param);
+  int ret;
+
+  ret = stm32_dsishortwrite(datatype, command, param);
+  return ret;
 }
+
+#ifdef BOARD_LCD_EXTERNAL_AMOLED
+static int stm32_lcd_panel_read(uint8_t datatype, uint8_t command,
+                                FAR uint8_t *buffer, size_t len)
+{
+  return stm32_dsiread(datatype, command, buffer, len);
+}
+#endif
 
 static int stm32_lcd_panel_long_write(uint8_t command,
                                            FAR const uint8_t *data,
                                            size_t len)
 {
-  return stm32_dsilongwrite(command, data, len);
+  int ret;
+
+  ret = stm32_dsilongwrite(command, data, len);
+  return ret;
 }
 
 static void stm32_lcd_panel_delay(unsigned int delay_ms)
@@ -365,6 +403,29 @@ static void stm32_lcd_panel_delay(unsigned int delay_ms)
 
 static int stm32_lcd_panel_initialize(void)
 {
+#ifdef CONFIG_STM32U5X9J_DK_LCD_CO5300
+  static const struct co5300_dsi_ops_s ops =
+    {
+      .short_write  = stm32_lcd_panel_short_write,
+      .read         = stm32_lcd_panel_read,
+      .long_write   = stm32_lcd_panel_long_write,
+      .delay_ms     = stm32_lcd_panel_delay,
+      .pixel_format = BOARD_LCD_PANEL_COLMOD,
+      .madctl       = CO5300_MADCTL_RGB,
+      .brightness   = CO5300_BRIGHTNESS_MAX,
+    };
+#elif defined(CONFIG_STM32U5X9J_DK_LCD_ST7801)
+  static const struct st7801_dsi_ops_s ops =
+    {
+      .short_write  = stm32_lcd_panel_short_write,
+      .read         = stm32_lcd_panel_read,
+      .long_write   = stm32_lcd_panel_long_write,
+      .delay_ms     = stm32_lcd_panel_delay,
+      .pixel_format = BOARD_LCD_PANEL_COLMOD,
+      .madctl       = ST7801_MADCTL_RGB,
+      .brightness   = ST7801_BRIGHTNESS_50_PERCENT,
+    };
+#else
   static const struct hx8379c_dsi_ops_s ops =
     {
       .short_write = stm32_lcd_panel_short_write,
@@ -372,9 +433,17 @@ static int stm32_lcd_panel_initialize(void)
       .delay_ms    = stm32_lcd_panel_delay,
       .pixel_format = BOARD_LCD_PANEL_COLMOD,
     };
+#endif
+
   int ret;
 
+#ifdef CONFIG_STM32U5X9J_DK_LCD_CO5300
+  ret = co5300_initialize(&ops);
+#elif defined(CONFIG_STM32U5X9J_DK_LCD_ST7801)
+  ret = st7801_initialize(&ops);
+#else
   ret = hx8379c_initialize(&ops);
+#endif
   if (ret < 0)
     {
       syslog(LOG_ERR, "ERROR: LCD panel init failed: %d\n", ret);
@@ -414,13 +483,14 @@ int stm32_lcd_initialize(void)
   stm32_lcd_prepare_panel();
 
   syslog(LOG_INFO,
-         "stm32u5x9j: LCD fb-map=%s fb-format=%s fb-bpp=%u dsi-format=%s "
-         "dsi-bpp=%u panel-colmod=0x%02x phys-stride=%u "
-         "layer-stride=%u fb-count=%u\n",
-         BOARD_LCD_FB_MAP_NAME, BOARD_LCD_FORMAT_NAME,
+         "stm32u5x9j: LCD panel=%s fb-map=%s fb-format=%s fb-bpp=%u "
+         "dsi-format=%s dsi-bpp=%u dsi-lanes=%u panel-colmod=0x%02x "
+         "phys-stride=%u layer-stride=%u fb-count=%u\n",
+         BOARD_LCD_PANEL_NAME, BOARD_LCD_FB_MAP_NAME, BOARD_LCD_FORMAT_NAME,
          (unsigned int)BOARD_LCD_BPP,
          BOARD_LCD_DSI_FORMAT_NAME,
          (unsigned int)BOARD_LCD_DSI_BPP,
+         (unsigned int)BOARD_LCD_DSI_LANES,
          (unsigned int)BOARD_LCD_PANEL_COLMOD,
          (unsigned int)BOARD_LCD_PHYS_STRIDE,
          (unsigned int)BOARD_LCD_LAYER_STRIDE,
@@ -464,7 +534,9 @@ int stm32_lcd_initialize(void)
   memset(&ltdc, 0, sizeof(ltdc));
   ltdc.fb_base       = BOARD_LCD_FB;
   ltdc.fb1_base      = BOARD_LCD_FB1;
-#ifdef CONFIG_STM32U5_LTDC_FB_DOUBLE_BUFFER
+#ifdef CONFIG_STM32U5X9J_DK_LCD_ST7801
+  ltdc.layer_fb_base = BOARD_LCD_FB;
+#elif defined(CONFIG_STM32U5_LTDC_FB_DOUBLE_BUFFER)
   ltdc.layer_fb_base = BOARD_LCD_FB1;
 #else
   ltdc.layer_fb_base = BOARD_LCD_FB;
@@ -512,8 +584,7 @@ int stm32_lcd_initialize(void)
       return ret;
     }
 
-#if !defined(CONFIG_STM32U5X9J_DK_LCD_COLORBAR) && \
-    !defined(CONFIG_STM32U5X9J_DK_LCD_PATTERN)
+#ifndef CONFIG_STM32U5X9J_DK_LCD_COLORBAR
   stm32_lcd_clear_framebuffer();
 #endif
 
@@ -538,9 +609,7 @@ int stm32_lcd_initialize(void)
       return ret;
     }
 
-#ifdef CONFIG_STM32U5X9J_DK_LCD_PATTERN
-  stm32_lcd_pattern();
-#elif defined(CONFIG_STM32U5X9J_DK_LCD_COLORBAR)
+#ifdef CONFIG_STM32U5X9J_DK_LCD_COLORBAR
   stm32_lcd_colorbar();
   stm32_lcd_clean_framebuffer();
 #endif
