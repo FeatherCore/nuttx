@@ -21,6 +21,10 @@ ifeq ($(CONFIG_STM32H7S78_DK_GT911),y)
 CSRCS += stm32_touchscreen.c
 endif
 
+ifeq ($(CONFIG_STM32H7S78_DK_AW8697),y)
+CSRCS += stm32_aw8697.c
+endif
+
 ifeq ($(CONFIG_BOARDCTL_BOOT_IMAGE),y)
 CSRCS += stm32_boot_image.c
 endif

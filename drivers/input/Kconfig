@@ -46,6 +46,41 @@ config FF_AW86225
 	---help---
 		Enable aw86225 haptic controller chip.
 
+config FF_AW8697
+	bool "Enable aw8697 driver"
+	default n
+	---help---
+		Enable AWINIC AW8697 LRA haptic controller chip.
+
+if FF_AW8697
+
+config FF_AW8697_I2C_ADDRESS
+	hex "AW8697 I2C address"
+	default 0x5a
+	---help---
+		The AW8697 AD pin selects either 0x5a or 0x5b.
+
+config FF_AW8697_I2C_FREQUENCY
+	int "AW8697 I2C frequency"
+	default 400000
+
+config FF_AW8697_DEVPATH
+	string "AW8697 force-feedback device path"
+	default "/dev/input0"
+
+config FF_AW8697_EFFECTS
+	int "AW8697 effect slots"
+	default 4
+	range 1 14
+
+config FF_AW8697_RATED_FREQUENCY
+	int "LRA rated frequency in Hz"
+	default 235
+	---help---
+		Default matches the LD0832AA-0126F motor specification.
+
+endif # FF_AW8697
+
 if FF_AW86225
 
 config AW86225_RTP_FILE_SUPPORT

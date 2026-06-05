@@ -107,6 +107,23 @@ config STM32H7S78_DK_GT911_DEBUG
 	depends on STM32H7S78_DK_GT911
 	select INPUT_GT911_DEBUG
 
+config STM32H7S78_DK_AW8697
+	bool "AW8697 haptic motor"
+	default n
+	select INPUT
+	select INPUT_FF
+	select FF_AW8697
+	select STM32H7RS_I2C
+	select STM32H7RS_I2C1
+	---help---
+		Enable the AWINIC AW8697 LRA haptic driver and register it as a
+		NuttX force-feedback input device.  The LD0832AA-0126F motor under
+		third/HW/motor is rated for 235 Hz, which is the default driver
+		RTP frequency.  The default board wiring uses the ARDUINO Uno V3
+		I2C pins D15/CN14 pin 10/PB6 for SCL and D14/CN14 pin 9/PB9 for
+		SDA.  The AW8697 interrupt output is reserved on D3/CN14 pin 4/PD12,
+		and RSTN is driven from D2/CN14 pin 3/PF1.
+
 if STM32H7RS_EXTNOR_OTA_PARTITION
 
 config STM32H7RS_OTA_PRIMARY_SLOT_DEVPATH

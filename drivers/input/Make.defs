@@ -42,6 +42,10 @@ ifeq ($(CONFIG_FF_AW86225),y)
   CSRCS += aw86225.c
 endif
 
+ifeq ($(CONFIG_FF_AW8697),y)
+  CSRCS += aw8697.c
+endif
+
 ifeq ($(CONFIG_INPUT_MOUSE),y)
   CSRCS += mouse_upper.c
 endif
