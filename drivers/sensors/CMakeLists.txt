@@ -220,6 +220,10 @@ if(CONFIG_SENSORS)
       list(APPEND SRCS bmp280_uorb.c)
     endif()
 
+    if(CONFIG_SENSORS_BME280)
+      list(APPEND SRCS bme280.c)
+    endif()
+
     if(CONFIG_SENSORS_BME680)
       list(APPEND SRCS bme680_uorb.c)
     endif()

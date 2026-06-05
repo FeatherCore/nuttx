@@ -604,6 +604,37 @@ config BMP280_I2C_FREQUENCY
 
 endif # SENSORS_BMP280
 
+config SENSORS_BME280
+	bool "Bosch BME280 Temperature, Humidity and Pressure Sensor"
+	default n
+	select I2C
+	---help---
+		Enable driver for the Bosch BME280 combined humidity, pressure and
+		temperature sensor.
+
+if SENSORS_BME280
+
+config BME280_I2C_ADDRESS
+	hex "BME280 I2C address"
+	default 0x76
+	---help---
+		The BME280 7-bit I2C address is 0x76 when SDO is pulled to GND and
+		0x77 when SDO is pulled to VDDIO.
+
+config BME280_I2C_FREQUENCY
+	int "BME280 I2C frequency"
+	default 400000
+
+config BME280_DEVPATH
+	string "BME280 device path"
+	default "/dev/bme280"
+
+config BME280_MEASUREMENT_WAIT_MS
+	int "BME280 forced measurement wait time"
+	default 10
+
+endif # SENSORS_BME280
+
 config SENSORS_BME680
 	bool "Bosch BME680 Temperature, Gas, Humidity and Pressure Sensor"
 	default n

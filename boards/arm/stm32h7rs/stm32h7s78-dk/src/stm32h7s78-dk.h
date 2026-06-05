@@ -17,5 +17,6 @@ int stm32_xspi2_nor_initialize(void);
 int stm32_xspi1_psram_initialize(void);
 int stm32_touchscreen_setup(void);
 int stm32_aw8697_setup(void);
+int stm32_bme280_setup(void);
 
 #endif /* __BOARDS_ARM_STM32H7RS_STM32H7S78_DK_SRC_STM32H7S78_DK_H */

@@ -27,6 +27,10 @@ if(CONFIG_STM32H7S78_DK_AW8697)
   list(APPEND SRCS stm32_aw8697.c)
 endif()
 
+if(CONFIG_STM32H7S78_DK_BME280)
+  list(APPEND SRCS stm32_bme280.c)
+endif()
+
 target_sources(board PRIVATE ${SRCS})
 if(CONFIG_BUILD_PROTECTED)
   set_property(
