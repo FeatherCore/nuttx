@@ -224,6 +224,10 @@ if(CONFIG_SENSORS)
       list(APPEND SRCS bme280.c)
     endif()
 
+    if(CONFIG_SENSORS_MAX30102)
+      list(APPEND SRCS max30102.c)
+    endif()
+
     if(CONFIG_SENSORS_BME680)
       list(APPEND SRCS bme680_uorb.c)
     endif()

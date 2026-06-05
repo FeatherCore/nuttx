@@ -123,6 +123,14 @@ void board_late_initialize(void)
     }
 #endif
 
+#ifdef CONFIG_STM32H7S78_DK_MAX30102
+  ret = stm32_max30102_setup();
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "stm32_max30102_setup failed: %d\n", ret);
+    }
+#endif
+
 #ifdef CONFIG_FS_PROCFS
   ret = mount(NULL, CONFIG_NSH_PROC_MOUNTPOINT, "procfs", 0, NULL);
   if (ret < 0)

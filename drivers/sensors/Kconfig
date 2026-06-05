@@ -635,6 +635,62 @@ config BME280_MEASUREMENT_WAIT_MS
 
 endif # SENSORS_BME280
 
+config SENSORS_MAX30102
+	bool "Maxim MAX30102 Heart-Rate and SpO2 Sensor"
+	default n
+	select I2C
+	---help---
+		Enable driver support for the Maxim MAX30102 pulse oximeter
+		and heart-rate sensor.
+
+if SENSORS_MAX30102
+
+config MAX30102_I2C_ADDRESS
+	hex "MAX30102 I2C address"
+	default 0x57
+
+config MAX30102_I2C_FREQUENCY
+	int "MAX30102 I2C frequency"
+	default 400000
+
+config MAX30102_DEVPATH
+	string "MAX30102 device path"
+	default "/dev/max30102"
+
+config MAX30102_SAMPLE_WAIT_MS
+	int "MAX30102 sample wait timeout in milliseconds"
+	default 1000
+
+config MAX30102_FIFO_AVERAGE
+	int "MAX30102 FIFO sample averaging setting"
+	default 2
+	range 0 7
+
+config MAX30102_ADC_RANGE
+	int "MAX30102 SpO2 ADC range setting"
+	default 2
+	range 0 3
+
+config MAX30102_SAMPLE_RATE
+	int "MAX30102 SpO2 sample rate setting"
+	default 1
+	range 0 7
+
+config MAX30102_PULSE_WIDTH
+	int "MAX30102 LED pulse width setting"
+	default 3
+	range 0 3
+
+config MAX30102_LED1_PA
+	hex "MAX30102 red LED pulse amplitude"
+	default 0x24
+
+config MAX30102_LED2_PA
+	hex "MAX30102 IR LED pulse amplitude"
+	default 0x24
+
+endif # SENSORS_MAX30102
+
 config SENSORS_BME680
 	bool "Bosch BME680 Temperature, Gas, Humidity and Pressure Sensor"
 	default n
