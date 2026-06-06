@@ -35,6 +35,10 @@ if(CONFIG_STM32H7S78_DK_MAX30102)
   list(APPEND SRCS stm32_max30102.c)
 endif()
 
+if(CONFIG_STM32H7S78_DK_LSM6DSOX)
+  list(APPEND SRCS stm32_lsm6dsox.c)
+endif()
+
 target_sources(board PRIVATE ${SRCS})
 if(CONFIG_BUILD_PROTECTED)
   set_property(

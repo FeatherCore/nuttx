@@ -691,6 +691,67 @@ config MAX30102_LED2_PA
 
 endif # SENSORS_MAX30102
 
+config SENSORS_LSM6DSOX
+	bool "STMicro LSM6DSOX Accelerometer and Gyroscope"
+	default n
+	select I2C
+	---help---
+		Enable driver support for the STMicro LSM6DSOX 3-axis
+		accelerometer and 3-axis gyroscope.
+
+if SENSORS_LSM6DSOX
+
+config LSM6DSOX_I2C_ADDRESS
+	hex "LSM6DSOX I2C address"
+	default 0x6a
+	---help---
+		The LSM6DSOX 7-bit I2C address is 0x6a when SDO/SA0 is tied to
+		GND and 0x6b when SDO/SA0 is tied to VDDIO.
+
+config LSM6DSOX_I2C_FREQUENCY
+	int "LSM6DSOX I2C frequency"
+	default 400000
+
+config LSM6DSOX_DEVPATH
+	string "LSM6DSOX device path"
+	default "/dev/lsm6dsox"
+
+config LSM6DSOX_ACCEL_ODR
+	int "LSM6DSOX accelerometer ODR setting"
+	default 4
+	range 0 10
+	---help---
+		CTRL1_XL ODR_XL field.  The default value 4 selects 104 Hz.
+
+config LSM6DSOX_ACCEL_FS
+	int "LSM6DSOX accelerometer full-scale setting"
+	default 0
+	range 0 3
+	---help---
+		CTRL1_XL FS_XL field.  With XL_FS_MODE=0, 0 selects +/-2 g,
+		1 selects +/-16 g, 2 selects +/-4 g, and 3 selects +/-8 g.
+
+config LSM6DSOX_GYRO_ODR
+	int "LSM6DSOX gyroscope ODR setting"
+	default 4
+	range 0 10
+	---help---
+		CTRL2_G ODR_G field.  The default value 4 selects 104 Hz.
+
+config LSM6DSOX_GYRO_FS
+	int "LSM6DSOX gyroscope full-scale setting"
+	default 0
+	range 0 3
+	---help---
+		CTRL2_G FS_G field.  0 selects +/-250 dps, 1 selects
+		+/-500 dps, 2 selects +/-1000 dps, and 3 selects +/-2000 dps.
+
+config LSM6DSOX_RESET_WAIT_MS
+	int "LSM6DSOX software reset timeout in milliseconds"
+	default 50
+
+endif # SENSORS_LSM6DSOX
+
 config SENSORS_BME680
 	bool "Bosch BME680 Temperature, Gas, Humidity and Pressure Sensor"
 	default n

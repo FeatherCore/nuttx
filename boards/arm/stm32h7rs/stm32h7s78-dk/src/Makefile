@@ -33,6 +33,10 @@ ifeq ($(CONFIG_STM32H7S78_DK_MAX30102),y)
 CSRCS += stm32_max30102.c
 endif
 
+ifeq ($(CONFIG_STM32H7S78_DK_LSM6DSOX),y)
+CSRCS += stm32_lsm6dsox.c
+endif
+
 ifeq ($(CONFIG_BOARDCTL_BOOT_IMAGE),y)
 CSRCS += stm32_boot_image.c
 endif

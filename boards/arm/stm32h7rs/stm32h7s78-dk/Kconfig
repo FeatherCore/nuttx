@@ -154,6 +154,21 @@ config STM32H7S78_DK_MAX30102
 		0x57.  RD and IRD are LED driver/module pins and are not wired
 		to MCU GPIOs in this bring-up configuration.
 
+config STM32H7S78_DK_LSM6DSOX
+	bool "LSM6DSOX accelerometer and gyroscope"
+	default n
+	select SENSORS
+	select SENSORS_LSM6DSOX
+	select STM32H7RS_I2C
+	select STM32H7RS_I2C1
+	---help---
+		Enable the STMicro LSM6DSOX accelerometer and gyroscope on the
+		ARDUINO Uno V3 I2C pins.  The default board wiring uses
+		D15/CN14 pin 10/PB6 for SCL and D14/CN14 pin 9/PB9 for SDA.
+		The LSM6DSOX address is selected by SDO/SA0: 0x6a when tied
+		to GND and 0x6b when tied to VDDIO.  INT1 and INT2 are not
+		used by the initial polling demo.
+
 if STM32H7RS_EXTNOR_OTA_PARTITION
 
 config STM32H7RS_OTA_PRIMARY_SLOT_DEVPATH

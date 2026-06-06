@@ -228,6 +228,10 @@ if(CONFIG_SENSORS)
       list(APPEND SRCS max30102.c)
     endif()
 
+    if(CONFIG_SENSORS_LSM6DSOX)
+      list(APPEND SRCS lsm6dsox.c)
+    endif()
+
     if(CONFIG_SENSORS_BME680)
       list(APPEND SRCS bme680_uorb.c)
     endif()
