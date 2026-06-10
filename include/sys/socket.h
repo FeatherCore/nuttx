@@ -143,6 +143,7 @@
 /* Protocol levels supported by get/setsockopt(): */
 
 #define SOL_SOCKET       1 /* Only socket-level options supported */
+#define SOL_NETLINK    270 /* Netlink socket options */
 
 /* Socket-level options */
 
@@ -223,6 +224,9 @@
 #define SO_TIMESTAMPNS  20 /* Generates a timestamp in ns for each incoming packet
                             * arg: integer value
                             */
+#define SO_ATTACH_FILTER 26 /* Attach a classic BPF socket filter.
+                             * arg: struct sock_fprog
+                             */
 
 /* The options are unsupported but included for compatibility
  * and portability
@@ -230,6 +234,28 @@
 #define SO_SNDBUFFORCE  32
 #define SO_RCVBUFFORCE  33
 #define SO_RXQ_OVFL     40
+#define SO_WIFI_STATUS  41 /* Enable Linux-compatible Wi-Fi TX status
+                            * notifications on packet sockets.
+                            */
+#define SCM_WIFI_STATUS SO_WIFI_STATUS
+
+/* Linux-compatible socket error-queue metadata used by packet sockets. */
+
+#ifndef __NUTTX_SOCK_EXTENDED_ERR_DEFINED
+#define __NUTTX_SOCK_EXTENDED_ERR_DEFINED 1
+struct sock_extended_err
+{
+  uint32_t ee_errno;
+  uint8_t  ee_origin;
+  uint8_t  ee_type;
+  uint8_t  ee_code;
+  uint8_t  ee_pad;
+  uint32_t ee_info;
+  uint32_t ee_data;
+};
+#endif
+
+#define SO_EE_ORIGIN_TXSTATUS 4
 
 /* Protocol-level socket operations. */
 

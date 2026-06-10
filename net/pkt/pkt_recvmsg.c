@@ -49,6 +49,7 @@
 #include "socket/socket.h"
 #include "utils/utils.h"
 #include <netpacket/packet.h>
+#include <netinet/if_ether.h>
 
 /****************************************************************************
  * Private Types
@@ -151,6 +152,34 @@ static inline void pkt_add_recvlen(FAR struct pkt_recvfrom_s *pstate,
  *
  ****************************************************************************/
 
+static inline void pkt_recvfrom_set_sender(FAR struct net_driver_s *dev,
+                                           FAR struct pkt_recvfrom_s *pstate,
+                                           FAR const struct eth_hdr_s *ethhdr,
+                                           uint8_t pkttype)
+{
+  FAR struct msghdr *msg = pstate->pr_msg;
+  FAR struct sockaddr_ll *from = msg->msg_name;
+
+  if (from == NULL || msg->msg_namelen < sizeof(struct sockaddr_ll))
+    {
+      return;
+    }
+
+  if (dev->d_lltype != NET_LL_ETHERNET && dev->d_lltype != NET_LL_IEEE80211)
+    {
+      return;
+    }
+
+  memset(from, 0, sizeof(struct sockaddr_ll));
+  from->sll_family = AF_PACKET;
+  from->sll_protocol = ethhdr->type;
+  from->sll_ifindex = dev->d_ifindex;
+  from->sll_pkttype = pkttype;
+  from->sll_halen = ETHER_ADDR_LEN;
+  memcpy(from->sll_addr, ethhdr->src, ETHER_ADDR_LEN);
+  msg->msg_namelen = sizeof(struct sockaddr_ll);
+}
+
 static void pkt_recvfrom_newdata(FAR struct net_driver_s *dev,
                                  FAR struct pkt_recvfrom_s *pstate)
 {
@@ -169,9 +198,17 @@ static void pkt_recvfrom_newdata(FAR struct net_driver_s *dev,
 
   recvlen = MIN(pstate->pr_msg->msg_iov->iov_len, dev->d_len);
 
-  /* Copy the new packet data into the user buffer */
+  /* Linux AF_PACKET/SOCK_DGRAM sockets expose the packet payload without
+   * the link-layer header.  NuttX keeps the header in the same IOB chain, so
+   * skip it explicitly for live receive.  The read-ahead path below already
+   * does the same thing.
+   */
 
-  if (pstate->pr_type == SOCK_RAW)
+  if (pstate->pr_type == SOCK_DGRAM)
+    {
+      offset = NET_LL_HDRLEN(dev);
+    }
+  else if (pstate->pr_type == SOCK_RAW)
     {
       offset = -NET_LL_HDRLEN(dev);
     }
@@ -202,6 +239,23 @@ static void pkt_recvfrom_newdata(FAR struct net_driver_s *dev,
 static inline void pkt_recvfrom_sender(FAR struct net_driver_s *dev,
                                        FAR struct pkt_recvfrom_s *pstate)
 {
+  struct eth_hdr_s ethhdr;
+  int ret;
+
+  if (dev->d_iob == NULL)
+    {
+      return;
+    }
+
+  ret = iob_copyout((FAR uint8_t *)&ethhdr, dev->d_iob, sizeof(ethhdr),
+                    -NET_LL_HDRLEN(dev));
+  if (ret != sizeof(ethhdr))
+    {
+      return;
+    }
+
+  pkt_recvfrom_set_sender(dev, pstate, &ethhdr,
+                          pkt_eth_pkttype(dev, &ethhdr));
 }
 
 /****************************************************************************
@@ -373,8 +427,11 @@ static inline void pkt_readahead(FAR struct pkt_recvfrom_s *pstate)
 {
   FAR struct pkt_conn_s *conn = pstate->pr_conn;
   FAR struct iob_s *iob;
+  FAR struct net_driver_s *dev;
+  struct eth_hdr_s ethhdr;
   int recvlen;
   int offset = 0;
+  uint8_t pkttype = PACKET_HOST;
 
   /* Check there is any packets already buffered in a read-ahead buffer. */
 
@@ -383,6 +440,7 @@ static inline void pkt_readahead(FAR struct pkt_recvfrom_s *pstate)
   if ((iob = iob_peek_queue(&conn->readahead)) != NULL)
     {
       DEBUGASSERT(iob->io_pktlen > 0);
+      dev = pkt_find_device(conn);
 
 #ifdef CONFIG_NET_TIMESTAMP
       /* Unpack stored timestamp if SO_TIMESTAMP/SO_TIMESTAMPNS socket option
@@ -406,7 +464,6 @@ static inline void pkt_readahead(FAR struct pkt_recvfrom_s *pstate)
 
       if (pstate->pr_type == SOCK_DGRAM)
         {
-          FAR struct net_driver_s *dev = pkt_find_device(conn);
           if (dev != NULL)
             {
               /* For SOCK_DGRAM, we need skip the l2 header */
@@ -417,6 +474,28 @@ static inline void pkt_readahead(FAR struct pkt_recvfrom_s *pstate)
             {
               offset = sizeof(struct eth_hdr_s);
             }
+        }
+
+      if (dev != NULL &&
+          (dev->d_lltype == NET_LL_ETHERNET ||
+           dev->d_lltype == NET_LL_IEEE80211))
+        {
+          int hdrlen;
+
+          hdrlen = iob_copyout((FAR uint8_t *)&ethhdr, iob, sizeof(ethhdr),
+                               0);
+          if (hdrlen == sizeof(ethhdr))
+            {
+              pkttype = pkt_eth_pkttype(dev, &ethhdr);
+              pkt_recvfrom_set_sender(dev, pstate, &ethhdr, pkttype);
+            }
+        }
+
+      if (!pkt_filter_accept(dev, conn, iob, iob->io_pktlen, 0, pkttype))
+        {
+          iob_remove_queue(&conn->readahead);
+          iob_free_chain(iob);
+          return;
         }
 
       recvlen = iob_copyout(pstate->pr_msg->msg_iov->iov_base, iob,
@@ -438,6 +517,47 @@ static inline void pkt_readahead(FAR struct pkt_recvfrom_s *pstate)
 
       iob_free_chain(iob);
     }
+}
+
+/****************************************************************************
+ * Name: pkt_recv_txstatus
+ *
+ * Description:
+ *   Receive a Linux-compatible AF_PACKET TX status entry from MSG_ERRQUEUE.
+ *
+ ****************************************************************************/
+
+static ssize_t pkt_recv_txstatus(FAR struct pkt_conn_s *conn,
+                                 FAR struct msghdr *msg)
+{
+  FAR struct iob_s *iob;
+  struct sock_extended_err serr;
+  int ack = 1;
+  ssize_t recvlen;
+
+  iob = iob_peek_queue(&conn->txstatus);
+  if (iob == NULL)
+    {
+      return -EAGAIN;
+    }
+
+  recvlen = iob_copyout(msg->msg_iov->iov_base, iob,
+                        msg->msg_iov->iov_len, 0);
+  if (recvlen < 0)
+    {
+      return recvlen;
+    }
+
+  memset(&serr, 0, sizeof(serr));
+  serr.ee_origin = SO_EE_ORIGIN_TXSTATUS;
+
+  cmsg_append(msg, SOL_SOCKET, SCM_WIFI_STATUS, &ack, sizeof(ack));
+  cmsg_append(msg, SOL_PACKET, PACKET_TX_TIMESTAMP, &serr, sizeof(serr));
+
+  iob_remove_queue(&conn->txstatus);
+  iob_free_chain(iob);
+
+  return recvlen;
 }
 
 /****************************************************************************
@@ -499,7 +619,12 @@ ssize_t pkt_recvmsg(FAR struct socket *psock, FAR struct msghdr *msg,
   if (psock->s_type != SOCK_DGRAM && psock->s_type != SOCK_RAW)
     {
       nerr("ERROR: Unsupported socket type: %d\n", psock->s_type);
-      return -ENOSYS;
+      return -EOPNOTSUPP;
+    }
+
+  if ((flags & ~(MSG_PEEK | MSG_DONTWAIT | MSG_TRUNC | MSG_ERRQUEUE)) != 0)
+    {
+      return -EINVAL;
     }
 
   /* Get the device driver that will service this transfer */
@@ -519,6 +644,12 @@ ssize_t pkt_recvmsg(FAR struct socket *psock, FAR struct msghdr *msg,
   pkt_recvfrom_initialize(conn, msg, &state, psock->s_type);
 
   conn_dev_lock(&conn->sconn, dev);
+
+  if ((flags & MSG_ERRQUEUE) != 0)
+    {
+      ret = pkt_recv_txstatus(conn, msg);
+      goto out;
+    }
 
   /* Check if there is buffered read-ahead data for this socket.  We may have
    * already received the response to previous command.
@@ -580,6 +711,7 @@ ssize_t pkt_recvmsg(FAR struct socket *psock, FAR struct msghdr *msg,
         }
     }
 
+out:
   conn_dev_unlock(&conn->sconn, dev);
 
   pkt_recvfrom_uninitialize(&state);

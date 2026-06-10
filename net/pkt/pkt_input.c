@@ -28,7 +28,11 @@
 #if defined(CONFIG_NET) && defined(CONFIG_NET_PKT)
 
 #include <errno.h>
+#include <poll.h>
 #include <nuttx/debug.h>
+
+#include <netinet/if_ether.h>
+#include <netpacket/packet.h>
 
 #include <nuttx/mm/iob.h>
 #include <nuttx/net/netdev.h>
@@ -42,6 +46,31 @@
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
+
+static uint16_t pkt_ethertype(FAR struct net_driver_s *dev)
+{
+  if (dev->d_lltype == NET_LL_ETHERNET || dev->d_lltype == NET_LL_IEEE80211)
+    {
+      FAR struct eth_hdr_s *ethhdr = NETLLBUF;
+      return ethhdr->type;
+    }
+
+  return 0;
+}
+
+static bool pkt_conn_matches(FAR struct net_driver_s *dev,
+                             FAR struct pkt_conn_s *conn,
+                             uint16_t ethertype)
+{
+  bool type_match;
+
+  type_match = conn->type == HTONS(ETH_P_ALL) ||
+               conn->type == ETH_P_ALL ||
+               conn->type == ethertype ||
+               HTONS(conn->type) == ethertype;
+
+  return dev->d_ifindex == conn->ifindex && type_match;
+}
 
 /****************************************************************************
  * Name: pkt_datahandler
@@ -114,6 +143,18 @@ static uint16_t pkt_datahandler(FAR struct net_driver_s *dev,
     }
   else
     {
+      FAR struct pkt_poll_s *info;
+
+      for (info = conn->pollinfo;
+           info < &conn->pollinfo[CONFIG_NET_PKT_NPOLLWAITERS];
+           info++)
+        {
+          if (info->conn == conn && info->fds != NULL)
+            {
+              poll_notify(&info->fds, 1, POLLIN | POLLRDNORM);
+            }
+        }
+
       ninfo("Buffered %d bytes\n", dev->d_len);
       return dev->d_len;
     }
@@ -154,21 +195,43 @@ errout:
 static int pkt_in(FAR struct net_driver_s *dev)
 {
   FAR struct pkt_conn_s *conn;
+  FAR struct eth_hdr_s *ethhdr = NULL;
+  uint16_t ethertype;
+  uint8_t pkttype = PACKET_HOST;
+  bool matched = false;
   int ret = OK;
 
+  ethertype = pkt_ethertype(dev);
+  if (dev->d_lltype == NET_LL_ETHERNET || dev->d_lltype == NET_LL_IEEE80211)
+    {
+      ethhdr = NETLLBUF;
+      pkttype = pkt_eth_pkttype(dev, ethhdr);
+    }
+
   pkt_conn_list_lock();
-  conn = pkt_active(dev);
-  if (conn)
+  for (conn = pkt_nextconn(NULL); conn != NULL; conn = pkt_nextconn(conn))
     {
       uint32_t flags;
+
+      if (!pkt_conn_matches(dev, conn, ethertype))
+        {
+          continue;
+        }
+
+      matched = true;
 
       if (conn->pendiob == dev->d_iob)
         {
           /* Do not read back the packet sent by oneself */
 
           conn->pendiob = NULL;
-          pkt_conn_list_unlock();
-          return OK;
+          continue;
+        }
+
+      if (!pkt_filter_accept(dev, conn, dev->d_iob, dev->d_len,
+                             -NET_LL_HDRLEN(dev), pkttype))
+        {
+          continue;
         }
 
 #if defined(CONFIG_NET_TIMESTAMP) && !defined(CONFIG_ARCH_HAVE_NETDEV_TIMESTAMP)
@@ -209,7 +272,8 @@ static int pkt_in(FAR struct net_driver_s *dev)
             }
         }
     }
-  else
+
+  if (!matched)
     {
       ninfo("No PKT listener\n");
     }

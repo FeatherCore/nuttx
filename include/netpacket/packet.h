@@ -46,10 +46,14 @@
 
 /* Packet socket options */
 
-#define PACKET_ADD_MEMBERSHIP  1 /* Add a multicast address to the interface */
-#define PACKET_DROP_MEMBERSHIP 2 /* Drop a multicast address from the interface */
+#define PACKET_ADD_MEMBERSHIP  1  /* Add a multicast address to the interface */
+#define PACKET_DROP_MEMBERSHIP 2  /* Drop a multicast address from the interface */
+#define PACKET_TX_TIMESTAMP    16 /* Linux-compatible TX status cmsg */
 
 #define PACKET_MR_MULTICAST    0 /* Multicast address */
+#define PACKET_MR_PROMISC      1 /* Receive all packets */
+#define PACKET_MR_ALLMULTI     2 /* Receive all multicast packets */
+#define PACKET_MR_UNICAST      3 /* Unicast address */
 
 /****************************************************************************
  * Public Types

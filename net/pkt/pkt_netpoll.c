@@ -45,6 +45,11 @@
  * Private Functions
  ****************************************************************************/
 
+static bool pkt_poll_is_unbound(FAR struct pkt_conn_s *conn)
+{
+  return conn->ifindex == 0 && conn->type == 0;
+}
+
 /****************************************************************************
  * Name: psock_pkt_cansend
  *
@@ -115,9 +120,10 @@ static uint32_t pkt_poll_eventhandler(FAR struct net_driver_s *dev,
 
       /* Check for data availability events. */
 
-      if ((flags & PKT_NEWDATA) != 0)
+      if ((flags & PKT_NEWDATA) != 0 ||
+          iob_peek_queue(&info->conn->txstatus) != NULL)
         {
-          eventset |= POLLIN;
+          eventset |= POLLIN | POLLRDNORM;
         }
 
       /* Check for loss of connection events. */
@@ -180,6 +186,43 @@ int pkt_pollsetup(FAR struct socket *psock, FAR struct pollfd *fds)
   if (conn == NULL || fds == NULL)
     {
       return -EINVAL;
+    }
+
+  /* Linux allows an AF_PACKET/SOCK_DGRAM/protocol 0 socket to stay
+   * unbound and use sendto() with a sockaddr_ll-selected interface.  wpa's
+   * nl80211 driver uses this for EAPOL TX status/error-queue handling.  In
+   * that state there is no fixed net_driver_s to attach a devif callback to,
+   * but poll() must still succeed and be wakeable when txstatus is queued.
+   */
+
+  if (pkt_poll_is_unbound(conn))
+    {
+      info = conn->pollinfo;
+      while (info->conn != NULL)
+        {
+          if (++info >= &conn->pollinfo[CONFIG_NET_PKT_NPOLLWAITERS])
+            {
+              return -ENOMEM;
+            }
+        }
+
+      info->conn = conn;
+      info->fds  = fds;
+      info->cb   = NULL;
+      fds->priv  = info;
+
+      if (iob_peek_queue(&conn->txstatus) != NULL)
+        {
+          eventset |= POLLIN | POLLRDNORM;
+        }
+
+      if (psock_pkt_cansend(conn) >= 0)
+        {
+          eventset |= POLLWRNORM;
+        }
+
+      poll_notify(&fds, 1, eventset);
+      return OK;
     }
 
   dev = pkt_find_device(conn);
@@ -249,7 +292,12 @@ int pkt_pollsetup(FAR struct socket *psock, FAR struct pollfd *fds)
     {
       /* Normal data may be read without blocking. */
 
-      eventset |= POLLRDNORM;
+      eventset |= POLLIN | POLLRDNORM;
+    }
+
+  if (iob_peek_queue(&conn->txstatus) != NULL)
+    {
+      eventset |= POLLIN | POLLRDNORM;
     }
 
   /* Check for write data availability now */
@@ -296,9 +344,25 @@ int pkt_pollteardown(FAR struct socket *psock, FAR struct pollfd *fds)
 
   /* Sanity check */
 
-  if (!conn || !fds->priv)
+  if (!conn)
     {
       return -EINVAL;
+    }
+
+  if (!fds->priv)
+    {
+      return OK;
+    }
+
+  info = (FAR struct pkt_poll_s *)fds->priv;
+
+  if (pkt_poll_is_unbound(conn))
+    {
+      fds->priv = NULL;
+      info->conn = NULL;
+      info->fds = NULL;
+      info->cb = NULL;
+      return OK;
     }
 
   dev = pkt_find_device(conn);
@@ -312,7 +376,6 @@ int pkt_pollteardown(FAR struct socket *psock, FAR struct pollfd *fds)
 
   /* Recover the socket descriptor poll state info from the poll structure */
 
-  info = (FAR struct pkt_poll_s *)fds->priv;
   DEBUGASSERT(info->fds != NULL && info->cb != NULL);
   if (info != NULL)
     {
@@ -327,6 +390,8 @@ int pkt_pollteardown(FAR struct socket *psock, FAR struct pollfd *fds)
       /* Then free the poll info container */
 
       info->conn = NULL;
+      info->fds  = NULL;
+      info->cb   = NULL;
     }
 
   conn_dev_unlock(&conn->sconn, dev);

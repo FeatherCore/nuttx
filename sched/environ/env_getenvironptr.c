@@ -58,6 +58,11 @@ FAR char **get_environ_ptr(void)
 {
   FAR struct tcb_s *tcb = this_task();
 
+  if (tcb == NULL || tcb->group == NULL)
+    {
+      return NULL;
+    }
+
   return tcb->group->tg_envp;
 }
 

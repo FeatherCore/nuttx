@@ -35,6 +35,7 @@
 #include <assert.h>
 #include <fcntl.h>
 #include <errno.h>
+#include <poll.h>
 #include <nuttx/debug.h>
 
 #include "inode/inode.h"

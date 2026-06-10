@@ -80,6 +80,61 @@
 #define NETLINK_CRYPTO                   21      /* Crypto layer */
 #define NETLINK_SMC                      22      /* SMC monitoring */
 
+#define NETLINK_INET_DIAG                NETLINK_SOCK_DIAG
+
+#define MAX_LINKS                        32
+
+/* NETLINK socket options ***************************************************/
+
+#define NETLINK_ADD_MEMBERSHIP           1
+#define NETLINK_DROP_MEMBERSHIP          2
+#define NETLINK_PKTINFO                  3
+#define NETLINK_BROADCAST_ERROR          4
+#define NETLINK_NO_ENOBUFS               5
+#define NETLINK_RX_RING                  6
+#define NETLINK_TX_RING                  7
+#define NETLINK_LISTEN_ALL_NSID          8
+#define NETLINK_LIST_MEMBERSHIPS         9
+#define NETLINK_CAP_ACK                  10
+#define NETLINK_EXT_ACK                  11
+#define NETLINK_GET_STRICT_CHK           12
+
+struct nl_pktinfo
+{
+  uint32_t group;
+};
+
+struct nl_mmap_req
+{
+  unsigned int nm_block_size;
+  unsigned int nm_block_nr;
+  unsigned int nm_frame_size;
+  unsigned int nm_frame_nr;
+};
+
+struct nl_mmap_hdr
+{
+  unsigned int nm_status;
+  unsigned int nm_len;
+  uint32_t     nm_group;
+  uint32_t     nm_pid;
+  uint32_t     nm_uid;
+  uint32_t     nm_gid;
+};
+
+enum nl_mmap_status
+{
+  NL_MMAP_STATUS_UNUSED,
+  NL_MMAP_STATUS_RESERVED,
+  NL_MMAP_STATUS_VALID,
+  NL_MMAP_STATUS_COPY,
+  NL_MMAP_STATUS_SKIP,
+};
+
+#define NL_MMAP_MSG_ALIGNMENT            4U
+#define NL_MMAP_MSG_ALIGN(n)             NLMSG_ALIGN(n)
+#define NL_MMAP_HDRLEN                   NL_MMAP_MSG_ALIGN(sizeof(struct nl_mmap_hdr))
+
 /* Definitions associated with struct sockaddr_nl ***************************/
 
 /* Flags values */

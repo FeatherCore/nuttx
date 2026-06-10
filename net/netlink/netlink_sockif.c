@@ -29,6 +29,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <string.h>
 #include <poll.h>
 #include <sched.h>
@@ -42,9 +43,16 @@
 #include <nuttx/wqueue.h>
 #include <nuttx/net/net.h>
 
+#include "utils/utils.h"
 #include "netlink/netlink.h"
 
 #ifdef CONFIG_NET_NETLINK
+
+#ifdef CONFIG_WL_NUTTX_HWSIM_DEBUG
+#  define hwsim_netlink_debugf(...) ninfo(__VA_ARGS__)
+#else
+#  define hwsim_netlink_debugf(...) do { } while (0)
+#endif
 
 /****************************************************************************
  * Private Function Prototypes
@@ -70,7 +78,35 @@ static ssize_t netlink_sendmsg(FAR struct socket *psock,
                                FAR const struct msghdr *msg, int flags);
 static ssize_t netlink_recvmsg(FAR struct socket *psock,
                                FAR struct msghdr *msg, int flags);
+
+void netlink_release_notify(int protocol, uint32_t portid)
+  __attribute__((weak));
+
+void netlink_release_notify(int protocol, uint32_t portid)
+{
+  (void)protocol;
+  (void)portid;
+}
 static int netlink_close(FAR struct socket *psock);
+#ifdef CONFIG_NET_SOCKOPTS
+static int netlink_getsockopt(FAR struct socket *psock, int level,
+                              int option, FAR void *value,
+                              FAR socklen_t *value_len);
+static int netlink_setsockopt(FAR struct socket *psock, int level,
+                              int option, FAR const void *value,
+                              socklen_t value_len);
+#endif
+
+static bool netlink_protocol_known(int proto);
+static bool netlink_pid_inuse_locked(uint16_t protocol, uint32_t pid,
+                                     FAR struct netlink_conn_s *skip);
+static uint32_t netlink_generate_pid_locked(FAR struct netlink_conn_s *conn);
+
+/****************************************************************************
+ * Private Data
+ ****************************************************************************/
+
+static uint32_t g_netlink_next_auto_pid = UINT32_MAX;
 
 /****************************************************************************
  * Public Data
@@ -90,7 +126,17 @@ const struct sock_intf_s g_netlink_sockif =
   netlink_poll,         /* si_poll */
   netlink_sendmsg,      /* si_sendmsg */
   netlink_recvmsg,      /* si_recvmsg */
-  netlink_close         /* si_close */
+  netlink_close,        /* si_close */
+  NULL,                 /* si_ioctl */
+  NULL,                 /* si_socketpair */
+  NULL,                 /* si_shutdown */
+#ifdef CONFIG_NET_SOCKOPTS
+  netlink_getsockopt,   /* si_getsockopt */
+  netlink_setsockopt,   /* si_setsockopt */
+#endif
+#ifdef CONFIG_NET_SENDFILE
+  NULL                  /* si_sendfile */
+#endif
 };
 
 /****************************************************************************
@@ -125,20 +171,9 @@ static int netlink_setup(FAR struct socket *psock)
 
   DEBUGASSERT((unsigned int)proto <= UINT8_MAX);
 
-  switch (proto)
+  if (!netlink_protocol_known(proto))
     {
-#ifdef CONFIG_NETLINK_ROUTE
-      case NETLINK_ROUTE:
-        break;
-#endif
-
-#ifdef CONFIG_NETLINK_NETFILTER
-      case NETLINK_NETFILTER:
-        break;
-#endif
-
-      default:
-        return -EPROTONOSUPPORT;
+      return -EPROTONOSUPPORT;
     }
 
   /* Verify the socket type (domain should always be PF_NETLINK here) */
@@ -163,6 +198,7 @@ static int netlink_setup(FAR struct socket *psock)
        */
 
       conn->crefs = 1;
+      conn->protocol = proto;
 
       /* Attach the connection instance to the socket */
 
@@ -171,6 +207,116 @@ static int netlink_setup(FAR struct socket *psock)
     }
 
   return -EPROTONOSUPPORT;
+}
+
+/****************************************************************************
+ * Name: netlink_protocol_known
+ *
+ * Description:
+ *   Return true when the protocol number is part of the Linux AF_NETLINK
+ *   protocol namespace.  Not every protocol has a NuttX backend yet, but
+ *   Linux still treats the namespace as protocol-scoped.  Let socket setup
+ *   create a connection for known protocol numbers and report unsupported
+ *   operations later from sendmsg(), instead of failing before userspace can
+ *   probe capabilities.
+ *
+ ****************************************************************************/
+
+static bool netlink_protocol_known(int proto)
+{
+  switch (proto)
+    {
+      case NETLINK_ROUTE:
+      case NETLINK_USERSOCK:
+      case NETLINK_FIREWALL:
+      case NETLINK_SOCK_DIAG:
+      case NETLINK_NFLOG:
+      case NETLINK_XFRM:
+      case NETLINK_SELINUX:
+      case NETLINK_ISCSI:
+      case NETLINK_AUDIT:
+      case NETLINK_FIB_LOOKUP:
+      case NETLINK_CONNECTOR:
+      case NETLINK_NETFILTER:
+      case NETLINK_IP6_FW:
+      case NETLINK_DNRTMSG:
+      case NETLINK_KOBJECT_UEVENT:
+      case NETLINK_GENERIC:
+      case NETLINK_SCSITRANSPORT:
+      case NETLINK_ECRYPTFS:
+      case NETLINK_RDMA:
+      case NETLINK_CRYPTO:
+      case NETLINK_SMC:
+        return true;
+
+      default:
+        return false;
+    }
+}
+
+/****************************************************************************
+ * Name: netlink_pid_inuse_locked
+ *
+ * Description:
+ *   Check whether a local port ID is already bound in the same netlink
+ *   protocol namespace.  Linux keeps port IDs protocol-scoped; matching only
+ *   the numeric port ID can incorrectly route NETLINK_GENERIC replies to a
+ *   NETLINK_ROUTE socket that happens to have the same ID.
+ *
+ ****************************************************************************/
+
+static bool netlink_pid_inuse_locked(uint16_t protocol, uint32_t pid,
+                                     FAR struct netlink_conn_s *skip)
+{
+  FAR struct netlink_conn_s *conn = NULL;
+
+  while ((conn = netlink_nextconn(conn)) != NULL)
+    {
+      if (conn != skip && conn->protocol == protocol && conn->pid == pid)
+        {
+          return true;
+        }
+    }
+
+  return false;
+}
+
+/****************************************************************************
+ * Name: netlink_generate_pid_locked
+ *
+ * Description:
+ *   Generate a Linux-like auto-bound port ID.  Prefer the current task ID
+ *   when it is available, then fall back to high-numbered IDs to avoid
+ *   colliding with task IDs.
+ *
+ ****************************************************************************/
+
+static uint32_t netlink_generate_pid_locked(FAR struct netlink_conn_s *conn)
+{
+  uint32_t pid;
+  unsigned int i;
+
+  pid = (uint32_t)nxsched_gettid();
+  if (pid != 0 && !netlink_pid_inuse_locked(conn->protocol, pid, conn))
+    {
+      return pid;
+    }
+
+  for (i = 0; i < UINT32_MAX; i++)
+    {
+      pid = g_netlink_next_auto_pid--;
+      if (g_netlink_next_auto_pid == 0)
+        {
+          g_netlink_next_auto_pid = UINT32_MAX;
+        }
+
+      if (pid != 0 && !netlink_pid_inuse_locked(conn->protocol, pid, conn))
+        {
+          return pid;
+        }
+    }
+
+  return 0;
 }
 
 /****************************************************************************
@@ -254,6 +400,7 @@ static int netlink_bind(FAR struct socket *psock,
 {
   FAR struct sockaddr_nl *nladdr;
   FAR struct netlink_conn_s *conn;
+  uint32_t pid;
 
   DEBUGASSERT(addrlen >= sizeof(struct sockaddr_nl));
 
@@ -262,8 +409,35 @@ static int netlink_bind(FAR struct socket *psock,
   nladdr = (FAR struct sockaddr_nl *)addr;
   conn   = psock->s_conn;
 
-  conn->pid    = nladdr->nl_pid ? nladdr->nl_pid : nxsched_gettid();
+  netlink_lock();
+
+  if (nladdr->nl_pid != 0)
+    {
+      pid = nladdr->nl_pid;
+      if (netlink_pid_inuse_locked(conn->protocol, pid, conn))
+        {
+          netlink_unlock();
+          return -EADDRINUSE;
+        }
+    }
+  else
+    {
+      pid = netlink_generate_pid_locked(conn);
+      if (pid == 0)
+        {
+          netlink_unlock();
+          return -EADDRINUSE;
+        }
+    }
+
+  conn->pid    = pid;
   conn->groups = nladdr->nl_groups;
+  netlink_unlock();
+
+  hwsim_netlink_debugf("hwsim-debug: netlink_bind conn=%p pid=%lu "
+                       "groups=0x%lx\n", conn,
+                       (unsigned long)conn->pid,
+                       (unsigned long)conn->groups);
 
   return OK;
 }
@@ -483,9 +657,19 @@ static int netlink_poll(FAR struct socket *psock, FAR struct pollfd *fds,
 
   if (setup)
     {
-      /* If POLLOUT is selected, return immediately (maybe) */
+      pollevent_t revents = 0;
 
-      pollevent_t revents = POLLOUT;
+      /* If POLLOUT is selected, return immediately (maybe).  Keep the
+       * reported event mask restricted to what the caller requested, like
+       * Linux poll().  libnl uses separate event sockets that wait only for
+       * POLLIN; reporting unconditional POLLOUT there can wake the event
+       * loop without a queued netlink message.
+       */
+
+      if ((fds->events & POLLOUT) != 0)
+        {
+          revents |= POLLOUT;
+        }
 
       /* If POLLIN is selected and a response is available, return
        * immediately (maybe).
@@ -494,16 +678,12 @@ static int netlink_poll(FAR struct socket *psock, FAR struct pollfd *fds,
       netlink_lock();
       if (netlink_check_response(conn))
         {
-          revents |= POLLIN;
+          revents |= (fds->events & (POLLIN | POLLRDNORM));
         }
 
-      /* But return ONLY if POLLIN and/or POLLIN are included in the
-       * requested event set.
-       */
-
-      poll_notify(&fds, 1, revents);
-      if (fds->revents != 0)
+      if (revents != 0)
         {
+          poll_notify(&fds, 1, revents);
           netlink_unlock();
           return OK;
         }
@@ -512,7 +692,7 @@ static int netlink_poll(FAR struct socket *psock, FAR struct pollfd *fds,
        * requested.
        */
 
-      if ((fds->events & POLLIN) != 0)
+      if ((fds->events & (POLLIN | POLLRDNORM)) != 0)
         {
           /* Some limitations:  There can be only a single outstanding POLLIN
            * on the Netlink connection.
@@ -587,6 +767,11 @@ static ssize_t netlink_sendmsg(FAR struct socket *psock,
 
   /* Validity check, only single iov supported */
 
+  if ((flags & MSG_OOB) != 0)
+    {
+      return -EOPNOTSUPP;
+    }
+
   if (msg->msg_iovlen != 1)
     {
       return -ENOTSUP;
@@ -637,6 +822,15 @@ static ssize_t netlink_sendmsg(FAR struct socket *psock,
         break;
 #endif
 
+#ifdef CONFIG_NETLINK_GENERIC
+      case NETLINK_GENERIC:
+        ret = netlink_generic_sendto(conn, nlmsg,
+                                     msg->msg_iov->iov_len, flags,
+                                     (FAR const struct sockaddr_nl *)to,
+                                     tolen);
+        break;
+#endif
+
       default:
        ret = -EOPNOTSUPP;
        break;
@@ -674,6 +868,9 @@ static ssize_t netlink_recvmsg(FAR struct socket *psock,
   FAR socklen_t *fromlen = &msg->msg_namelen;
   FAR struct netlink_response_s *entry;
   FAR struct socket_conn_s *conn;
+  FAR struct netlink_conn_s *nlconn;
+  size_t msglen;
+  bool peek;
   int ret = OK;
 
   DEBUGASSERT(from == NULL ||
@@ -684,9 +881,19 @@ static ssize_t netlink_recvmsg(FAR struct socket *psock,
       return -ENOTSUP;
     }
 
-  /* Find the response to this message.  The return value */
+  if ((flags & MSG_OOB) != 0)
+    {
+      return -EOPNOTSUPP;
+    }
 
-  entry = netlink_tryget_response(psock->s_conn);
+  msg->msg_flags = 0;
+  peek = (flags & MSG_PEEK) != 0;
+
+  /* Find the response to this message. */
+
+  nlconn = psock->s_conn;
+  entry = peek ? netlink_trypeek_response(nlconn) :
+                 netlink_tryget_response(nlconn);
   if (entry == NULL)
     {
       conn = psock->s_conn;
@@ -702,7 +909,8 @@ static ssize_t netlink_recvmsg(FAR struct socket *psock,
 
       /* Wait for the response. */
 
-      ret = netlink_get_response(psock->s_conn, &entry);
+      ret = peek ? netlink_peek_response(psock->s_conn, &entry) :
+                   netlink_get_response(psock->s_conn, &entry);
 
       /* If interrupted by signals, return errno */
 
@@ -712,23 +920,221 @@ static ssize_t netlink_recvmsg(FAR struct socket *psock,
         }
     }
 
-  if (len > entry->msg.nlmsg_len)
+  msglen = entry->msg.nlmsg_len;
+  if (len > msglen)
     {
-      len = entry->msg.nlmsg_len;
+      len = msglen;
+    }
+  else if (len < msglen)
+    {
+      msg->msg_flags |= MSG_TRUNC;
     }
 
   /* Copy the payload to the user buffer */
 
-  memcpy(buf, &entry->msg, len);
-  kmm_free(entry);
+  if (len > 0)
+    {
+      memcpy(buf, &entry->msg, len);
+    }
+
+  if (nlconn->pktinfo && msg->msg_control != NULL)
+    {
+      struct nl_pktinfo info;
+
+      info.group = entry->group;
+      cmsg_append(msg, SOL_NETLINK, NETLINK_PKTINFO, &info, sizeof(info));
+    }
+
+  if (!peek)
+    {
+      kmm_free(entry);
+    }
 
   if (from != NULL)
     {
       netlink_getpeername(psock, from, fromlen);
     }
 
-  return len;
+  return (flags & MSG_TRUNC) != 0 ? msglen : len;
 }
+
+/****************************************************************************
+ * Name: netlink_setsockopt
+ *
+ * Description:
+ *   Perform protocol-level setsockopt() for Netlink sockets.
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_NET_SOCKOPTS
+static int netlink_setsockopt(FAR struct socket *psock, int level,
+                              int option, FAR const void *value,
+                              socklen_t value_len)
+{
+  FAR struct netlink_conn_s *conn;
+  uint32_t groupmask;
+  int group;
+  int enabled;
+
+  if (level != SOL_NETLINK)
+    {
+      return -ENOPROTOOPT;
+    }
+
+  if (value == NULL || value_len < sizeof(int))
+    {
+      return -EINVAL;
+    }
+
+  conn = psock->s_conn;
+  enabled = *(FAR const int *)value;
+
+  switch (option)
+    {
+      case NETLINK_PKTINFO:
+        conn->pktinfo = enabled != 0;
+        return OK;
+
+      case NETLINK_ADD_MEMBERSHIP:
+      case NETLINK_DROP_MEMBERSHIP:
+        group = enabled;
+        if (group <= 0 || group > 32)
+          {
+            return -EINVAL;
+          }
+
+        groupmask = 1u << (group - 1);
+        if (option == NETLINK_ADD_MEMBERSHIP)
+          {
+            conn->groups |= groupmask;
+          }
+        else
+          {
+            conn->groups &= ~groupmask;
+          }
+
+        return OK;
+
+      case NETLINK_EXT_ACK:
+        conn->ext_ack = enabled != 0;
+        return OK;
+
+      case NETLINK_CAP_ACK:
+        conn->cap_ack = enabled != 0;
+        return OK;
+
+      case NETLINK_NO_ENOBUFS:
+        conn->no_enobufs = enabled != 0;
+        return OK;
+
+      case NETLINK_BROADCAST_ERROR:
+        conn->broadcast_error = enabled != 0;
+        return OK;
+
+      case NETLINK_LISTEN_ALL_NSID:
+        conn->listen_all_nsid = enabled != 0;
+        return OK;
+
+      case NETLINK_GET_STRICT_CHK:
+        conn->strict_chk = enabled != 0;
+        return OK;
+
+      case NETLINK_RX_RING:
+      case NETLINK_TX_RING:
+      case NETLINK_LIST_MEMBERSHIPS:
+        return -EOPNOTSUPP;
+
+      default:
+        return -ENOPROTOOPT;
+    }
+}
+#endif
+
+/****************************************************************************
+ * Name: netlink_getsockopt
+ *
+ * Description:
+ *   Perform protocol-level getsockopt() for Netlink sockets.
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_NET_SOCKOPTS
+static int netlink_getsockopt(FAR struct socket *psock, int level,
+                              int option, FAR void *value,
+                              FAR socklen_t *value_len)
+{
+  FAR struct netlink_conn_s *conn;
+  uint32_t memberships;
+  socklen_t len;
+  int enabled;
+
+  if (level != SOL_NETLINK)
+    {
+      return -ENOPROTOOPT;
+    }
+
+  if (value == NULL || value_len == NULL)
+    {
+      return -EINVAL;
+    }
+
+  conn = psock->s_conn;
+  len = *value_len;
+
+  switch (option)
+    {
+      case NETLINK_LIST_MEMBERSHIPS:
+        memberships = conn->groups;
+        if (len >= sizeof(memberships))
+          {
+            memcpy(value, &memberships, sizeof(memberships));
+          }
+
+        *value_len = sizeof(memberships);
+        return OK;
+
+      case NETLINK_PKTINFO:
+        enabled = conn->pktinfo;
+        break;
+
+      case NETLINK_EXT_ACK:
+        enabled = conn->ext_ack;
+        break;
+
+      case NETLINK_CAP_ACK:
+        enabled = conn->cap_ack;
+        break;
+
+      case NETLINK_NO_ENOBUFS:
+        enabled = conn->no_enobufs;
+        break;
+
+      case NETLINK_BROADCAST_ERROR:
+        enabled = conn->broadcast_error;
+        break;
+
+      case NETLINK_LISTEN_ALL_NSID:
+        enabled = conn->listen_all_nsid;
+        break;
+
+      case NETLINK_GET_STRICT_CHK:
+        enabled = conn->strict_chk;
+        break;
+
+      default:
+        return -ENOPROTOOPT;
+    }
+
+  if (len < sizeof(int))
+    {
+      return -EINVAL;
+    }
+
+  memcpy(value, &enabled, sizeof(enabled));
+  *value_len = sizeof(enabled);
+  return OK;
+}
+#endif
 
 /****************************************************************************
  * Name: netlink_close
@@ -758,6 +1164,16 @@ static int netlink_close(FAR struct socket *psock)
 
   if (conn->crefs <= 1)
     {
+      hwsim_netlink_debugf("hwsim-debug: netlink_close conn=%p pid=%lu "
+                           "groups=0x%lx\n", conn,
+                           (unsigned long)conn->pid,
+                           (unsigned long)conn->groups);
+
+      if (conn->pid != 0)
+        {
+          netlink_release_notify(psock->s_proto, conn->pid);
+        }
+
       /* Free the connection structure */
 
       conn->crefs = 0;

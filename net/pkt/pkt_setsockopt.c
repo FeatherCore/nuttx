@@ -32,6 +32,7 @@
 #include <assert.h>
 #include <nuttx/debug.h>
 
+#include <net/if.h>
 #include <netpacket/packet.h>
 #include <nuttx/net/net.h>
 #include <nuttx/net/pkt.h>
@@ -79,15 +80,35 @@ int pkt_setsockopt(FAR struct socket *psock, int level, int option,
 
   DEBUGASSERT(value_len == 0 || value != NULL);
 
-  if (level != SOL_PACKET)
-    {
-      return -ENOPROTOOPT;
-    }
-
   if (psock->s_type != SOCK_DGRAM && psock->s_type != SOCK_RAW)
     {
       nerr("ERROR:  Not a valid PKT socket\n");
       return -ENOTCONN;
+    }
+
+  if (level == SOL_SOCKET && option == SO_ATTACH_FILTER)
+    {
+      return pkt_attach_filter(psock->s_conn, value, value_len);
+    }
+
+  if (level == SOL_SOCKET && option == SO_WIFI_STATUS)
+    {
+      FAR struct pkt_conn_s *conn = psock->s_conn;
+      int enabled;
+
+      if (value_len != sizeof(int))
+        {
+          return -EINVAL;
+        }
+
+      enabled = *(FAR const int *)value;
+      conn->wifi_status = enabled != 0;
+      return OK;
+    }
+
+  if (level != SOL_PACKET)
+    {
+      return -ENOPROTOOPT;
     }
 
   switch (option)
@@ -144,6 +165,11 @@ int pkt_setsockopt(FAR struct socket *psock, int level, int option,
 
           if (mreq->mr_type == PACKET_MR_MULTICAST)
             {
+              if (mreq->mr_alen != IFHWADDRLEN)
+                {
+                  return -EINVAL;
+                }
+
               if (option == PACKET_ADD_MEMBERSHIP && dev->d_addmac != NULL)
                 {
                   /* Add the multicast MAC address to the device */
@@ -160,13 +186,56 @@ int pkt_setsockopt(FAR struct socket *psock, int level, int option,
               else
                 {
                   nerr("ERROR: Device does not support add MAC address\n");
-                  ret = -ENOSYS;
+                  ret = -EOPNOTSUPP;
+                }
+            }
+          else if (mreq->mr_type == PACKET_MR_UNICAST)
+            {
+              if (mreq->mr_alen != IFHWADDRLEN)
+                {
+                  return -EINVAL;
+                }
+
+              if (option == PACKET_ADD_MEMBERSHIP && dev->d_addmac != NULL)
+                {
+                  ret = dev->d_addmac(dev, mreq->mr_address);
+                }
+              else if (option == PACKET_DROP_MEMBERSHIP &&
+                       dev->d_rmmac != NULL)
+                {
+                  ret = dev->d_rmmac(dev, mreq->mr_address);
+                }
+              else
+                {
+                  ret = -EOPNOTSUPP;
+                }
+            }
+          else if (mreq->mr_type == PACKET_MR_PROMISC)
+            {
+              if (option == PACKET_ADD_MEMBERSHIP)
+                {
+                  dev->d_flags |= IFF_PROMISC;
+                }
+              else
+                {
+                  dev->d_flags &= ~IFF_PROMISC;
+                }
+            }
+          else if (mreq->mr_type == PACKET_MR_ALLMULTI)
+            {
+              if (option == PACKET_ADD_MEMBERSHIP)
+                {
+                  dev->d_flags |= IFF_ALLMULTI;
+                }
+              else
+                {
+                  dev->d_flags &= ~IFF_ALLMULTI;
                 }
             }
           else
             {
               nerr("ERROR: Invalid mr_type: %d\n", mreq->mr_type);
-              return -ENOSYS;
+              return -EINVAL;
             }
         }
         break;

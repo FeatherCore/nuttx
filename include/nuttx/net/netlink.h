@@ -29,42 +29,18 @@
 
 #include <nuttx/config.h>
 
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <stdint.h>
+
 #include <nuttx/queue.h>
 
 #include <netpacket/netlink.h>
+#include <nuttx/net/netlink_kernel.h>
 
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
-
-/****************************************************************************
- * Public Types
- ****************************************************************************/
-
-/* This is the form of the obfuscated state structure passed to modules
- * outside of the networking layer.
- */
-
-typedef FAR void *NETLINK_HANDLE;
-
-/* Netlink uses a two step, request-get, referenced by a user managed
- * sequence number.  This means that the requested data must be buffered
- * until it is gotten by the client.  This structure holds that buffered
- * data.
- *
- * REVISIT:  There really should be a time stamp on this so that we can
- * someday weed out un-claimed responses.
- */
-
-struct netlink_response_s
-{
-  sq_entry_t flink;
-  struct nlmsghdr msg;
-
-  /* Message-specific data may follow */
-};
-
-#define SIZEOF_NETLINK_RESPONSE_S(n) (sizeof(struct netlink_response_s) + (n))
 
 /****************************************************************************
  * Public Function Prototypes
@@ -77,47 +53,6 @@ extern "C"
 #else
 #define EXTERN extern
 #endif
-
-/****************************************************************************
- * Name: netlink_add_response
- *
- * Description:
- *   Add response data at the tail of the pending response list.
- *
- *   Note:  The network will be momentarily locked to support exclusive
- *   access to the pending response list.
- *
- * Input Parameters:
- *   handle - The handle previously provided to the sendto() implementation
- *            for the protocol.  This is an opaque reference to the Netlink
- *            socket state structure.
- *   resp   - The response to the request.  The memory referenced by 'resp'
- *            must have been allocated via kmm_malloc().  It will be freed
- *            using kmm_free() after it has been consumed.
- *
- ****************************************************************************/
-
-void netlink_add_response(NETLINK_HANDLE handle,
-                          FAR struct netlink_response_s *resp);
-
-/****************************************************************************
- * Name: netlink_add_broadcast
- *
- * Description:
- *   Add broadcast data to all interested netlink connections.
- *
- *   Note:  The network will be momentarily locked to support exclusive
- *   access to the pending response list.
- *
- * Input Parameters:
- *   group - The broadcast group index.
- *   data  - The broadcast data.  The memory referenced by 'data'
- *           must have been allocated via kmm_malloc().  It will be freed
- *           using kmm_free() after it has been consumed.
- *
- ****************************************************************************/
-
-void netlink_add_broadcast(int group, FAR struct netlink_response_s *data);
 
 #undef EXTERN
 #ifdef __cplusplus
