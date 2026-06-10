@@ -40,6 +40,12 @@ ifeq ($(CONFIG_WL_VIRTUAL),y)
 include wireless/virtual/Make.defs
 endif
 
+# Include ESP-Hosted NG Wi-Fi support
+
+ifeq ($(CONFIG_WL_ESP_HOSTED_NG),y)
+include wireless/esp_hosted_ng/Make.defs
+endif
+
 # Include Bluetooth support
 
 ifeq ($(CONFIG_DRIVERS_BLUETOOTH),y)

@@ -19,6 +19,10 @@
 #include <debug.h>
 #include <nuttx/video/fb.h>
 
+#ifdef CONFIG_WL_ESP_HOSTED_NG
+#  include <nuttx/wireless/esp_hosted_ng.h>
+#endif
+
 #include "stm32h7s78-dk.h"
 
 /****************************************************************************
@@ -104,6 +108,22 @@ void board_late_initialize(void)
   if (ret < 0)
     {
       syslog(LOG_ERR, "stm32_touchscreen_setup failed: %d\n", ret);
+    }
+#endif
+
+#ifdef CONFIG_STM32H7RS_SPI4
+  ret = stm32_spi4_board_initialize();
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "stm32_spi4_board_initialize failed: %d\n", ret);
+    }
+#endif
+
+#ifdef CONFIG_WL_ESP_HOSTED_NG
+  ret = esp_hosted_ng_initialize();
+  if (ret < 0)
+    {
+      syslog(LOG_WARNING, "esp_hosted_ng_initialize deferred: %d\n", ret);
     }
 #endif
 

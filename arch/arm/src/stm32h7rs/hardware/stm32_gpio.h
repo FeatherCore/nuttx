@@ -97,6 +97,12 @@
                                            STM32_GPIO_OSPEEDR_OFFSET)
 #define STM32_GPIOF_PUPDR            (STM32_GPIOF_BASE + \
                                            STM32_GPIO_PUPDR_OFFSET)
+#define STM32_GPIOF_IDR              (STM32_GPIOF_BASE + \
+                                           STM32_GPIO_IDR_OFFSET)
+#define STM32_GPIOF_ODR              (STM32_GPIOF_BASE + \
+                                           STM32_GPIO_ODR_OFFSET)
+#define STM32_GPIOF_BSRR             (STM32_GPIOF_BASE + \
+                                           STM32_GPIO_BSRR_OFFSET)
 #define STM32_GPIOF_AFRL             (STM32_GPIOF_BASE + \
                                            STM32_GPIO_AFRL_OFFSET)
 #define STM32_GPIOF_AFRH             (STM32_GPIOF_BASE + \
@@ -113,6 +119,34 @@
                                            STM32_GPIO_AFRL_OFFSET)
 #define STM32_GPIOG_AFRH             (STM32_GPIOG_BASE + \
                                            STM32_GPIO_AFRH_OFFSET)
+#define STM32_GPIOH_MODER            (STM32_GPIOH_BASE + \
+                                           STM32_GPIO_MODER_OFFSET)
+#define STM32_GPIOH_OTYPER           (STM32_GPIOH_BASE + \
+                                           STM32_GPIO_OTYPER_OFFSET)
+#define STM32_GPIOH_OSPEEDR          (STM32_GPIOH_BASE + \
+                                           STM32_GPIO_OSPEEDR_OFFSET)
+#define STM32_GPIOH_PUPDR            (STM32_GPIOH_BASE + \
+                                           STM32_GPIO_PUPDR_OFFSET)
+#define STM32_GPIOH_AFRL             (STM32_GPIOH_BASE + \
+                                           STM32_GPIO_AFRL_OFFSET)
+#define STM32_GPIOH_AFRH             (STM32_GPIOH_BASE + \
+                                           STM32_GPIO_AFRH_OFFSET)
+#define STM32_GPIOM_MODER            (STM32_GPIOM_BASE + \
+                                           STM32_GPIO_MODER_OFFSET)
+#define STM32_GPIOM_OTYPER           (STM32_GPIOM_BASE + \
+                                           STM32_GPIO_OTYPER_OFFSET)
+#define STM32_GPIOM_OSPEEDR          (STM32_GPIOM_BASE + \
+                                           STM32_GPIO_OSPEEDR_OFFSET)
+#define STM32_GPIOM_PUPDR            (STM32_GPIOM_BASE + \
+                                           STM32_GPIO_PUPDR_OFFSET)
+#define STM32_GPIOM_AFRL             (STM32_GPIOM_BASE + \
+                                           STM32_GPIO_AFRL_OFFSET)
+#define STM32_GPIOM_AFRH             (STM32_GPIOM_BASE + \
+                                           STM32_GPIO_AFRH_OFFSET)
+#define STM32_GPIOM_ODR              (STM32_GPIOM_BASE + \
+                                           STM32_GPIO_ODR_OFFSET)
+#define STM32_GPIOM_BSRR             (STM32_GPIOM_BASE + \
+                                           STM32_GPIO_BSRR_OFFSET)
 #define STM32_GPION_MODER            (STM32_GPION_BASE + \
                                            STM32_GPIO_MODER_OFFSET)
 #define STM32_GPION_OTYPER           (STM32_GPION_BASE + \
@@ -171,6 +205,7 @@
 #define GPIO_AFR_MASK(n)                 (15u << GPIO_AFR_SHIFT(n))
 #define GPIO_AF_LPTIM1                   1u
 #define GPIO_AF_I2C1                     4u
+#define GPIO_AF_SPI4                     5u
 #define GPIO_AF_UART4                    8u
 #define GPIO_AF_XSPIM_P1                 9u
 #define GPIO_AF_XSPIM_P2                 9u

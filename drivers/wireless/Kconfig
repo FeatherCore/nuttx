@@ -119,6 +119,7 @@ menuconfig DRIVERS_IEEE80211
 
 source "drivers/wireless/ieee80211/Kconfig"
 source "drivers/wireless/virtual/Kconfig"
+source "drivers/wireless/esp_hosted_ng/Kconfig"
 
 menuconfig DRIVERS_BLUETOOTH
 	bool "Bluetooth Device Support"

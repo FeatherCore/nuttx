@@ -1,0 +1,38 @@
+############################################################################
+# drivers/wireless/esp_hosted_ng/Make.defs
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+############################################################################
+
+ifeq ($(CONFIG_WL_ESP_HOSTED_NG),y)
+DEPPATH += --dep-path wireless/esp_hosted_ng
+VPATH += :wireless/esp_hosted_ng
+CFLAGS += ${INCDIR_PREFIX}$(TOPDIR)$(DELIM)drivers$(DELIM)wireless$(DELIM)esp_hosted_ng
+CFLAGS += ${INCDIR_PREFIX}$(TOPDIR)$(DELIM)wireless$(DELIM)ieee80211$(DELIM)include
+CFLAGS += ${INCDIR_PREFIX}$(TOPDIR)$(DELIM)wireless$(DELIM)ieee80211$(DELIM)include$(DELIM)uapi
+
+ifeq ($(CONFIG_WL_ESP_HOSTED_NG_LINUX_CFG80211),y)
+ESP_HOSTED_NG_UPSTREAM = wireless$(DELIM)esp_hosted_ng$(DELIM)upstream_host
+
+DEPPATH += --dep-path $(ESP_HOSTED_NG_UPSTREAM)
+DEPPATH += --dep-path $(ESP_HOSTED_NG_UPSTREAM)$(DELIM)include
+VPATH += :$(ESP_HOSTED_NG_UPSTREAM)
+CFLAGS += ${INCDIR_PREFIX}$(TOPDIR)$(DELIM)drivers$(DELIM)$(ESP_HOSTED_NG_UPSTREAM)
+CFLAGS += ${INCDIR_PREFIX}$(TOPDIR)$(DELIM)drivers$(DELIM)$(ESP_HOSTED_NG_UPSTREAM)$(DELIM)include
+CFLAGS += -DCONFIG_AP_MODE
+
+CSRCS += esp_hosted_ng_linux_if.c
+CSRCS += esp_hosted_ng_transport.c
+CSRCS += main.c
+CSRCS += esp_cmd.c
+CSRCS += esp_utils.c
+CSRCS += esp_cfg80211.c
+CSRCS += esp_stats.c
+CSRCS += esp_log.c
+CSRCS += esp_hosted_ng_bt_stub.c
+else
+CSRCS += esp_hosted_ng_netdev.c
+CSRCS += esp_hosted_ng_transport.c
+endif
+endif

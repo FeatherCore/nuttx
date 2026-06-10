@@ -35,6 +35,7 @@
 #define STM32_RCC_PLL3FRACR          (STM32_RCC_BASE + 0x0044u)
 #define STM32_RCC_CCIPR1             (STM32_RCC_BASE + 0x004cu)
 #define STM32_RCC_CCIPR2             (STM32_RCC_BASE + 0x0050u)
+#define STM32_RCC_CCIPR3             (STM32_RCC_BASE + 0x0054u)
 #define STM32_RCC_CCIPR4             (STM32_RCC_BASE + 0x0058u)
 #define STM32_RCC_PLL1DIVR2          (STM32_RCC_BASE + 0x00c0u)
 #define STM32_RCC_PLL2DIVR2          (STM32_RCC_BASE + 0x00c4u)
@@ -42,10 +43,12 @@
 #define STM32_RCC_AHB5RSTR           (STM32_RCC_BASE + 0x007cu)
 #define STM32_RCC_APB5RSTR           (STM32_RCC_BASE + 0x008cu)
 #define STM32_RCC_APB1RSTR1          (STM32_RCC_BASE + 0x0090u)
+#define STM32_RCC_APB2RSTR           (STM32_RCC_BASE + 0x0098u)
 #define STM32_RCC_AHB4ENR            (STM32_RCC_BASE + 0x0140u)
 #define STM32_RCC_APB5ENR            (STM32_RCC_BASE + 0x0144u)
 #define STM32_RCC_APB1ENR1           (STM32_RCC_BASE + 0x0148u)
 #define STM32_RCC_AHB5ENR            (STM32_RCC_BASE + 0x0134u)
+#define STM32_RCC_APB2ENR            (STM32_RCC_BASE + 0x0150u)
 #define STM32_RCC_APB4ENR            (STM32_RCC_BASE + 0x0154u)
 
 #define RCC_CR_HSION                     (1u << 0)
@@ -213,12 +216,17 @@
 #define RCC_CCIPR2_LPTIM1SEL_MASK        (7u << RCC_CCIPR2_LPTIM1SEL_SHIFT)
 #define RCC_CCIPR2_LPTIM1SEL_PCLK        0u
 
+#define RCC_CCIPR3_SPI45SEL_SHIFT        4
+#define RCC_CCIPR3_SPI45SEL_MASK         (7u << RCC_CCIPR3_SPI45SEL_SHIFT)
+#define RCC_CCIPR3_SPI45SEL_PCLK         0u
+
 #define RCC_AHB5RSTR_XSPI1RST            (1u << 5)
 #define RCC_AHB5RSTR_XSPI2RST            (1u << 12)
 #define RCC_AHB5RSTR_GPU2DRST            (1u << 20)
 
 #define RCC_APB1RSTR1_LPTIM1RST          (1u << 9)
 #define RCC_APB1RSTR1_I2C1RST            (1u << 21)
+#define RCC_APB2RSTR_SPI4RST             (1u << 13)
 #define RCC_APB5RSTR_LTDCRST             (1u << 1)
 
 #define RCC_AHB4ENR_GPIOAEN              (1u << 0)
@@ -228,6 +236,8 @@
 #define RCC_AHB4ENR_GPIOEEN              (1u << 4)
 #define RCC_AHB4ENR_GPIOFEN              (1u << 5)
 #define RCC_AHB4ENR_GPIOGEN              (1u << 6)
+#define RCC_AHB4ENR_GPIOHEN              (1u << 7)
+#define RCC_AHB4ENR_GPIOMEN              (1u << 12)
 #define RCC_AHB4ENR_GPIONEN              (1u << 13)
 #define RCC_AHB4ENR_GPIOOEN              (1u << 14)
 #define RCC_AHB4ENR_GPIOPEN              (1u << 15)
@@ -240,6 +250,7 @@
 #define RCC_APB1ENR1_LPTIM1EN            (1u << 9)
 #define RCC_APB1ENR1_UART4EN             (1u << 19)
 #define RCC_APB1ENR1_I2C1EN              (1u << 21)
+#define RCC_APB2ENR_SPI4EN               (1u << 13)
 #define RCC_APB4ENR_SBSEN                (1u << 1)
 #define RCC_APB5ENR_LTDCEN               (1u << 1)
 
