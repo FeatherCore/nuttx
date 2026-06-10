@@ -1,0 +1,12 @@
+#ifndef __WIRELESS_IEEE80211_INCLUDE_LINUX_ATM_H
+#define __WIRELESS_IEEE80211_INCLUDE_LINUX_ATM_H
+
+#ifndef AF_ATMPVC
+#  define AF_ATMPVC 8
+#endif
+
+#ifndef AF_ATMSVC
+#  define AF_ATMSVC 20
+#endif
+
+#endif /* __WIRELESS_IEEE80211_INCLUDE_LINUX_ATM_H */

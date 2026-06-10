@@ -34,6 +34,12 @@ ifeq ($(CONFIG_DRIVERS_IEEE80211),y)
 include wireless/ieee80211/Make.defs
 endif
 
+# Include virtual IEEE 802.11 devices
+
+ifeq ($(CONFIG_WL_VIRTUAL),y)
+include wireless/virtual/Make.defs
+endif
+
 # Include Bluetooth support
 
 ifeq ($(CONFIG_DRIVERS_BLUETOOTH),y)

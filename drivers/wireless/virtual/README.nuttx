@@ -1,0 +1,22 @@
+# Linux virtual wireless source drop
+
+This directory contains the Linux 7.0.10 virtual wireless driver sources copied
+from:
+
+```text
+/home/uan/Feather-develop-WIFI/third/linux-7.0.10/drivers/net/wireless/virtual
+```
+
+Imported files:
+
+```text
+virt_wifi_linux.c
+mac80211_hwsim_linux.c
+mac80211_hwsim_linux.h
+```
+
+The files are intentionally not compiled yet. They depend on Linux cfg80211,
+mac80211, netlink, sk_buff, debugfs, module, and rhashtable infrastructure.
+The next porting step is to bind these sources to the NuttX IEEE 802.11 vendor
+drop under `nuttx/wireless/ieee80211` and then expose a NuttX netdev that can be
+used by the `wifi_ap_demo` / `wifi_sta_demo` applications.

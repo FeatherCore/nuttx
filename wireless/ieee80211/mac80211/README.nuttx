@@ -1,0 +1,4 @@
+Linux mac80211 source drop imported from Linux 7.0.10.
+
+The source files are intentionally kept close to upstream. NuttX build glue
+and compatibility shims live outside the copied Linux files where possible.

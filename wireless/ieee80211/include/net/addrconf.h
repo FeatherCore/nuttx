@@ -1,0 +1,4 @@
+#ifndef __WIRELESS_IEEE80211_INCLUDE_NET_ADDRCONF_H
+#define __WIRELESS_IEEE80211_INCLUDE_NET_ADDRCONF_H
+#include <linux/cfg80211_compat.h>
+#endif

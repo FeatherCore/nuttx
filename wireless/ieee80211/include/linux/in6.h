@@ -1,0 +1,4 @@
+#ifndef __WIRELESS_IEEE80211_INCLUDE_LINUX_IN6_H
+#define __WIRELESS_IEEE80211_INCLUDE_LINUX_IN6_H
+#include <netinet/in.h>
+#endif

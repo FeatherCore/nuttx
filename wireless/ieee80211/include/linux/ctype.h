@@ -1,0 +1,4 @@
+#ifndef __WIRELESS_IEEE80211_INCLUDE_LINUX_CTYPE_H
+#define __WIRELESS_IEEE80211_INCLUDE_LINUX_CTYPE_H
+#include <ctype.h>
+#endif

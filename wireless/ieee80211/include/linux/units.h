@@ -1,0 +1,9 @@
+#ifndef __WIRELESS_IEEE80211_INCLUDE_LINUX_UNITS_H
+#define __WIRELESS_IEEE80211_INCLUDE_LINUX_UNITS_H
+#define HZ_PER_KHZ 1000UL
+#define KHZ_PER_MHZ 1000UL
+#define KHZ_PER_GHZ 1000000UL
+#define HZ_PER_MHZ 1000000UL
+#define MHZ_TO_KHZ(freq) ((freq) * 1000)
+#define KHZ_TO_MHZ(freq) ((freq) / 1000)
+#endif

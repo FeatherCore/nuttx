@@ -1,0 +1,4 @@
+#ifndef __WIRELESS_IEEE80211_INCLUDE_LINUX_RBTREE_H
+#define __WIRELESS_IEEE80211_INCLUDE_LINUX_RBTREE_H
+#include <linux/cfg80211_compat.h>
+#endif

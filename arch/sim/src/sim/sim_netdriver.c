@@ -71,6 +71,9 @@
 #include <nuttx/net/netdev_lowerhalf.h>
 #include <nuttx/net/pkt.h>
 #include <nuttx/net/wifi_sim.h>
+#ifdef CONFIG_WL_NUTTX_HWSIM
+#  include <nuttx/wireless/virtual_hwsim.h>
+#endif
 
 #include "sim_internal.h"
 #include "sim_wifihost.h"
@@ -219,6 +222,8 @@ static int netdriver_ifup(struct netdev_lowerhalf_s *dev)
     {
 #  if defined(CONFIG_SIM_WIFIDEV_HOST)
       if (sim_wifihost_connected((struct sim_wifihost_lowerhalf_s *)dev))
+#  elif defined(CONFIG_WL_NUTTX_HWSIM)
+      if (virtual_hwsim_connected((struct wifi_sim_lowerhalf_s *)dev))
 #  elif defined(CONFIG_SIM_WIFIDEV_PSEUDO)
       if (wifi_sim_connected((struct wifi_sim_lowerhalf_s *)dev))
 #  endif
@@ -314,6 +319,8 @@ int sim_netdriver_init(void)
 #  if defined(CONFIG_SIM_WIFIDEV_HOST)
           sim_wifihost_init((struct sim_wifihost_lowerhalf_s *)dev,
                             devidx);
+#  elif defined(CONFIG_WL_NUTTX_HWSIM)
+          virtual_hwsim_init((struct wifi_sim_lowerhalf_s *)dev);
 #  elif defined(CONFIG_SIM_WIFIDEV_PSEUDO)
           wifi_sim_init((struct wifi_sim_lowerhalf_s *)dev);
 #  endif

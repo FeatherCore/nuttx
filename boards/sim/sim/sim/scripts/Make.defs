@@ -23,6 +23,16 @@
 -include $(TOPDIR)/.config
 include $(TOPDIR)/tools/Config.mk
 
+ifeq ($(CONFIG_HOST_LINUX),y)
+ifneq ($(CONFIG_WIRELESS_WIFI_WPA_SUPPLICANT)$(CONFIG_WIRELESS_WIFI_HOSTAPD),)
+  HOST_LIBCRYPTO := $(shell $(CC) -print-file-name=libcrypto.so)
+  ifneq ($(HOST_LIBCRYPTO),libcrypto.so)
+    EXTRA_LIBPATHS += -L$(dir $(HOST_LIBCRYPTO))
+  endif
+  EXTRA_LIBS += -lcrypto
+endif
+endif
+
 # NuttX is sometimes built as a native target.
 # In that case, the __NuttX__ macro is predefined by the compiler.
 # https://github.com/NuttX/buildroot

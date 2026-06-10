@@ -1,0 +1,6 @@
+#ifndef __WIRELESS_IEEE80211_INCLUDE_LINUX_RCULIST_H
+#define __WIRELESS_IEEE80211_INCLUDE_LINUX_RCULIST_H
+
+#include <linux/list.h>
+
+#endif
