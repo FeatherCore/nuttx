@@ -107,6 +107,68 @@ config STM32H7S78_DK_GT911_DEBUG
 	depends on STM32H7S78_DK_GT911
 	select INPUT_GT911_DEBUG
 
+config STM32H7S78_DK_AW8697
+	bool "AW8697 haptic motor"
+	default n
+	select INPUT
+	select INPUT_FF
+	select FF_AW8697
+	select STM32H7RS_I2C
+	select STM32H7RS_I2C1
+	---help---
+		Enable the AWINIC AW8697 LRA haptic driver and register it as a
+		NuttX force-feedback input device.  The LD0832AA-0126F motor under
+		third/HW/motor is rated for 235 Hz, which is the default driver
+		RTP frequency.  The default board wiring uses the ARDUINO Uno V3
+		I2C pins D15/CN14 pin 10/PB6 for SCL and D14/CN14 pin 9/PB9 for
+		SDA.  The AW8697 interrupt output is reserved on D3/CN14 pin 4/PD12,
+		and RSTN is driven from D2/CN14 pin 3/PF1.
+
+config STM32H7S78_DK_BME280
+	bool "BME280 environment sensor"
+	default n
+	select SENSORS
+	select SENSORS_BME280
+	select STM32H7RS_I2C
+	select STM32H7RS_I2C1
+	---help---
+		Enable the Bosch BME280 temperature, humidity and pressure sensor
+		on the ARDUINO Uno V3 I2C pins.  The default board wiring uses
+		D15/CN14 pin 10/PB6 for SCL and D14/CN14 pin 9/PB9 for SDA.
+		The BME280 address is selected by SDO: 0x76 when tied to GND and
+		0x77 when tied to VDDIO.
+
+config STM32H7S78_DK_MAX30102
+	bool "MAX30102 heart-rate and SpO2 sensor"
+	default n
+	select SENSORS
+	select SENSORS_MAX30102
+	select STM32H7RS_I2C
+	select STM32H7RS_I2C1
+	---help---
+		Enable the Maxim MAX30102 pulse oximeter and heart-rate sensor
+		on the ARDUINO Uno V3 I2C pins.  The default board wiring uses
+		D15/CN14 pin 10/PB6 for SCL and D14/CN14 pin 9/PB9 for SDA.
+		The active-low open-drain interrupt output is reserved on
+		D2/CN14 pin 3/PF1.  The MAX30102 fixed 7-bit I2C address is
+		0x57.  RD and IRD are LED driver/module pins and are not wired
+		to MCU GPIOs in this bring-up configuration.
+
+config STM32H7S78_DK_LSM6DSOX
+	bool "LSM6DSOX accelerometer and gyroscope"
+	default n
+	select SENSORS
+	select SENSORS_LSM6DSOX
+	select STM32H7RS_I2C
+	select STM32H7RS_I2C1
+	---help---
+		Enable the STMicro LSM6DSOX accelerometer and gyroscope on the
+		ARDUINO Uno V3 I2C pins.  The default board wiring uses
+		D15/CN14 pin 10/PB6 for SCL and D14/CN14 pin 9/PB9 for SDA.
+		The LSM6DSOX address is selected by SDO/SA0: 0x6a when tied
+		to GND and 0x6b when tied to VDDIO.  INT1 and INT2 are not
+		used by the initial polling demo.
+
 if STM32H7RS_EXTNOR_OTA_PARTITION
 
 config STM32H7RS_OTA_PRIMARY_SLOT_DEVPATH

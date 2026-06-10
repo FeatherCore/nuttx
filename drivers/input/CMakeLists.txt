@@ -41,6 +41,10 @@ if(CONFIG_INPUT)
     list(APPEND SRCS aw86225.c)
   endif()
 
+  if(CONFIG_FF_AW8697)
+    list(APPEND SRCS aw8697.c)
+  endif()
+
   if(CONFIG_INPUT_MOUSE)
     list(APPEND SRCS mouse_upper.c)
   endif()

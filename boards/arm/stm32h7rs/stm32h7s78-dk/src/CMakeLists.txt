@@ -27,6 +27,22 @@ if(CONFIG_STM32H7S78_DK_GT911)
   list(APPEND SRCS stm32_touchscreen.c)
 endif()
 
+if(CONFIG_STM32H7S78_DK_AW8697)
+  list(APPEND SRCS stm32_aw8697.c)
+endif()
+
+if(CONFIG_STM32H7S78_DK_BME280)
+  list(APPEND SRCS stm32_bme280.c)
+endif()
+
+if(CONFIG_STM32H7S78_DK_MAX30102)
+  list(APPEND SRCS stm32_max30102.c)
+endif()
+
+if(CONFIG_STM32H7S78_DK_LSM6DSOX)
+  list(APPEND SRCS stm32_lsm6dsox.c)
+endif()
+
 target_sources(board PRIVATE ${SRCS})
 
 if(CONFIG_ETC_ROMFS)

@@ -604,6 +604,154 @@ config BMP280_I2C_FREQUENCY
 
 endif # SENSORS_BMP280
 
+config SENSORS_BME280
+	bool "Bosch BME280 Temperature, Humidity and Pressure Sensor"
+	default n
+	select I2C
+	---help---
+		Enable driver for the Bosch BME280 combined humidity, pressure and
+		temperature sensor.
+
+if SENSORS_BME280
+
+config BME280_I2C_ADDRESS
+	hex "BME280 I2C address"
+	default 0x76
+	---help---
+		The BME280 7-bit I2C address is 0x76 when SDO is pulled to GND and
+		0x77 when SDO is pulled to VDDIO.
+
+config BME280_I2C_FREQUENCY
+	int "BME280 I2C frequency"
+	default 400000
+
+config BME280_DEVPATH
+	string "BME280 device path"
+	default "/dev/bme280"
+
+config BME280_MEASUREMENT_WAIT_MS
+	int "BME280 forced measurement wait time"
+	default 10
+
+endif # SENSORS_BME280
+
+config SENSORS_MAX30102
+	bool "Maxim MAX30102 Heart-Rate and SpO2 Sensor"
+	default n
+	select I2C
+	---help---
+		Enable driver support for the Maxim MAX30102 pulse oximeter
+		and heart-rate sensor.
+
+if SENSORS_MAX30102
+
+config MAX30102_I2C_ADDRESS
+	hex "MAX30102 I2C address"
+	default 0x57
+
+config MAX30102_I2C_FREQUENCY
+	int "MAX30102 I2C frequency"
+	default 400000
+
+config MAX30102_DEVPATH
+	string "MAX30102 device path"
+	default "/dev/max30102"
+
+config MAX30102_SAMPLE_WAIT_MS
+	int "MAX30102 sample wait timeout in milliseconds"
+	default 1000
+
+config MAX30102_FIFO_AVERAGE
+	int "MAX30102 FIFO sample averaging setting"
+	default 2
+	range 0 7
+
+config MAX30102_ADC_RANGE
+	int "MAX30102 SpO2 ADC range setting"
+	default 2
+	range 0 3
+
+config MAX30102_SAMPLE_RATE
+	int "MAX30102 SpO2 sample rate setting"
+	default 1
+	range 0 7
+
+config MAX30102_PULSE_WIDTH
+	int "MAX30102 LED pulse width setting"
+	default 3
+	range 0 3
+
+config MAX30102_LED1_PA
+	hex "MAX30102 red LED pulse amplitude"
+	default 0x24
+
+config MAX30102_LED2_PA
+	hex "MAX30102 IR LED pulse amplitude"
+	default 0x24
+
+endif # SENSORS_MAX30102
+
+config SENSORS_LSM6DSOX
+	bool "STMicro LSM6DSOX Accelerometer and Gyroscope"
+	default n
+	select I2C
+	---help---
+		Enable driver support for the STMicro LSM6DSOX 3-axis
+		accelerometer and 3-axis gyroscope.
+
+if SENSORS_LSM6DSOX
+
+config LSM6DSOX_I2C_ADDRESS
+	hex "LSM6DSOX I2C address"
+	default 0x6a
+	---help---
+		The LSM6DSOX 7-bit I2C address is 0x6a when SDO/SA0 is tied to
+		GND and 0x6b when SDO/SA0 is tied to VDDIO.
+
+config LSM6DSOX_I2C_FREQUENCY
+	int "LSM6DSOX I2C frequency"
+	default 400000
+
+config LSM6DSOX_DEVPATH
+	string "LSM6DSOX device path"
+	default "/dev/lsm6dsox"
+
+config LSM6DSOX_ACCEL_ODR
+	int "LSM6DSOX accelerometer ODR setting"
+	default 4
+	range 0 10
+	---help---
+		CTRL1_XL ODR_XL field.  The default value 4 selects 104 Hz.
+
+config LSM6DSOX_ACCEL_FS
+	int "LSM6DSOX accelerometer full-scale setting"
+	default 0
+	range 0 3
+	---help---
+		CTRL1_XL FS_XL field.  With XL_FS_MODE=0, 0 selects +/-2 g,
+		1 selects +/-16 g, 2 selects +/-4 g, and 3 selects +/-8 g.
+
+config LSM6DSOX_GYRO_ODR
+	int "LSM6DSOX gyroscope ODR setting"
+	default 4
+	range 0 10
+	---help---
+		CTRL2_G ODR_G field.  The default value 4 selects 104 Hz.
+
+config LSM6DSOX_GYRO_FS
+	int "LSM6DSOX gyroscope full-scale setting"
+	default 0
+	range 0 3
+	---help---
+		CTRL2_G FS_G field.  0 selects +/-250 dps, 1 selects
+		+/-500 dps, 2 selects +/-1000 dps, and 3 selects +/-2000 dps.
+
+config LSM6DSOX_RESET_WAIT_MS
+	int "LSM6DSOX software reset timeout in milliseconds"
+	default 50
+
+endif # SENSORS_LSM6DSOX
+
 config SENSORS_BME680
 	bool "Bosch BME680 Temperature, Gas, Humidity and Pressure Sensor"
 	default n
