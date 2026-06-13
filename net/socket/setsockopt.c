@@ -136,11 +136,11 @@ static int psock_socketlevel_option(FAR struct socket *psock, int option,
       case SO_KEEPALIVE:   /* Verifies TCP connections active by enabling the
                             * periodic transmission of probes */
       case SO_OOBINLINE:   /* Leaves received out-of-band data inline */
-      case SO_REUSEADDR:   /* Allow reuse of local addresses */
-#ifdef CONFIG_NET_TIMESTAMP
-      case SO_TIMESTAMP:   /* Generates a timestamp in us for each incoming packet */
-      case SO_TIMESTAMPNS: /* Generates a timestamp in ns for each incoming packet */
-#endif
+	      case SO_REUSEADDR:   /* Allow reuse of local addresses */
+	#ifdef CONFIG_NET_TIMESTAMP
+	      case SO_TIMESTAMP:   /* Generates a timestamp in us for each incoming packet */
+	      case SO_TIMESTAMPNS: /* Generates a timestamp in ns for each incoming packet */
+	#endif
         {
           int setting;
 
@@ -175,11 +175,22 @@ static int psock_socketlevel_option(FAR struct socket *psock, int option,
             }
 
           conn_unlock(conn);
-        }
-        break;
+	        }
+	        break;
 
-#ifdef CONFIG_NET_BINDTODEVICE
-      /* Handle the SO_BINDTODEVICE socket-level option.
+	      case SO_RCVBUF:      /* Sets receive buffer size */
+	      case SO_SNDBUF:      /* Sets send buffer size */
+	        {
+	          if (value_len != sizeof(int))
+	            {
+	              return -EINVAL;
+	            }
+
+	          break;
+	        }
+
+	#ifdef CONFIG_NET_BINDTODEVICE
+	      /* Handle the SO_BINDTODEVICE socket-level option.
        *
        * NOTE: this option makes sense for UDP sockets trying to broadcast
        * while their local address is not set, eg, with DHCP requests.

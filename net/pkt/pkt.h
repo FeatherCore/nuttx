@@ -64,6 +64,14 @@ struct pkt_poll_s
   FAR struct devif_callback_s *cb;   /* Needed to teardown the poll */
 };
 
+struct pkt_bpf_insn_s
+{
+  uint16_t code;
+  uint8_t  jt;
+  uint8_t  jf;
+  uint32_t k;
+};
+
 struct pkt_conn_s
 {
   /* Common prologue of all connection structures. */
@@ -98,13 +106,24 @@ struct pkt_conn_s
    *
    *   readahead - A singly linked list of type struct iob_qentry_s
    *               where the PKT read-ahead data is retained.
+   *   txstatus  - Linux-compatible MSG_ERRQUEUE entries for packet TX
+   *               status notifications.
    *
    * TODO: Maybe support PACKET_MMAP for further optimize.
    */
 
   struct iob_queue_s readahead;   /* Read-ahead buffering */
+  struct iob_queue_s txstatus;    /* TX status error queue */
 
   FAR struct iob_s  *pendiob;     /* The iob currently being sent */
+
+  /* Classic BPF program attached with Linux-compatible
+   * setsockopt(SOL_SOCKET, SO_ATTACH_FILTER).
+   */
+
+  FAR struct pkt_bpf_insn_s *filter;
+  uint16_t                  filter_len;
+  uint8_t                   wifi_status;
 
   /* The following is a list of poll structures of threads waiting for
    * socket events.
@@ -134,6 +153,7 @@ EXTERN const struct sock_intf_s g_pkt_sockif;
  ****************************************************************************/
 
 struct net_driver_s; /* Forward reference */
+struct eth_hdr_s;    /* Forward reference */
 struct socket;       /* Forward reference */
 
 /****************************************************************************
@@ -184,6 +204,51 @@ FAR struct pkt_conn_s *pkt_active(FAR struct net_driver_s *dev);
  ****************************************************************************/
 
 FAR struct pkt_conn_s *pkt_nextconn(FAR struct pkt_conn_s *conn);
+
+/****************************************************************************
+ * Name: pkt_attach_filter
+ *
+ * Description:
+ *   Attach a Linux classic BPF socket filter to a packet connection.
+ *
+ ****************************************************************************/
+
+int pkt_attach_filter(FAR struct pkt_conn_s *conn, FAR const void *value,
+                      socklen_t value_len);
+
+/****************************************************************************
+ * Name: pkt_detach_filter
+ *
+ * Description:
+ *   Remove any attached packet socket filter.
+ *
+ ****************************************************************************/
+
+void pkt_detach_filter(FAR struct pkt_conn_s *conn);
+
+/****************************************************************************
+ * Name: pkt_filter_accept
+ *
+ * Description:
+ *   Return true when the packet should be delivered to the packet socket.
+ *
+ ****************************************************************************/
+
+bool pkt_filter_accept(FAR struct net_driver_s *dev,
+                       FAR struct pkt_conn_s *conn,
+                       FAR struct iob_s *iob, size_t framelen,
+                       int hdr_offset, uint8_t pkttype);
+
+/****************************************************************************
+ * Name: pkt_eth_pkttype
+ *
+ * Description:
+ *   Return the Linux-compatible PACKET_* type for an Ethernet frame.
+ *
+ ****************************************************************************/
+
+uint8_t pkt_eth_pkttype(FAR struct net_driver_s *dev,
+                        FAR const struct eth_hdr_s *ethhdr);
 
 /****************************************************************************
  * Name: pkt_sendmsg_is_valid

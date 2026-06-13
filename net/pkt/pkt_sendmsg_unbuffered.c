@@ -30,6 +30,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 
+#include <poll.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <string.h>
@@ -39,6 +40,8 @@
 #include <arch/irq.h>
 #include <netpacket/packet.h>
 
+#include <nuttx/kmalloc.h>
+#include <nuttx/mm/iob.h>
 #include <nuttx/semaphore.h>
 #include <nuttx/net/netdev.h>
 #include <nuttx/net/net.h>
@@ -73,6 +76,82 @@ struct send_s
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
+
+static void pkt_txstatus_notify(FAR struct pkt_conn_s *conn)
+{
+  FAR struct pkt_poll_s *info;
+
+  for (info = conn->pollinfo;
+       info < &conn->pollinfo[CONFIG_NET_PKT_NPOLLWAITERS];
+       info++)
+    {
+      if (info->conn == conn && info->fds != NULL)
+        {
+          poll_notify(&info->fds, 1, POLLIN);
+        }
+    }
+}
+
+static void pkt_queue_txstatus(FAR struct send_s *pstate,
+                               FAR struct net_driver_s *dev)
+{
+  FAR struct iob_s *iob;
+  FAR uint8_t *frame;
+  size_t framelen = pstate->snd_buflen;
+  bool build_l2 = pstate->addr != NULL &&
+                  pstate->snd_sock->s_type == SOCK_DGRAM;
+  int ret;
+
+  if (!pstate->snd_conn->wifi_status || pstate->snd_sent <= 0)
+    {
+      return;
+    }
+
+  if (build_l2)
+    {
+      framelen += NET_LL_HDRLEN(dev);
+    }
+
+  frame = kmm_malloc(framelen);
+  if (frame == NULL)
+    {
+      return;
+    }
+
+  if (build_l2)
+    {
+      FAR struct eth_hdr_s *ethhdr = (FAR struct eth_hdr_s *)frame;
+
+      memcpy(ethhdr->dest, pstate->addr->sll_addr, ETHER_ADDR_LEN);
+      memcpy(ethhdr->src, &dev->d_mac.ether, ETHER_ADDR_LEN);
+      ethhdr->type = pstate->addr->sll_protocol;
+      memcpy(frame + NET_LL_HDRLEN(dev), pstate->snd_buffer,
+             pstate->snd_buflen);
+    }
+  else
+    {
+      memcpy(frame, pstate->snd_buffer, pstate->snd_buflen);
+    }
+
+  iob = iob_tryalloc(false);
+  if (iob != NULL)
+    {
+      ret = iob_copyin(iob, frame, framelen, 0, false);
+      if (ret == (int)framelen &&
+          iob_add_queue(iob, &pstate->snd_conn->txstatus) == OK)
+        {
+          pkt_txstatus_notify(pstate->snd_conn);
+          iob = NULL;
+        }
+
+      if (iob != NULL)
+        {
+          iob_free_chain(iob);
+        }
+    }
+
+  kmm_free(frame);
+}
 
 /****************************************************************************
  * Name: psock_send_eventhandler
@@ -114,7 +193,8 @@ static uint32_t psock_send_eventhandler(FAR struct net_driver_s *dev,
           int ret;
           int offset = -NET_LL_HDRLEN(dev);
 
-          if (pstate->snd_sock->s_type == SOCK_DGRAM)
+          if (pstate->addr != NULL &&
+              pstate->snd_sock->s_type == SOCK_DGRAM)
             {
               offset = 0;
             }
@@ -131,7 +211,8 @@ static uint32_t psock_send_eventhandler(FAR struct net_driver_s *dev,
           pstate->snd_sent          = pstate->snd_buflen;
           pstate->snd_conn->pendiob = dev->d_iob;
 
-          if (pstate->snd_sock->s_type == SOCK_DGRAM)
+          if (pstate->addr != NULL &&
+              pstate->snd_sock->s_type == SOCK_DGRAM)
             {
               FAR struct eth_hdr_s *ethhdr = NETLLBUF;
               memcpy(ethhdr->dest, pstate->addr->sll_addr, ETHER_ADDR_LEN);
@@ -139,6 +220,8 @@ static uint32_t psock_send_eventhandler(FAR struct net_driver_s *dev,
               ethhdr->type = pstate->addr->sll_protocol;
               dev->d_len += NET_LL_HDRLEN(dev);
             }
+
+          pkt_queue_txstatus(pstate, dev);
         }
 
 end_wait:
@@ -201,7 +284,7 @@ ssize_t pkt_sendmsg(FAR struct socket *psock, FAR const struct msghdr *msg,
 
   conn = psock->s_conn;
 
-  if (psock->s_type == SOCK_DGRAM)
+  if (addr != NULL)
     {
       /* Set the interface index for devif_poll can match the conn */
 

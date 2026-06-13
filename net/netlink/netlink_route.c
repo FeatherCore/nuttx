@@ -27,12 +27,14 @@
 #include <nuttx/config.h>
 
 #include <sys/types.h>
+#include <inttypes.h>
 #include <string.h>
 #include <assert.h>
 #include <errno.h>
 #include <nuttx/debug.h>
 #include <arpa/inet.h>
 
+#include <net/if.h>
 #include <net/route.h>
 #include <netpacket/netlink.h>
 #include <netinet/if_ether.h>
@@ -82,6 +84,10 @@ struct getlink_recvfrom_response_s
   struct ifinfomsg iface;
   struct rtattr    attrmtu;
   uint32_t         mtu;                         /* IFLA_MTU attribute */
+  struct rtattr    attroperstate;
+  uint8_t          operstate[NLMSG_ALIGN(sizeof(uint8_t))];
+  struct rtattr    attrlinkmode;
+  uint8_t          linkmode[NLMSG_ALIGN(sizeof(uint8_t))];
 #if defined(CONFIG_NET_ETHERNET) || defined(CONFIG_NET_TUN)
   struct rtattr    attraddr;
   uint8_t          mac[NLMSG_ALIGN(ETH_ALEN)];  /* IFLA_ADDRESS attribute */
@@ -94,6 +100,13 @@ struct getlink_recvfrom_rsplist_s
 {
   sq_entry_t flink;
   struct getlink_recvfrom_response_s payload;
+};
+
+struct route_link_state_s
+{
+  bool valid;
+  uint8_t operstate;
+  uint8_t linkmode;
 };
 
 /* RTM_GETNEIGH:  Get neighbor table entry */
@@ -270,6 +283,10 @@ static_assert(sizeof(g_ifa_ipv6_policy) / sizeof(g_ifa_ipv6_policy[0]) ==
 #  define g_ifa_ipv6_policy NULL
 #endif
 
+#ifdef CONFIG_NETDEV_IFINDEX
+static struct route_link_state_s g_route_link_state[MAX_IFINDEX + 1];
+#endif
+
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
@@ -283,6 +300,64 @@ static_assert(sizeof(g_ifa_ipv6_policy) / sizeof(g_ifa_ipv6_policy[0]) ==
  ****************************************************************************/
 
 #ifndef CONFIG_NETLINK_DISABLE_GETLINK
+
+static uint8_t netlink_default_operstate(FAR struct net_driver_s *dev)
+{
+  return IFF_IS_UP(dev->d_flags) ? IF_OPER_UP : IF_OPER_DOWN;
+}
+
+static void netlink_get_link_state(FAR struct net_driver_s *dev,
+                                   FAR uint8_t *operstate,
+                                   FAR uint8_t *linkmode)
+{
+#ifdef CONFIG_NETDEV_IFINDEX
+  if (dev->d_ifindex > 0 && dev->d_ifindex <= MAX_IFINDEX &&
+      g_route_link_state[dev->d_ifindex].valid)
+    {
+      *operstate = g_route_link_state[dev->d_ifindex].operstate;
+      *linkmode = g_route_link_state[dev->d_ifindex].linkmode;
+      return;
+    }
+#endif
+
+  *operstate = netlink_default_operstate(dev);
+  *linkmode = 0;
+}
+
+static void netlink_set_link_state(FAR struct net_driver_s *dev,
+                                   int operstate, int linkmode)
+{
+#ifdef CONFIG_NETDEV_IFINDEX
+  FAR struct route_link_state_s *state;
+
+  if (dev->d_ifindex <= 0 || dev->d_ifindex > MAX_IFINDEX)
+    {
+      return;
+    }
+
+  state = &g_route_link_state[dev->d_ifindex];
+  if (!state->valid)
+    {
+      state->operstate = netlink_default_operstate(dev);
+      state->linkmode = 0;
+      state->valid = true;
+    }
+
+  if (operstate >= 0)
+    {
+      state->operstate = (uint8_t)operstate;
+    }
+
+  if (linkmode >= 0)
+    {
+      state->linkmode = (uint8_t)linkmode;
+    }
+#else
+  (void)dev;
+  (void)operstate;
+  (void)linkmode;
+#endif
+}
 
 static uint16_t netlink_convert_device_type(uint8_t lltype)
 {
@@ -328,6 +403,8 @@ netlink_get_device(FAR struct net_driver_s *dev,
   FAR struct getlink_recvfrom_rsplist_s *alloc;
   FAR struct getlink_recvfrom_response_s *resp;
   int up = IFF_IS_UP(dev->d_flags);
+  uint8_t operstate;
+  uint8_t linkmode;
 
   /* Allocate the response buffer */
 
@@ -360,6 +437,16 @@ netlink_get_device(FAR struct net_driver_s *dev,
   resp->attrmtu.rta_len  = RTA_LENGTH(sizeof(uint32_t));
   resp->attrmtu.rta_type = IFLA_MTU;
   resp->mtu              = NETDEV_PKTSIZE(dev) - NET_LL_HDRLEN(dev);
+
+  netlink_get_link_state(dev, &operstate, &linkmode);
+
+  resp->attroperstate.rta_len  = RTA_LENGTH(sizeof(uint8_t));
+  resp->attroperstate.rta_type = IFLA_OPERSTATE;
+  resp->operstate[0]           = operstate;
+
+  resp->attrlinkmode.rta_len   = RTA_LENGTH(sizeof(uint8_t));
+  resp->attrlinkmode.rta_type  = IFLA_LINKMODE;
+  resp->linkmode[0]            = linkmode;
 
 #if defined(CONFIG_NET_ETHERNET) || defined(CONFIG_NET_TUN)
   resp->attraddr.rta_len  = RTA_LENGTH(ETH_ALEN);
@@ -1320,6 +1407,70 @@ netlink_fill_ipv6prefix(FAR struct net_driver_s *dev, int type,
 #endif
 
 /****************************************************************************
+ * Name: netlink_set_link
+ *
+ * Description:
+ *   Accept Linux-compatible RTM_SETLINK updates used by wpa_supplicant for
+ *   IFLA_LINKMODE/IFLA_OPERSTATE and expose them in later RTM_GETLINK
+ *   replies.
+ *
+ ****************************************************************************/
+
+static int netlink_set_link(FAR const struct nlmsghdr *nlmsg)
+{
+  FAR struct ifinfomsg *ifm = NLMSG_DATA(nlmsg);
+  FAR struct net_driver_s *dev;
+  FAR struct rtattr *rta;
+  int attrlen;
+  int linkmode = -1;
+  int operstate = -1;
+
+  if (nlmsg->nlmsg_len < NLMSG_LENGTH(sizeof(*ifm)))
+    {
+      return -EINVAL;
+    }
+
+  dev = netdev_findbyindex(ifm->ifi_index);
+  if (dev == NULL)
+    {
+      return -ENODEV;
+    }
+
+  attrlen = nlmsg->nlmsg_len - NLMSG_LENGTH(sizeof(*ifm));
+  rta = (FAR struct rtattr *)((FAR char *)ifm +
+        NLMSG_ALIGN(sizeof(*ifm)));
+
+  for (; RTA_OK(rta, attrlen); rta = RTA_NEXT(rta, attrlen))
+    {
+      if (RTA_PAYLOAD(rta) < 1)
+        {
+          continue;
+        }
+
+      switch (rta->rta_type)
+        {
+          case IFLA_LINKMODE:
+            linkmode = *(FAR uint8_t *)RTA_DATA(rta);
+            break;
+
+          case IFLA_OPERSTATE:
+            operstate = *(FAR uint8_t *)RTA_DATA(rta);
+            break;
+
+          default:
+            break;
+        }
+    }
+
+  ninfo("RTM_SETLINK if=%s ifindex=%" PRId32 " linkmode=%d operstate=%d\n",
+        dev->d_ifname, ifm->ifi_index, linkmode, operstate);
+
+  netlink_set_link_state(dev, operstate, linkmode);
+
+  return OK;
+}
+
+/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
@@ -1361,6 +1512,10 @@ ssize_t netlink_route_sendto(NETLINK_HANDLE handle,
         ret = netlink_get_devlist(handle, req);
         break;
 #endif
+
+      case RTM_SETLINK:
+        ret = netlink_set_link(nlmsg);
+        break;
 
 #ifndef CONFIG_NETLINK_DISABLE_GETNEIGH
       /* Retrieve ARP/Neighbor Tables */
@@ -1488,7 +1643,7 @@ ssize_t netlink_route_sendto(NETLINK_HANDLE handle,
 #endif
 
       default:
-        ret = -ENOSYS;
+        ret = -EOPNOTSUPP;
         break;
     }
 
@@ -1520,8 +1675,7 @@ void netlink_device_notify(FAR struct net_driver_s *dev)
   resp = netlink_get_device(dev, NULL);
   if (resp != NULL)
     {
-      netlink_add_broadcast(RTNLGRP_LINK, resp);
-      netlink_add_terminator(NULL, NULL, RTNLGRP_LINK);
+      netlink_add_broadcast_protocol(NETLINK_ROUTE, RTNLGRP_LINK, resp);
     }
 }
 #endif
@@ -1569,8 +1723,7 @@ void netlink_device_notify_ipaddr(FAR struct net_driver_s *dev,
           return;
         }
 
-      netlink_add_broadcast(group, resp);
-      netlink_add_terminator(NULL, NULL, group);
+      netlink_add_broadcast_protocol(NETLINK_ROUTE, group, resp);
     }
 }
 #endif
@@ -1622,8 +1775,7 @@ void netlink_route_notify(FAR const void *route, int type, int domain)
 
   if (resp != NULL)
     {
-      netlink_add_broadcast(group, resp);
-      netlink_add_terminator(NULL, NULL, group);
+      netlink_add_broadcast_protocol(NETLINK_ROUTE, group, resp);
     }
 }
 #endif
@@ -1647,8 +1799,7 @@ void netlink_neigh_notify(FAR const void *neigh, int type, int domain)
       return;
     }
 
-  netlink_add_broadcast(RTNLGRP_NEIGH, resp);
-  netlink_add_terminator(NULL, NULL, RTNLGRP_NEIGH);
+  netlink_add_broadcast_protocol(NETLINK_ROUTE, RTNLGRP_NEIGH, resp);
 }
 #endif
 
@@ -1672,8 +1823,7 @@ void netlink_ipv6_prefix_notify(FAR struct net_driver_s *dev, int type,
       return;
     }
 
-  netlink_add_broadcast(RTNLGRP_IPV6_PREFIX, resp);
-  netlink_add_terminator(NULL, NULL, RTNLGRP_IPV6_PREFIX);
+  netlink_add_broadcast_protocol(NETLINK_ROUTE, RTNLGRP_IPV6_PREFIX, resp);
 }
 #endif
 

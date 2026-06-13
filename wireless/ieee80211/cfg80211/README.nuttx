@@ -1,0 +1,18 @@
+Linux cfg80211/nl80211 vendor drop
+==================================
+
+This directory is an unrefactored import of Linux 7.0.10 net/wireless.
+It is the baseline for bringing Linux cfg80211 and nl80211 behavior into
+FeatherCore/NuttX before native cleanup.
+
+Imported source root:
+
+  third/linux-7.0.10/net/wireless
+
+Imported interface headers live under:
+
+  wireless/ieee80211/include
+
+The build switch is CONFIG_WIRELESS_IEEE80211_CFG80211_LINUX and is
+disabled by default. Do not expect this tree to compile until the Linux
+compatibility layer and the NuttX generic netlink bridge are added.

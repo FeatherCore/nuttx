@@ -231,7 +231,7 @@ ssize_t pkt_sendmsg(FAR struct socket *psock, FAR const struct msghdr *msg,
     }
 
   conn = psock->s_conn;
-  if (psock->s_type == SOCK_DGRAM)
+  if (addr != NULL)
     {
       /* Set the interface index for devif_poll can match the conn */
 
@@ -325,7 +325,7 @@ ssize_t pkt_sendmsg(FAR struct socket *psock, FAR const struct msghdr *msg,
       goto errout_with_iob;
     }
 
-  if (psock->s_type == SOCK_DGRAM)
+  if (addr != NULL && psock->s_type == SOCK_DGRAM)
     {
       FAR struct eth_hdr_s *ethhdr =
           (FAR struct eth_hdr_s *)(IOB_DATA(iob) - NET_LL_HDRLEN(dev));

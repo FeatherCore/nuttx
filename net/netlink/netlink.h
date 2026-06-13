@@ -192,7 +192,15 @@ struct netlink_conn_s
   uint32_t groups;                   /* Multicast groups mask (if bound) */
   uint32_t dst_pid;                  /* Destination port ID */
   uint32_t dst_groups;               /* Destination multicast groups mask */
+  uint16_t protocol;                 /* Netlink protocol */
   uint8_t crefs;                     /* Reference counts on this instance */
+  uint8_t ext_ack;                   /* NETLINK_EXT_ACK enabled */
+  uint8_t cap_ack;                   /* NETLINK_CAP_ACK enabled */
+  uint8_t no_enobufs;                /* NETLINK_NO_ENOBUFS enabled */
+  uint8_t broadcast_error;           /* NETLINK_BROADCAST_ERROR enabled */
+  uint8_t strict_chk;                /* NETLINK_GET_STRICT_CHK enabled */
+  uint8_t listen_all_nsid;           /* NETLINK_LISTEN_ALL_NSID enabled */
+  uint8_t pktinfo;                   /* NETLINK_PKTINFO enabled */
 
   /* poll() support */
 
@@ -437,6 +445,22 @@ FAR struct netlink_response_s *
 netlink_tryget_response(FAR struct netlink_conn_s *conn);
 
 /****************************************************************************
+ * Name: netlink_trypeek_response
+ *
+ * Description:
+ *   Return the next response from the head of the pending response list
+ *   without removing it.
+ *
+ * Returned Value:
+ *   The next response from the head of the pending response list is
+ *   returned.  NULL will be returned if the pending response list is empty.
+ *
+ ****************************************************************************/
+
+FAR struct netlink_response_s *
+netlink_trypeek_response(FAR struct netlink_conn_s *conn);
+
+/****************************************************************************
  * Name: netlink_get_response
  *
  * Description:
@@ -461,6 +485,29 @@ netlink_tryget_response(FAR struct netlink_conn_s *conn);
 
 int netlink_get_response(FAR struct netlink_conn_s *conn,
                          FAR struct netlink_response_s **response);
+
+/****************************************************************************
+ * Name: netlink_peek_response
+ *
+ * Description:
+ *   Return the next response from the head of the pending response list
+ *   without removing it.  This function will block until a response is
+ *   received if the pending response list is empty.
+ *
+ * Input Parameters:
+ *   conn     - The Netlink connection
+ *   response - The next response from the head of the pending response list
+ *              is returned.  NULL will be returned only in the event of a
+ *              failure.
+ *
+ * Returned Value:
+ *   Zero (OK) is returned if a response is available.  A negated error value
+ *   is returned if an unexpected error occurred.
+ *
+ ****************************************************************************/
+
+int netlink_peek_response(FAR struct netlink_conn_s *conn,
+                          FAR struct netlink_response_s **response);
 
 /****************************************************************************
  * Name: netlink_check_response
@@ -565,6 +612,14 @@ void netlink_ipv6_prefix_notify(FAR struct net_driver_s *dev, int type,
                                 FAR const struct icmpv6_prefixinfo_s *pinfo);
 #endif
 
+#endif /* CONFIG_NETLINK_ROUTE */
+
+/****************************************************************************
+ * Attribute helpers shared by Netlink protocol implementations.
+ ****************************************************************************/
+
+#if defined(CONFIG_NETLINK_ROUTE) || defined(CONFIG_NETLINK_GENERIC)
+
 /****************************************************************************
  * Name: nla_next
  *
@@ -596,7 +651,23 @@ int nla_parse(FAR struct nlattr **tb, int maxtype,
               FAR const struct nlattr *head,
               int len, FAR const struct nla_policy *policy,
               FAR struct netlink_ext_ack *extack);
-#endif /* CONFIG_NETLINK_ROUTE */
+#endif
+
+/****************************************************************************
+ * Name: netlink_generic_sendto
+ *
+ * Description:
+ *   Perform the sendto() operation for the NETLINK_GENERIC protocol.
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_NETLINK_GENERIC
+ssize_t netlink_generic_sendto(NETLINK_HANDLE handle,
+                               FAR const struct nlmsghdr *nlmsg,
+                               size_t len, int flags,
+                               FAR const struct sockaddr_nl *to,
+                               socklen_t tolen);
+#endif
 
 /****************************************************************************
  * Name: netlink_netfilter_sendto

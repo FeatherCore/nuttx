@@ -12,6 +12,7 @@ config WIRELESS
 if WIRELESS
 
 source "wireless/bluetooth/Kconfig"
+source "wireless/ieee80211/Kconfig"
 source "wireless/ieee802154/Kconfig"
 source "wireless/pktradio/Kconfig"
 

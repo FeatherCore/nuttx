@@ -28,6 +28,7 @@
 
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <poll.h>
 #include <stdbool.h>
 #include <string.h>
 #include <assert.h>
@@ -367,6 +368,7 @@ static int pkt_close(FAR struct socket *psock)
               /* Yes... free any read-ahead data */
 
               iob_free_queue(&conn->readahead);
+              iob_free_queue(&conn->txstatus);
 
 #ifdef CONFIG_NET_PKT_WRITE_BUFFERS
               /* Free write buffer callback. */

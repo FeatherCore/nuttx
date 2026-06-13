@@ -27,8 +27,16 @@ ifeq ($(CONFIG_NET_NETLINK),y)
 SOCK_CSRCS += netlink_sockif.c
 NET_CSRCS += netlink_conn.c netlink_notifier.c
 
+ifneq ($(filter y,$(CONFIG_NETLINK_ROUTE) $(CONFIG_NETLINK_GENERIC)),)
+NET_CSRCS += netlink_attr.c
+endif
+
 ifeq ($(CONFIG_NETLINK_ROUTE),y)
-NET_CSRCS += netlink_route.c netlink_attr.c
+NET_CSRCS += netlink_route.c
+endif
+
+ifeq ($(CONFIG_NETLINK_GENERIC),y)
+NET_CSRCS += netlink_generic.c
 endif
 
 ifeq ($(CONFIG_NETLINK_NETFILTER),y)

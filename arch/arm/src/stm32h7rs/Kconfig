@@ -81,6 +81,21 @@ config STM32H7RS_I2C1
 		Enable I2C1.  The STM32H7S78-DK routes GT911 touch through PB6
 		SCL and PB9 SDA.
 
+config STM32H7RS_SPI
+	bool "SPI"
+	default n
+	depends on SPI
+	---help---
+		Enable the STM32H7RS polling SPI master lower-half.
+
+config STM32H7RS_SPI4
+	bool "SPI4"
+	default n
+	depends on STM32H7RS_SPI
+	---help---
+		Enable SPI4.  On STM32H7S78-DK this is routed to the Arduino
+		SPI header using PE12 SCK, PE13 MISO and PE14 MOSI.
+
 config STM32H7RS_DISPLAY
 	bool "LTDC display"
 	default n

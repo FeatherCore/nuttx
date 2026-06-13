@@ -907,6 +907,13 @@ int netdev_upper_wireless_ioctl(FAR struct netdev_lowerhalf_s *lower,
 
   switch (cmd)
     {
+      case SIOCSIWCOMMIT: /* Commit pending changes */
+        if (ops->connect)
+          {
+            ret = ops->connect(lower);
+          }
+        break;
+
       case SIOCSIWENCODEEXT: /* Set encoding token & mode */
         if (ops->passwd)
           {

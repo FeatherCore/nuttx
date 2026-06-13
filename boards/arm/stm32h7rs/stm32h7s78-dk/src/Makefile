@@ -13,6 +13,10 @@ ifeq ($(CONFIG_STM32H7RS_XSPI),y)
 CSRCS += stm32_extmem.c stm32_xspi.c
 endif
 
+ifeq ($(CONFIG_STM32H7RS_SPI4),y)
+CSRCS += stm32_spi.c
+endif
+
 ifeq ($(CONFIG_STM32H7S78_DK_LCD),y)
 CSRCS += stm32_lcd.c
 endif
@@ -39,6 +43,10 @@ endif
 
 ifeq ($(CONFIG_BOARDCTL_BOOT_IMAGE),y)
 CSRCS += stm32_boot_image.c
+endif
+
+ifeq ($(CONFIG_ETC_ROMFS),y)
+RCRAWS = etc/init.d/rc.sysinit etc/init.d/rcS etc/wpa_supplicant.conf
 endif
 
 include $(TOPDIR)/boards/Board.mk

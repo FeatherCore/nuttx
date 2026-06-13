@@ -1,0 +1,94 @@
+#
+# For a description of the syntax of this configuration file,
+# see the file kconfig-language.txt in the NuttX tools repository.
+#
+
+menu "ESP-Hosted NG Wi-Fi"
+
+config WL_ESP_HOSTED_NG
+	bool "ESP-Hosted NG host driver glue"
+	default n
+	depends on DRIVERS_WIRELESS && NET && WIRELESS_IEEE80211_CFG80211_LINUX
+	select SPI
+	select SPI_EXCHANGE
+	select DRIVERS_IEEE80211
+	select WIRELESS_ESP_HOSTED_NG
+	select WIRELESS_ESP_HOSTED_NG_SPI
+	---help---
+		Enable the NuttX-side ESP-Hosted NG host driver glue.  The
+		upstream ESP-Hosted NG host driver is staged under
+		apps/wireless/esp_hosted_ng/upstream/host and is being adapted to
+		the NuttX Linux cfg80211/nl80211 port.
+
+if WL_ESP_HOSTED_NG
+
+config WL_ESP_HOSTED_NG_LINUX_CFG80211
+	bool "Use Linux cfg80211 ESP-Hosted NG host path"
+	default y
+	---help---
+		Build the ESP-Hosted NG host driver through the Linux-style
+		cfg80211/nl80211 path.  This is the path used by wpa_supplicant:
+		wpa_supplicant -> nl80211 -> cfg80211 -> ESP-Hosted driver.
+
+config WL_ESP_HOSTED_NG_LEGACY_WEXT_DEMO
+	bool "Use legacy Wireless Extensions bring-up path"
+	default n
+	---help---
+		Build the early NuttX lower-half demo path that accepts ESSID and
+		passphrase through wireless ioctls.  This bypasses nl80211 and is
+		kept only as a bring-up fallback.
+
+config WL_ESP_HOSTED_NG_SPI_DEV
+	int "SPI bus number connected to ESP32-C5"
+	default 1
+	---help---
+		NuttX SPI bus number wired to the ESP32-C5 ESP-Hosted NG SPI
+		interface.
+
+config WL_ESP_HOSTED_NG_SPI_FREQUENCY
+	int "Initial SPI frequency"
+	default 10000000
+	---help---
+		Initial SPI clock for ESP-Hosted NG transactions.  This mirrors
+		the Linux ESP-Hosted default of 10 MHz.
+
+config WL_ESP_HOSTED_NG_SPI_MODE
+	int "SPI mode"
+	default 2
+	range 0 3
+	---help---
+		ESP-Hosted NG Linux host driver uses SPI mode 2 by default.
+
+config WL_ESP_HOSTED_NG_HANDSHAKE_PIN
+	int "Handshake GPIO pin"
+	default -1
+	---help---
+		Host GPIO connected to the ESP32-C5 handshake line.  The Linux
+		ESP-Hosted reference uses this rising edge to start a full-duplex
+		SPI transaction.  -1 means the board binding is not defined yet.
+
+config WL_ESP_HOSTED_NG_DATA_READY_PIN
+	int "Data ready GPIO pin"
+	default -1
+	---help---
+		Host GPIO connected to the ESP32-C5 data-ready line.  The Linux
+		ESP-Hosted reference uses this rising edge when the ESP has a
+		frame queued for the host.  -1 means the board binding is not
+		defined yet.
+
+config WL_ESP_HOSTED_NG_RESET_PIN
+	int "ESP32-C5 reset GPIO pin"
+	default -1
+	---help---
+		Optional host GPIO connected to ESP32-C5 EN/reset.
+
+config WL_ESP_HOSTED_NG_IFNAME
+	string "Wi-Fi interface name"
+	default "wlan0"
+	---help---
+		Expected network interface name exported by the ESP-Hosted NG
+		cfg80211 glue once the transport port is complete.
+
+endif # WL_ESP_HOSTED_NG
+
+endmenu

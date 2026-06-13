@@ -1,0 +1,82 @@
+############################################################################
+# wireless/ieee80211/mac80211/Make.defs
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.  The
+# ASF licenses this file to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance with the
+# License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+# License for the specific language governing permissions and limitations
+# under the License.
+#
+############################################################################
+
+ifeq ($(CONFIG_WIRELESS_IEEE80211_MAC80211_LINUX),y)
+
+CSRCS += ieee80211/mac80211/main.c
+CSRCS += ieee80211/mac80211/status.c
+CSRCS += ieee80211/mac80211/driver-ops.c
+CSRCS += ieee80211/mac80211/sta_info.c
+CSRCS += ieee80211/mac80211/wep.c
+CSRCS += ieee80211/mac80211/aead_api.c
+CSRCS += ieee80211/mac80211/wpa.c
+CSRCS += ieee80211/mac80211/scan.c
+CSRCS += ieee80211/mac80211/offchannel.c
+CSRCS += ieee80211/mac80211/ht.c
+CSRCS += ieee80211/mac80211/agg-tx.c
+CSRCS += ieee80211/mac80211/agg-rx.c
+CSRCS += ieee80211/mac80211/vht.c
+CSRCS += ieee80211/mac80211/he.c
+CSRCS += ieee80211/mac80211/s1g.c
+CSRCS += ieee80211/mac80211/ibss.c
+CSRCS += ieee80211/mac80211/iface.c
+CSRCS += ieee80211/mac80211/link.c
+CSRCS += ieee80211/mac80211/rate.c
+CSRCS += ieee80211/mac80211/rc80211_minstrel_ht.c
+CSRCS += ieee80211/mac80211/michael.c
+CSRCS += ieee80211/mac80211/tkip.c
+CSRCS += ieee80211/mac80211/aes_cmac.c
+CSRCS += ieee80211/mac80211/aes_gmac.c
+CSRCS += ieee80211/mac80211/fils_aead.c
+CSRCS += ../crypto/rijndael.c
+CSRCS += ieee80211/mac80211/cfg.c
+CSRCS += ieee80211/mac80211/ethtool.c
+CSRCS += ieee80211/mac80211/rx.c
+CSRCS += ieee80211/mac80211/spectmgmt.c
+CSRCS += ieee80211/mac80211/tx.c
+CSRCS += ieee80211/mac80211/key.c
+CSRCS += ieee80211/mac80211/util.c
+CSRCS += ieee80211/mac80211/parse.c
+CSRCS += ieee80211/mac80211/wme.c
+CSRCS += ieee80211/mac80211/chan.c
+CSRCS += ieee80211/mac80211/trace.c
+CSRCS += ieee80211/mac80211/mlme.c
+CSRCS += ieee80211/mac80211/tdls.c
+CSRCS += ieee80211/mac80211/ocb.c
+CSRCS += ieee80211/mac80211/airtime.c
+CSRCS += ieee80211/mac80211/eht.c
+CSRCS += ieee80211/mac80211/uhr.c
+CSRCS += ieee80211/mac80211/wbrf.c
+CSRCS += ieee80211/mac80211/mesh.c
+CSRCS += ieee80211/mac80211/mesh_pathtbl.c
+CSRCS += ieee80211/mac80211/mesh_plink.c
+CSRCS += ieee80211/mac80211/mesh_hwmp.c
+CSRCS += ieee80211/mac80211/mesh_sync.c
+CSRCS += ieee80211/mac80211/mesh_ps.c
+
+DEPPATH += --dep-path ieee80211/mac80211
+CFLAGS += ${INCDIR_PREFIX}$(TOPDIR)$(DELIM)wireless$(DELIM)ieee80211$(DELIM)mac80211
+CFLAGS += -DCONFIG_MAC80211=1
+CFLAGS += -DCONFIG_MAC80211_MESH=1
+CFLAGS += -DCONFIG_MAC80211_RC_MINSTREL=1
+
+endif # CONFIG_WIRELESS_IEEE80211_MAC80211_LINUX

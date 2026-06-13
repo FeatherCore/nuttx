@@ -76,6 +76,11 @@ FAR char *getenv(FAR const char *name)
   /* Get a reference to the thread-private environ in the TCB. */
 
   rtcb  = this_task();
+  if (rtcb == NULL)
+    {
+      goto errout;
+    }
+
   group = rtcb->group;
 
   /* Check if the variable exists */

@@ -71,6 +71,13 @@ config NETLINK_ROUTE
 	---help---
 		Support the NETLINK_ROUTE protocol option.
 
+config NETLINK_GENERIC
+	bool "Generic Netlink protocol"
+	default n
+	---help---
+		Support the NETLINK_GENERIC protocol option.  Generic Netlink is
+		used by Linux-compatible families such as nl80211.
+
 if NETLINK_ROUTE
 
 config NETLINK_DISABLE_GETLINK

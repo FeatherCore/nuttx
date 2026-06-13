@@ -11,6 +11,10 @@ if(CONFIG_STM32H7RS_XSPI)
   list(APPEND SRCS stm32_extmem.c stm32_xspi.c)
 endif()
 
+if(CONFIG_STM32H7RS_SPI4)
+  list(APPEND SRCS stm32_spi.c)
+endif()
+
 if(CONFIG_BOARDCTL_BOOT_IMAGE)
   list(APPEND SRCS stm32_boot_image.c)
 endif()
@@ -40,6 +44,23 @@ if(CONFIG_STM32H7S78_DK_LSM6DSOX)
 endif()
 
 target_sources(board PRIVATE ${SRCS})
+
+if(CONFIG_ETC_ROMFS)
+  nuttx_add_romfs(
+    NAME
+    etc
+    MOUNTPOINT
+    etc
+    RCRAWS
+    etc/init.d/rc.sysinit
+    etc/init.d/rcS
+    etc/wpa_supplicant.conf
+    PATH
+    ${CMAKE_CURRENT_BINARY_DIR}/etc)
+
+  target_link_libraries(board PRIVATE romfs_etc)
+endif()
+
 if(CONFIG_BUILD_PROTECTED)
   set_property(
     GLOBAL PROPERTY LD_SCRIPT "${NUTTX_BOARD_DIR}/scripts/memory.ld"

@@ -1,0 +1,19 @@
+############################################################################
+# drivers/wireless/virtual/Make.defs
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+############################################################################
+
+ifeq ($(CONFIG_WL_VIRTUAL),y)
+DEPPATH += --dep-path wireless/virtual
+VPATH += :wireless/virtual
+CFLAGS += ${INCDIR_PREFIX}$(TOPDIR)$(DELIM)drivers$(DELIM)wireless$(DELIM)virtual
+CFLAGS += ${INCDIR_PREFIX}$(TOPDIR)$(DELIM)wireless$(DELIM)ieee80211$(DELIM)include
+CFLAGS += ${INCDIR_PREFIX}$(TOPDIR)$(DELIM)wireless$(DELIM)ieee80211$(DELIM)include$(DELIM)uapi
+
+ifeq ($(CONFIG_WL_NUTTX_HWSIM),y)
+CSRCS += virtual_hwsim.c
+CSRCS += mac80211_hwsim_linux.c
+endif
+endif

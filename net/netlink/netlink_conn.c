@@ -162,6 +162,8 @@ FAR struct netlink_conn_s *netlink_alloc(void)
   conn = NET_BUFPOOL_TRYALLOC(g_netlink_connections);
   if (conn != NULL)
     {
+      memset(conn, 0, sizeof(*conn));
+
       /* Enqueue the connection into the active list */
 
       dq_addlast(&conn->sconn.node, &g_active_netlink_connections);
@@ -270,6 +272,41 @@ void netlink_add_response(NETLINK_HANDLE handle,
 }
 
 /****************************************************************************
+ * Name: netlink_add_response_pid
+ *
+ * Description:
+ *   Add response data to the pending response list for the NetLink
+ *   connection with the specified protocol and local port ID.
+ *
+ ****************************************************************************/
+
+int netlink_add_response_pid(int protocol, uint32_t pid,
+                             FAR struct netlink_response_s *resp)
+{
+  FAR struct netlink_conn_s *conn = NULL;
+
+  DEBUGASSERT(resp != NULL);
+
+  netlink_lock();
+
+  while ((conn = netlink_nextconn(conn)) != NULL)
+    {
+      if (conn->protocol != protocol || conn->pid != pid)
+        {
+          continue;
+        }
+
+      sq_addlast(&resp->flink, &conn->resplist);
+      netlink_notifier_signal(conn);
+      netlink_unlock();
+      return OK;
+    }
+
+  netlink_unlock();
+  return -ENOENT;
+}
+
+/****************************************************************************
  * Name: netlink_add_terminator
  *
  * Description:
@@ -302,7 +339,15 @@ int netlink_add_terminator(NETLINK_HANDLE handle,
 
   if (group > 0)
     {
-      netlink_add_broadcast(group, resp);
+      FAR struct netlink_conn_s *conn = handle;
+
+      if (conn == NULL)
+        {
+          kmm_free(resp);
+          return -EINVAL;
+        }
+
+      netlink_add_broadcast_protocol(conn->protocol, group, resp);
     }
   else
     {
@@ -329,7 +374,8 @@ int netlink_add_terminator(NETLINK_HANDLE handle,
  *
  ****************************************************************************/
 
-void netlink_add_broadcast(int group, FAR struct netlink_response_s *data)
+void netlink_add_broadcast_protocol(int protocol, int group,
+                                    FAR struct netlink_response_s *data)
 {
   FAR struct netlink_conn_s *conn = NULL;
   int first = 1;
@@ -340,6 +386,11 @@ void netlink_add_broadcast(int group, FAR struct netlink_response_s *data)
 
   while ((conn = netlink_nextconn(conn)) != NULL)
     {
+      if (protocol >= 0 && conn->protocol != protocol)
+        {
+          continue;
+        }
+
       if ((conn->groups & (1 << (group - 1))) == 0)
         {
           continue;
@@ -352,7 +403,8 @@ void netlink_add_broadcast(int group, FAR struct netlink_response_s *data)
           FAR struct netlink_response_s *tmp;
           size_t len;
 
-          len = sizeof(sq_entry_t) + data->msg.nlmsg_len;
+          len = SIZEOF_NETLINK_RESPONSE_S(data->msg.nlmsg_len -
+                                          sizeof(struct nlmsghdr));
           tmp = kmm_malloc(len);
           if (tmp == NULL)
             {
@@ -364,6 +416,7 @@ void netlink_add_broadcast(int group, FAR struct netlink_response_s *data)
         }
 
       first = 0;
+      data->group = group;
 
       /* Add the response to the end of the FIFO list */
 
@@ -382,6 +435,15 @@ void netlink_add_broadcast(int group, FAR struct netlink_response_s *data)
     {
       kmm_free(data);
     }
+}
+
+/****************************************************************************
+ * Name: netlink_add_broadcast
+ ****************************************************************************/
+
+void netlink_add_broadcast(int group, FAR struct netlink_response_s *data)
+{
+  netlink_add_broadcast_protocol(-1, group, data);
 }
 
 /****************************************************************************
@@ -414,6 +476,34 @@ netlink_tryget_response(FAR struct netlink_conn_s *conn)
 
   netlink_lock();
   resp = (FAR struct netlink_response_s *)sq_remfirst(&conn->resplist);
+  netlink_unlock();
+
+  return resp;
+}
+
+/****************************************************************************
+ * Name: netlink_trypeek_response
+ *
+ * Description:
+ *   Return the next response from the head of the pending response list
+ *   without removing it.  This is used to implement Linux-compatible
+ *   MSG_PEEK semantics for recvmsg().
+ *
+ * Returned Value:
+ *   The next response from the head of the pending response list is
+ *   returned.  NULL will be returned if the pending response list is empty.
+ *
+ ****************************************************************************/
+
+FAR struct netlink_response_s *
+netlink_trypeek_response(FAR struct netlink_conn_s *conn)
+{
+  FAR struct netlink_response_s *resp;
+
+  DEBUGASSERT(conn != NULL);
+
+  netlink_lock();
+  resp = (FAR struct netlink_response_s *)sq_peek(&conn->resplist);
   netlink_unlock();
 
   return resp;
@@ -489,6 +579,68 @@ int netlink_get_response(FAR struct netlink_conn_s *conn,
       netlink_notifier_teardown(conn);
 
       /* Check for any failures */
+
+      if (ret < 0)
+        {
+          break;
+        }
+    }
+
+  netlink_unlock();
+  return ret;
+}
+
+/****************************************************************************
+ * Name: netlink_peek_response
+ *
+ * Description:
+ *   Return the next response from the head of the pending response list
+ *   without removing it.  This function will block until a response is
+ *   received if the pending response list is empty.
+ *
+ * Input Parameters:
+ *   conn     - The Netlink connection
+ *   response - The next response from the head of the pending response list
+ *              is returned.  NULL will be returned only in the event of a
+ *              failure.
+ *
+ * Returned Value:
+ *   Zero (OK) is returned if a response is available.  A negated error value
+ *   is returned if an unexpected error occurred.
+ *
+ ****************************************************************************/
+
+int netlink_peek_response(FAR struct netlink_conn_s *conn,
+                          FAR struct netlink_response_s **response)
+{
+  int ret = OK;
+
+  DEBUGASSERT(conn != NULL);
+
+  netlink_lock();
+  while ((*response = (FAR struct netlink_response_s *)
+                      sq_peek(&conn->resplist)) == NULL)
+    {
+      sem_t waitsem;
+
+      nxsem_init(&waitsem, 0, 0);
+
+      ret = netlink_notifier_setup(netlink_response_available, conn,
+                                   &waitsem);
+      if (ret < 0)
+        {
+          nerr("ERROR: netlink_notifier_setup() failed: %d\n", ret);
+        }
+      else
+        {
+          tls_cleanup_push(tls_get_info(), netlink_notifier_teardown, conn);
+          ret = net_sem_timedwait2(&waitsem, true, UINT_MAX, &g_netlink_lock,
+                                   NULL);
+          tls_cleanup_pop(tls_get_info(), 0);
+        }
+
+      nxsem_destroy(&waitsem);
+      netlink_notifier_teardown(conn);
 
       if (ret < 0)
         {

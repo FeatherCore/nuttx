@@ -1,0 +1,46 @@
+#
+# For a description of the syntax of this configuration file,
+# see the file kconfig-language.txt in the NuttX tools repository.
+#
+
+menu "IEEE 802.11 support"
+
+config WIRELESS_IEEE80211_CFG80211_LINUX
+	bool "Linux cfg80211/nl80211 vendor drop"
+	default n
+	---help---
+		Enable the Linux cfg80211/nl80211 source drop imported from
+		Linux 7.0.10. This is intentionally disabled by default until
+		the Linux compatibility layer and NuttX generic netlink bridge
+		are in place.
+
+config WIRELESS_IEEE80211_NL80211_METADATA_ONLY
+	bool "Register nl80211 generic-netlink metadata only"
+	default y
+	depends on WIRELESS_IEEE80211_CFG80211_LINUX
+	---help---
+		Register the nl80211 generic-netlink family name and multicast
+		groups without dispatching the full Linux cfg80211 command table.
+		This keeps hostapd/wpa_supplicant family discovery moving while
+		the remaining cfg80211/mac80211 compatibility layer is completed.
+
+config NL80211_TESTMODE
+	bool "Enable nl80211 testmode command in the Linux wireless port"
+	default n
+	depends on WIRELESS_IEEE80211_CFG80211_LINUX
+	---help---
+		Enable the upstream nl80211 testmode command and driver hooks in
+		the imported cfg80211/mac80211/mac80211_hwsim path. This is useful
+		for simulator validation of hwsim-private hooks such as SET_PS and
+		GET_PS.
+
+config WIRELESS_IEEE80211_MAC80211_LINUX
+	bool "Linux mac80211 vendor drop"
+	default n
+	select WIRELESS_IEEE80211_CFG80211_LINUX
+	---help---
+		Enable the Linux mac80211 source drop imported from Linux
+		7.0.10. This builds the upstream mac80211 core against the
+		local Linux compatibility layer.
+
+endmenu

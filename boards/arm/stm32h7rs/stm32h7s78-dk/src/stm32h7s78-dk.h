@@ -15,6 +15,7 @@
 int stm32_extmem_initialize(void);
 int stm32_xspi2_nor_initialize(void);
 int stm32_xspi1_psram_initialize(void);
+int stm32_spi4_board_initialize(void);
 int stm32_touchscreen_setup(void);
 int stm32_aw8697_setup(void);
 int stm32_bme280_setup(void);

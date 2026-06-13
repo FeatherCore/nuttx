@@ -1,0 +1,5 @@
+#ifndef __WIRELESS_IEEE80211_INCLUDE_LINUX_NET_H
+#define __WIRELESS_IEEE80211_INCLUDE_LINUX_NET_H
+#include <linux/cfg80211_compat.h>
+#define PF_NETLINK 16
+#endif

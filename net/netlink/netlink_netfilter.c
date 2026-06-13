@@ -563,7 +563,7 @@ static int netlink_list_conntrack(NETLINK_HANDLE handle,
   uint8_t type = NFNL_MSG_TYPE(req->hdr.nlmsg_type);
   if (type != IPCTNL_MSG_CT_GET)
     {
-      return -ENOSYS;
+      return -EOPNOTSUPP;
     }
 
   info.handle = handle;
@@ -584,7 +584,7 @@ static int netlink_list_conntrack(NETLINK_HANDLE handle,
 #endif
 
       default:
-        return -ENOSYS;
+        return -EAFNOSUPPORT;
     }
 
   return netlink_add_terminator(handle, &req->hdr, 0);
@@ -610,7 +610,7 @@ ssize_t netlink_netfilter_sendto(NETLINK_HANDLE handle,
 {
   FAR const struct nfnl_sendto_request_s *req =
     (FAR const struct nfnl_sendto_request_s *)nlmsg;
-  ssize_t ret = -ENOSYS;
+  ssize_t ret = -EOPNOTSUPP;
   uint8_t subsys;
 
   DEBUGASSERT(handle != NULL && nlmsg != NULL &&
@@ -698,7 +698,7 @@ void netlink_conntrack_notify(uint8_t type, uint8_t domain,
 
   if (resp != NULL)
     {
-      netlink_add_broadcast(group, resp);
+      netlink_add_broadcast_protocol(NETLINK_NETFILTER, group, resp);
     }
 }
 

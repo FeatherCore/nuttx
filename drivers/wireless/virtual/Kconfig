@@ -1,0 +1,151 @@
+#
+# For a description of the syntax of this configuration file,
+# see the file kconfig-language.txt in the NuttX tools repository.
+#
+
+menu "Virtual IEEE 802.11 devices"
+
+config WL_VIRTUAL
+	bool "Virtual Wi-Fi driver support"
+	default n
+	depends on DRIVERS_WIRELESS
+	---help---
+		Enable NuttX virtual Wi-Fi driver support. The imported Linux
+		source files live in this directory as a vendor reference while
+		the NuttX compatibility layer is being completed.
+
+if WL_VIRTUAL
+
+config WL_NUTTX_HWSIM
+	bool "NuttX simulator virtual Wi-Fi hwsim driver"
+	default n
+	depends on ARCH_SIM && DRIVERS_WIFI_SIM && SIM_WIFIDEV_PSEUDO
+	---help---
+		Enable the NuttX simulator virtual Wi-Fi entry point. This
+			driver provides the NuttX-facing hwsim hook used by sim
+			configurations while the imported Linux mac80211_hwsim source is
+			kept as the vendor reference for the full cfg80211/mac80211 port.
+
+config WL_NUTTX_HWSIM_DEBUG
+	bool "Print hwsim port debug events"
+	default n
+	depends on WL_NUTTX_HWSIM
+	---help---
+		Emit low-level hwsim, cfg80211, nl80211, and mac80211 porting
+		debug logs. This is intended for simulator validation and should be
+		left disabled in quiet runtime configurations.
+
+config WL_NUTTX_HWSIM_RADIO_BASE
+	int "NuttX hwsim radio MAC base"
+	default 0
+	depends on WL_NUTTX_HWSIM
+	---help---
+		Offset the auto-generated mac80211_hwsim radio MAC addresses. This
+		lets separately launched simulator processes use distinct wlan0 MAC
+		addresses while each process still creates its own local radio set.
+
+config WL_NUTTX_HWSIM_RADIOS
+	int "NuttX hwsim radio count"
+	default 2
+	range 0 100
+	depends on WL_NUTTX_HWSIM
+	---help---
+		Select how many mac80211_hwsim radios are created inside one
+		simulator process. This mirrors the Linux mac80211_hwsim radios
+		module parameter, which is not runtime-configurable in the NuttX
+		port because module_param() is a compatibility no-op.
+
+config WL_NUTTX_HWSIM_CHANNELS
+	int "NuttX hwsim concurrent channel count"
+	default 2
+	range 1 64
+	depends on WL_NUTTX_HWSIM
+	---help---
+		Select the advertised number of concurrent channels for one hwsim
+		radio. This mirrors the Linux mac80211_hwsim channels module
+		parameter and controls whether channel-context support is enabled.
+
+config WL_NUTTX_HWSIM_MEDIUM_MAX_BYTES
+	int "NuttX hwsim shared frame medium limit"
+	default 67108864
+	range 1048576 268435456
+	depends on WL_NUTTX_HWSIM
+	---help---
+		Maximum size in bytes for the hostfs-backed hwsim shared frame
+		medium before it is truncated. Larger values reduce false
+		truncation during debug-heavy iperf, TWT, power-save, and wide
+		channel validation runs while keeping a bounded host file.
+
+config WL_NUTTX_HWSIM_MLO_SUPPORT
+	bool "Enable hwsim MLO and dynamic power-save capability flags"
+	default n
+	depends on WL_NUTTX_HWSIM
+	---help---
+		Enable the imported mac80211_hwsim MLO path for validation builds.
+		This sets WIPHY_FLAG_SUPPORTS_MLO plus SUPPORTS_DYNAMIC_PS,
+		CONNECTION_MONITOR, and AP_LINK_PS when each radio is created.
+		Keep this disabled for baseline AP/STA/P2P runs until the MLO and
+		dynamic power-save runtime behavior is fully proven.
+
+config WL_NUTTX_HWSIM_MULTI_RADIO_SUPPORT
+	bool "Enable hwsim multi-radio-per-wiphy capability"
+	default n
+	depends on WL_NUTTX_HWSIM
+	---help---
+		Enable the imported mac80211_hwsim multi-radio capability for
+		validation builds. This mirrors the Linux mac80211_hwsim
+		multi_radio module parameter and forces channel-context support.
+
+config WL_NUTTX_HWSIM_AMPDU_PROOF
+	bool "Print hwsim A-MPDU proof events"
+	default n
+	depends on WL_NUTTX_HWSIM
+	---help---
+		Emit low-volume A-MPDU proof logs while validating the simulator
+		mac80211_hwsim port. This is intended for AP/STA validation runs
+		and only prints aggregation trigger, ADDBA, and ampdu_action state.
+
+config WL_NUTTX_HWSIM_AMSDU_PROOF
+	bool "Enable and print hwsim A-MSDU proof events"
+	default n
+	depends on WL_NUTTX_HWSIM
+	---help---
+		Enable the simulator hwsim A-MSDU capability bits needed for
+		runtime validation and emit low-volume proof logs when mac80211
+		actually builds an A-MSDU frame. Linux mac80211_hwsim does not
+		enable these hardware flags by default, so keep this option
+		limited to validation configurations.
+
+config WL_NUTTX_HWSIM_DCM_PROOF
+	bool "Enable and print hwsim HE DCM proof events"
+	default n
+	depends on WL_NUTTX_HWSIM
+	---help---
+		Enable simulator-only HE DCM capability bits and low-volume proof
+		logs for runtime validation. Data-frame RX status injection is
+		still gated by the /h/hwsim-dcm-proof marker file so non-DCM
+		validation runs are not reported as HE DCM traffic.
+
+config WL_NUTTX_HWSIM_PS_PROOF
+	bool "Print hwsim power-save proof events"
+	default n
+	depends on WL_NUTTX_HWSIM
+	---help---
+		Emit low-volume mac80211 AP power-save proof logs while validating
+		the simulator hwsim path. The trace points cover STA sleep/wake,
+		unicast PS buffering, TIM changes, PS-Poll delivery, and wakeup
+		delivery.
+
+config WL_VIRTUAL_LINUX_VENDOR_DROP
+	bool "Linux virtual wireless source drop"
+	default n
+	---help---
+		Keep the Linux 7.0.10 virtual wireless source drop visible in
+		the NuttX Kconfig tree. This option intentionally does not build
+		the Linux files yet; mac80211_hwsim.c and virt_wifi.c require
+		Linux module, cfg80211, mac80211, sk_buff, netlink, debugfs, and
+		rhashtable compatibility that is still being ported.
+
+endif
+
+endmenu

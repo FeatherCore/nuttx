@@ -468,8 +468,8 @@ static int wifi_send_event(FAR struct wifi_sim_s *wifidev,
   memset(&wev->event.u, 0, sizeof(union iwreq_data));
   memcpy(&wev->event.u, ((FAR char *) wrqu), sizeof(union iwreq_data));
 
-  netlink_add_broadcast(RTNLGRP_LINK,
-                        (FAR struct netlink_response_s *)alloc);
+  netlink_add_broadcast_protocol(NETLINK_ROUTE, RTNLGRP_LINK,
+                                 (FAR struct netlink_response_s *)alloc);
   return OK;
 }
 
@@ -2017,4 +2017,3 @@ bool wifi_sim_connected(FAR struct wifi_sim_lowerhalf_s *dev)
 
   return false;
 }
-
