@@ -26,6 +26,7 @@ ifeq ($(CONFIG_DRIVERS_VIDEO),y)
 
 ifeq ($(CONFIG_VIDEO_FB),y)
   CSRCS += fb.c
+  CSRCS += video_fillrectangle_blend.c
 endif
 
 ifeq ($(CONFIG_VIDEO_STREAM),y)
