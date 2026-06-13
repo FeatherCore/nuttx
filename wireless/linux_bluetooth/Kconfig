@@ -1,0 +1,230 @@
+#############################################################################
+# wireless/linux_bluetooth/Kconfig
+#
+# SPDX-License-Identifier: Apache-2.0
+#############################################################################
+
+menuconfig NET_LINUX_BLUETOOTH
+	bool "Linux-semantics Bluetooth stack port"
+	default n
+	depends on ALLOW_BSD_COMPONENTS
+	select MM_IOB
+	select SCHED_HPWORK
+	select SCHED_LPWORK
+	---help---
+		Enable the Linux-semantics Bluetooth stack port.  This namespace is
+		intentionally separate from NuttX's legacy wireless/bluetooth stack.
+		The implementation target is a direct upstream-first port of Linux
+		net/bluetooth and BlueZ-observable behavior, including HCI, mgmt,
+		L2CAP, SMP, ATT/GATT, AVDTP/A2DP and LE Audio ISO paths.  Keep
+		temporary NuttX-native shim code limited to sim/hwsim bring-up and
+		compatibility gaps.
+
+if NET_LINUX_BLUETOOTH
+
+config NET_LINUX_BLUETOOTH_UPSTREAM_SOURCES
+	bool "Compile imported Linux net/bluetooth sources"
+	default n
+	---help---
+		Enable this only after the required Linux kernel compatibility
+		headers are available.  Imported upstream files live under
+		wireless/linux_bluetooth/upstream and should be adapted before
+		reimplementing protocol behavior in NuttX-native code.
+
+config NET_LINUX_BLUETOOTH_UPSTREAM_LIB
+	bool "Compile upstream net/bluetooth/lib.c"
+	default y
+	depends on NET_LINUX_BLUETOOTH_UPSTREAM_SOURCES
+	---help---
+		First upstream compile target.  This carries Linux Bluetooth helper
+		semantics such as baswap(), bt_to_errno(), bt_status() and logging.
+
+config NET_LINUX_BLUETOOTH_UPSTREAM_EIR
+	bool "Compile upstream net/bluetooth/eir.c"
+	default n
+	depends on NET_LINUX_BLUETOOTH_UPSTREAM_SOURCES
+	---help---
+		Enable after the hci_dev, uuid list and EIR/mgmt dependencies from
+		Linux hci_core.h are represented in the compat layer.
+
+config NET_LINUX_BLUETOOTH_UPSTREAM_HCI_CODEC
+	bool "Compile upstream net/bluetooth/hci_codec.c"
+	default n
+	depends on NET_LINUX_BLUETOOTH_UPSTREAM_SOURCES
+	---help---
+		Enable after sk_buff, codec lists and HCI sync command semantics are
+		represented in the compat layer.
+
+config NET_LINUX_BLUETOOTH_UPSTREAM_AF
+	bool "Compile upstream net/bluetooth/af_bluetooth.c"
+	default n
+	depends on NET_LINUX_BLUETOOTH_UPSTREAM_SOURCES
+	---help---
+		Compile the Linux Bluetooth address-family registration code.
+		This should be enabled after NuttX socket/domain registration and
+		Linux proto/socket ownership semantics are represented well enough
+		for AF_BLUETOOTH observable behavior.
+
+config NET_LINUX_BLUETOOTH_UPSTREAM_HCI_CORE
+	bool "Compile upstream Linux HCI core files"
+	default n
+	depends on NET_LINUX_BLUETOOTH_UPSTREAM_SOURCES
+	---help---
+		Compile the core Linux HCI implementation: hci_core.c,
+		hci_conn.c, hci_event.c and hci_sync.c.  This is the point where
+		the temporary VHCI-stage hci_dev wrapper should be replaced by the
+		real Linux hci_dev lifecycle, work queues, command/event handling
+		and connection state machine.
+
+config NET_LINUX_BLUETOOTH_UPSTREAM_HCI_SOCK
+	bool "Compile upstream net/bluetooth/hci_sock.c"
+	default n
+	depends on NET_LINUX_BLUETOOTH_UPSTREAM_HCI_CORE
+	---help---
+		Compile Linux raw/control HCI socket behavior after struct sock,
+		sk_buff ownership, poll/wakeup and socket filter compatibility are
+		available.
+
+config NET_LINUX_BLUETOOTH_UPSTREAM_MGMT
+	bool "Compile upstream Linux Bluetooth mgmt files"
+	default n
+	depends on NET_LINUX_BLUETOOTH_UPSTREAM_HCI_CORE
+	---help---
+		Compile mgmt.c, mgmt_config.c and mgmt_util.c.  This should
+		eventually replace the temporary mgmt facade used by btctl and
+		provide BlueZ-observable controller settings and mgmt events.
+
+config NET_LINUX_BLUETOOTH_UPSTREAM_L2CAP
+	bool "Compile upstream Linux L2CAP files"
+	default n
+	depends on NET_LINUX_BLUETOOTH_UPSTREAM_HCI_CORE
+	---help---
+		Compile l2cap_core.c and l2cap_sock.c after Linux socket,
+		channel, timer, security and sk_buff queue compatibility are ready.
+
+config NET_LINUX_BLUETOOTH_UPSTREAM_SMP
+	bool "Compile upstream Linux SMP"
+	default n
+	depends on NET_LINUX_BLUETOOTH_UPSTREAM_L2CAP
+	---help---
+		Compile smp.c so pairing/security moves from the temporary Just
+		Works skeleton into Linux's SMP state machine and key distribution
+		semantics.
+
+config NET_LINUX_BLUETOOTH_UPSTREAM_ISO
+	bool "Compile upstream Linux ISO sockets/path"
+	default n
+	depends on NET_LINUX_BLUETOOTH_UPSTREAM_HCI_CORE
+	---help---
+		Compile iso.c for LE Audio ISO socket/path behavior.  This should
+		eventually replace the temporary BIG/BIS synthetic table used by
+		the current hwsim LE Audio bring-up.
+
+config NET_LINUX_BLUETOOTH_UPSTREAM_BNEP
+	bool "Compile upstream Linux BNEP PAN networking path"
+	default n
+	depends on NET_LINUX_BLUETOOTH_UPSTREAM_L2CAP
+	---help---
+		Compile the imported Linux net/bluetooth/bnep core, socket and
+		netdevice sources.  This is the BR/EDR PAN/IP networking path
+		needed for future hwsim BT1/BT2 ping and iperf validation.
+		Enable only after Linux netdevice, skb, socket/ioctl and namespace
+		compatibility are mapped onto NuttX networking semantics.
+
+config NET_LINUX_BLUETOOTH_UPSTREAM_6LOWPAN
+	bool "Compile upstream Linux Bluetooth 6LoWPAN networking path"
+	default n
+	depends on NET_LINUX_BLUETOOTH_UPSTREAM_L2CAP
+	depends on NET_IPv6
+	---help---
+		Compile the imported Linux net/bluetooth/6lowpan.c path together
+		with the generic Linux net/6lowpan compression helpers.  This is
+		the LE IP networking path needed for BLE1/BLE2 hwsim IPv6 ping and
+		BlueZ 6lowpan-tester style validation.
+
+		Keep this disabled until the Linux IPv6 route/neighbour,
+		lowpan_dev, L2CAP CoC callback and netdevice compatibility
+		surfaces are represented well enough to preserve Linux observable
+		behavior instead of replacing it with a NuttX-only shortcut.
+
+config NET_LINUX_BLUETOOTH_6LOWPAN_BRIDGE
+	bool "Enable NuttX-facing Bluetooth 6LoWPAN hwsim netdev bridge"
+	default n
+	depends on NET_LINUX_BLUETOOTH
+	depends on NET_IPv6
+	depends on NET_MBIM
+	depends on SIM_BTHWSIM
+	---help---
+		Register a NuttX netdev for BLE hwsim IP validation and exchange
+		RFC 6LoWPAN uncompressed IPv6 dispatch frames over the LE IPSP
+		L2CAP data channel on the SIM_BTHWSIM ACL medium.
+
+		This is the NuttX-facing bridge needed to start BLE1/BLE2 IPv6
+		ping validation.  It deliberately lives outside imported upstream
+		Linux sources.  The long-term target remains replacing its
+		uncompressed dispatch shortcut with the imported Linux
+		net/bluetooth/6lowpan.c + net/6lowpan IPHC path once the required
+		Linux IPv6 route/neighbour and L2CAP CoC compatibility surfaces
+		are complete.
+
+config NET_LINUX_BLUETOOTH_UPSTREAM_HCI_VHCI
+	bool "Enable upstream drivers/bluetooth/hci_vhci.c port"
+	default n
+	depends on NET_LINUX_BLUETOOTH_UPSTREAM_SOURCES
+	---help---
+		Enable the Linux virtual HCI controller driver port.  The source is
+		imported under wireless/linux_bluetooth/upstream, but the build
+		owner is drivers/bluetooth to match Linux's split between
+		net/bluetooth and drivers/bluetooth.  This is the Bluetooth
+		controller-side counterpart to the mac80211_hwsim_linux.c import
+		used by the Wi-Fi hwsim port.  Enable only after hci_dev,
+		miscdevice, debugfs, sk_buff queues and file operation compat are
+		available.
+
+config NET_LINUX_BLUETOOTH_UPSTREAM_HCI_VHCI_AUTOSTART
+	bool "Open upstream hci_vhci during sim bring-up"
+	default n
+	depends on NET_LINUX_BLUETOOTH_UPSTREAM_HCI_VHCI
+	depends on SIM_BTHWSIM
+	---help---
+		Automatically register and open the imported upstream hci_vhci
+		miscdevice after the SIM_BTHWSIM public-file medium is ready.
+		This follows the same shape as the Wi-Fi hwsim Linux-driver import:
+		keep the upstream driver as the authority and add only a
+		NuttX-facing initialize/open bridge.
+
+config NET_LINUX_BLUETOOTH_HCI
+	bool "Linux Bluetooth HCI core"
+	default y
+
+config NET_LINUX_BLUETOOTH_L2CAP
+	bool "Linux Bluetooth L2CAP"
+	default y
+	depends on NET_LINUX_BLUETOOTH_HCI
+
+config NET_LINUX_BLUETOOTH_SMP
+	bool "Linux Bluetooth SMP"
+	default y
+	depends on NET_LINUX_BLUETOOTH_L2CAP
+
+config NET_LINUX_BLUETOOTH_ATT_GATT
+	bool "Linux Bluetooth ATT/GATT semantic layer"
+	default y
+	depends on NET_LINUX_BLUETOOTH_L2CAP
+
+config NET_LINUX_BLUETOOTH_A2DP
+	bool "A2DP/AVDTP semantic path"
+	default y
+	depends on NET_LINUX_BLUETOOTH_L2CAP
+
+config NET_LINUX_BLUETOOTH_ISO
+	bool "LE Audio ISO semantic path"
+	default y
+	depends on NET_LINUX_BLUETOOTH_HCI
+
+config NET_LINUX_BLUETOOTH_MAX_CONN
+	int "Maximum Linux Bluetooth connections"
+	default 4
+	range 1 32
+
+endif # NET_LINUX_BLUETOOTH

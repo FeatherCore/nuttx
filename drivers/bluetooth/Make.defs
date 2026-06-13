@@ -1,0 +1,24 @@
+############################################################################
+# drivers/bluetooth/Make.defs
+#
+# SPDX-License-Identifier: Apache-2.0
+############################################################################
+
+ifeq ($(CONFIG_NET_LINUX_BLUETOOTH),y)
+CFLAGS += ${INCDIR_PREFIX}$(TOPDIR)$(DELIM)wireless$(DELIM)linux_bluetooth$(DELIM)upstream$(DELIM)compat$(DELIM)include
+CFLAGS += ${INCDIR_PREFIX}$(TOPDIR)$(DELIM)wireless$(DELIM)linux_compat$(DELIM)include
+CFLAGS += ${INCDIR_PREFIX}$(TOPDIR)$(DELIM)wireless$(DELIM)ieee80211$(DELIM)include
+CSRCS += linux_bt_upstream_vhci.c
+DEPPATH += --dep-path bluetooth
+VPATH += :bluetooth
+endif
+
+ifeq ($(CONFIG_DRIVERS_BLUETOOTH_LINUX),y)
+ifeq ($(CONFIG_DRIVERS_BLUETOOTH_LINUX_HCI_VHCI),y)
+CFLAGS += ${INCDIR_PREFIX}$(TOPDIR)$(DELIM)wireless$(DELIM)linux_compat$(DELIM)include
+CFLAGS += ${INCDIR_PREFIX}$(TOPDIR)$(DELIM)wireless$(DELIM)ieee80211$(DELIM)include
+CSRCS += hci_vhci.c
+DEPPATH += --dep-path ..$(DELIM)wireless$(DELIM)linux_bluetooth$(DELIM)upstream$(DELIM)drivers_bluetooth
+VPATH += :..$(DELIM)wireless$(DELIM)linux_bluetooth$(DELIM)upstream$(DELIM)drivers_bluetooth
+endif
+endif # CONFIG_DRIVERS_BLUETOOTH_LINUX

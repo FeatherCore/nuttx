@@ -44,6 +44,14 @@
 #include "socket/socket.h"
 
 /****************************************************************************
+ * Public Data
+ ****************************************************************************/
+
+#if defined(CONFIG_NET_LINUX_BLUETOOTH) && !defined(CONFIG_NET_BLUETOOTH)
+extern const struct sock_intf_s g_linux_bt_sockif;
+#endif
+
+/****************************************************************************
  * Private Function Prototypes
  ****************************************************************************/
 
@@ -248,7 +256,11 @@ net_sockif(sa_family_t family, int type, int protocol)
       break;
 #endif
 
-#ifdef CONFIG_NET_BLUETOOTH
+#ifdef CONFIG_NET_LINUX_BLUETOOTH
+    case PF_BLUETOOTH:
+      sockif = &g_linux_bt_sockif;
+      break;
+#elif defined(CONFIG_NET_BLUETOOTH)
     case PF_BLUETOOTH:
       sockif = &g_bluetooth_sockif;
       break;

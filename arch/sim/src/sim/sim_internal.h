@@ -437,6 +437,29 @@ int sim_rpmsg_port_uart_init(const char *localcpu, const char *remotecpu,
 int sim_bthcisock_register(int dev_id);
 #endif
 
+/* sim_bthwsim.c ************************************************************/
+
+#ifdef CONFIG_SIM_BTHWSIM
+int sim_bthwsim_register(int role_id);
+int sim_bthwsim_send(uint16_t type, uint16_t dst, const void *payload,
+                     uint32_t payload_len);
+int sim_bthwsim_read(uint16_t type, char *out, size_t out_len);
+int sim_bthwsim_read_raw(uint16_t type, uint16_t *src, uint16_t *dst,
+                         void *payload, uint32_t payload_len,
+                         uint32_t *out_len);
+int sim_bthwsim_read_raw_named(uint16_t type, const char *consumer,
+                               uint16_t *src, uint16_t *dst,
+                               void *payload, uint32_t payload_len,
+                               uint32_t *out_len);
+int sim_bthwsim_h4_read(const char *path, void *payload,
+                        uint32_t payload_len, uint32_t *out_len);
+int sim_bthwsim_h4_append(const char *path, const void *payload,
+                          uint32_t payload_len);
+int sim_bthwsim_conn_set(uint16_t peer, uint16_t handle,
+                         const char *state);
+int sim_bthwsim_conn_clear(uint16_t peer);
+#endif
+
 /* sim_audio.c **************************************************************/
 
 #ifdef CONFIG_SIM_SOUND

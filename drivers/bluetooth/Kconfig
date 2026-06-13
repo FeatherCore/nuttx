@@ -1,0 +1,29 @@
+#############################################################################
+# drivers/bluetooth/Kconfig
+#
+# SPDX-License-Identifier: Apache-2.0
+#############################################################################
+
+menuconfig DRIVERS_BLUETOOTH_LINUX
+	bool "Linux Bluetooth controller driver port"
+	default y if NET_LINUX_BLUETOOTH
+	depends on NET_LINUX_BLUETOOTH
+	---help---
+		Enable the Linux-style Bluetooth controller driver port area.
+		This directory mirrors Linux drivers/bluetooth and is separate from
+		the Linux host stack port under wireless/linux_bluetooth.
+
+if DRIVERS_BLUETOOTH_LINUX
+
+config DRIVERS_BLUETOOTH_LINUX_HCI_VHCI
+	bool "Build imported Linux drivers/bluetooth/hci_vhci.c"
+	default y if NET_LINUX_BLUETOOTH_UPSTREAM_HCI_VHCI
+	depends on NET_LINUX_BLUETOOTH_UPSTREAM_HCI_VHCI
+	---help---
+		Compile the imported Linux virtual HCI driver from the
+		wireless/linux_bluetooth/upstream/drivers_bluetooth staging area,
+		but do so from the NuttX drivers/bluetooth layer.  This matches
+		Linux's split between net/bluetooth host stack code and
+		drivers/bluetooth controller drivers.
+
+endif # DRIVERS_BLUETOOTH_LINUX

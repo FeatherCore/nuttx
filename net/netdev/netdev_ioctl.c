@@ -74,6 +74,14 @@
 #  include <nuttx/wireless/cellular/cellular.h>
 #endif
 
+/****************************************************************************
+ * Pre-processor Definitions
+ ****************************************************************************/
+
+#ifndef BTPROTO_HCI
+#  define BTPROTO_HCI 1
+#endif
+
 #ifdef CONFIG_NETDEV_MODEM_LTE_IOCTL
 #  include <nuttx/wireless/lte/lte_ioctl.h>
 #endif
@@ -1901,6 +1909,16 @@ int psock_vioctl(FAR struct socket *psock, int cmd, va_list ap)
     }
 
   arg = va_arg(ap, unsigned long);
+
+  if (psock->s_domain == PF_BLUETOOTH && psock->s_proto == BTPROTO_HCI &&
+      psock->s_sockif != NULL && psock->s_sockif->si_ioctl != NULL)
+    {
+      ret = psock->s_sockif->si_ioctl(psock, cmd, arg);
+      if (ret != -ENOTTY)
+        {
+          return ret;
+        }
+    }
 
   /* Check for socket specific ioctl command */
 

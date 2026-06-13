@@ -6,33 +6,6 @@
 #include <linux/inetdevice.h>
 struct wireless_dev;
 struct sk_buff;
-struct net_device
-{
-  char name[IFNAMSIZ];
-  int ifindex;
-  unsigned int flags;
-  unsigned int priv_flags;
-  bool netns_immutable;
-  unsigned char dev_addr[6];
-  unsigned char perm_addr[6];
-  unsigned char addr_len;
-  struct device dev;
-  struct wireless_dev *ieee80211_ptr;
-  struct netdev_hw_addr_list mc;
-  const struct net_device_ops *netdev_ops;
-  unsigned short type;
-  bool needs_free_netdev;
-  bool carrier;
-  bool queue_stopped;
-  int pcpu_stat_type;
-  unsigned int needed_headroom;
-  unsigned int needed_tailroom;
-  netdev_features_t features;
-  netdev_features_t hw_features;
-  unsigned int min_mtu;
-  unsigned int max_mtu;
-  void *ml_priv;
-};
 struct net_device_stats
 {
   unsigned long rx_packets;
@@ -43,6 +16,40 @@ struct net_device_stats
   unsigned long tx_errors;
   unsigned long rx_dropped;
   unsigned long tx_dropped;
+};
+
+struct net_device
+{
+  char name[IFNAMSIZ];
+  int ifindex;
+  unsigned int flags;
+  unsigned int priv_flags;
+  bool netns_immutable;
+  unsigned char dev_addr[6];
+  unsigned char perm_addr[6];
+  unsigned char broadcast[6];
+  unsigned char addr_len;
+  struct device dev;
+  struct wireless_dev *ieee80211_ptr;
+  struct netdev_hw_addr_list mc;
+  const struct net_device_ops *netdev_ops;
+  struct net_device_stats stats;
+  unsigned short type;
+  unsigned int mtu;
+  unsigned int hard_header_len;
+  unsigned int tx_queue_len;
+  bool needs_free_netdev;
+  bool carrier;
+  bool queue_stopped;
+  int pcpu_stat_type;
+  unsigned int needed_headroom;
+  unsigned int needed_tailroom;
+  unsigned int watchdog_timeo;
+  netdev_features_t features;
+  netdev_features_t hw_features;
+  unsigned int min_mtu;
+  unsigned int max_mtu;
+  void *ml_priv;
 };
 struct netdev_hw_addr
 {
@@ -133,6 +140,30 @@ static inline void netif_wake_queue(struct net_device *dev)
     {
       dev->queue_stopped = false;
     }
+}
+
+static inline void netif_trans_update(struct net_device *dev)
+{
+  (void)dev;
+}
+
+static inline int netif_rx(struct sk_buff *skb)
+{
+#ifdef CONFIG_NET_LINUX_BLUETOOTH_UPSTREAM_BNEP
+  extern int linux_bt_bnep_netif_rx(struct sk_buff *skb);
+
+  if (skb != NULL && skb->dev != NULL &&
+      ((skb->dev->name[0] == 'b' && skb->dev->name[1] == 'n' &&
+        skb->dev->name[2] == 'e' && skb->dev->name[3] == 'p') ||
+       (skb->dev->name[0] == 'b' && skb->dev->name[1] == 't' &&
+        skb->dev->name[2] == 'n')))
+    {
+      return linux_bt_bnep_netif_rx(skb);
+    }
+#endif
+
+  (void)skb;
+  return 0;
 }
 
 static inline void netif_device_detach(struct net_device *dev)

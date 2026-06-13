@@ -25,6 +25,7 @@ CSRCS += ieee80211/genetlink_bridge.c
 CSRCS += ieee80211/ieee80211_linux_init.c
 CSRCS += ieee80211/netdevice_compat.c
 CFLAGS += ${INCDIR_PREFIX}$(TOPDIR)$(DELIM)wireless$(DELIM)ieee80211$(DELIM)include
+CFLAGS += ${INCDIR_PREFIX}$(TOPDIR)$(DELIM)wireless$(DELIM)linux_compat$(DELIM)include
 CFLAGS += ${INCDIR_PREFIX}$(TOPDIR)$(DELIM)wireless$(DELIM)ieee80211$(DELIM)include$(DELIM)uapi
 CFLAGS += -include $(TOPDIR)$(DELIM)wireless$(DELIM)ieee80211$(DELIM)include$(DELIM)linux$(DELIM)cfg80211_compat.h
 endif

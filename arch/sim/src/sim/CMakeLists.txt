@@ -262,6 +262,11 @@ if(CONFIG_SIM_HCISOCKET)
   list(APPEND SRCS sim_hcisocket.c)
 endif()
 
+if(CONFIG_SIM_BTHWSIM)
+  list(APPEND HOSTSRCS sim_hostbthwsim.c)
+  list(APPEND SRCS sim_bthwsim.c)
+endif()
+
 if(CONFIG_SIM_I2CBUS_LINUX)
   list(APPEND HOSTSRCS sim_linuxi2c.c)
 endif()

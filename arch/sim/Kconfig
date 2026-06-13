@@ -624,6 +624,43 @@ config SIM_HCISOCKET_DEVID
 		Attached the local bluetooth device use specific
 		Bluetooth HCI number id.
 
+config SIM_BTHWSIM
+	bool "Simulated Linux Bluetooth hwsim medium"
+	default false
+	depends on HOST_LINUX && NET_LINUX_BLUETOOTH
+	---help---
+		Enable the Linux-semantics Bluetooth hwsim backend for the
+		simulator.  Unlike SIM_HCISOCKET, this does not attach to a host
+		Bluetooth controller.  It creates a public host-file medium that
+		multiple simulator instances can read and append to, mirroring the
+		mac80211_hwsim-style simulation model.
+
+config SIM_BTHWSIM_ROLE
+	int "Bluetooth hwsim role id"
+	default 1
+	depends on SIM_BTHWSIM
+	---help---
+		Numeric hwsim role id.  Use distinct ids for bt1, bt2, ble1 and
+		ble2 so each simulator instance can skip its own transmitted
+		records and consume peer records.
+
+config SIM_BTHWSIM_MEDIUM_DIR
+	string "Bluetooth hwsim medium directory"
+	default "/tmp/nuttx-bthwsim"
+	depends on SIM_BTHWSIM
+	---help---
+		Host directory used for public-file Bluetooth medium records.
+		The backend creates bt-hwsim-ctrl.bin, bt-hwsim-adv.bin,
+		bt-hwsim-acl.bin and bt-hwsim-iso.bin under this directory.
+
+config SIM_BTHWSIM_MODE
+	string "Bluetooth hwsim mode"
+	default "dual"
+	depends on SIM_BTHWSIM
+	---help---
+		Role mode for diagnostics and future policy.  Expected values are
+		dual, bredr and le.
+
 config SIM_I2CBUS
 	bool "Simulated I2C Bus"
 	default n

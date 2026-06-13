@@ -1,0 +1,5 @@
+#ifndef __WIRELESS_LINUX_BLUETOOTH_COMPAT_LINUX_INIT_H
+#define __WIRELESS_LINUX_BLUETOOTH_COMPAT_LINUX_INIT_H
+#define __init
+#define __exit
+#endif

@@ -1,0 +1,1 @@
+../../../../include_net_bluetooth/hci_sync.h
