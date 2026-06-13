@@ -301,12 +301,43 @@ void sim_registerblockdevice(void);
 /* sim_x11framebuffer.c *****************************************************/
 
 #ifdef CONFIG_SIM_X11FB
+enum sim_x11_input_type_e
+{
+  SIM_X11_INPUT_NONE = 0,
+  SIM_X11_INPUT_POINTER_DOWN,
+  SIM_X11_INPUT_POINTER_MOVE,
+  SIM_X11_INPUT_POINTER_UP,
+  SIM_X11_INPUT_KEY_DOWN,
+  SIM_X11_INPUT_KEY_UP,
+  SIM_X11_INPUT_ENCODER_ROTATE
+};
+
+enum sim_x11_key_code_e
+{
+  SIM_X11_KEY_UNKNOWN = 0,
+  SIM_X11_KEY_BACKSPACE = 8,
+  SIM_X11_KEY_TAB = 9,
+  SIM_X11_KEY_ENTER = 13,
+  SIM_X11_KEY_DELETE = 127,
+  SIM_X11_KEY_SPACE = 32,
+  SIM_X11_KEY_LEFT = 1000,
+  SIM_X11_KEY_RIGHT,
+  SIM_X11_KEY_UP,
+  SIM_X11_KEY_DOWN
+};
+
 int sim_x11initialize(unsigned short width, unsigned short height,
                       void **fbmem, size_t *fblen, unsigned char *bpp,
                       unsigned short *stride, int fbcount, int interval);
 int sim_x11update(void);
 int sim_x11openwindow(void);
 int sim_x11closewindow(void);
+bool sim_x11windowclosed(void);
+bool sim_x11pollwindowclosed(void);
+int sim_x11pollinput(int *type, int16_t *x, int16_t *y,
+                     uint16_t *key, int16_t *encoder_delta,
+                     uint8_t *button);
+void sim_x11markwindowclosed(void);
 int sim_x11setoffset(unsigned int offset);
 #ifdef CONFIG_FB_CMAP
 int sim_x11cmap(unsigned short first, unsigned short len,
