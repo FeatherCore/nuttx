@@ -1,0 +1,6 @@
+#ifndef __WIRELESS_LINUX_BLUETOOTH_COMPAT_LINUX_UTSNAME_H
+#define __WIRELESS_LINUX_BLUETOOTH_COMPAT_LINUX_UTSNAME_H
+
+#include_next <linux/utsname.h>
+
+#endif

@@ -819,6 +819,8 @@ struct hlist_head
   struct hlist_node *first;
 };
 
+#define __WIRELESS_LINUX_COMPAT_LIST_TYPES_DEFINED 1
+
 struct skb_shared_hwtstamps
 {
   ktime_t hwtstamp;
@@ -1668,10 +1670,14 @@ struct netlink_callback
 
 typedef bool (*netlink_filter_fn)(struct sk_buff *skb, void *data);
 
+#ifdef __WIRELESS_IEEE80211_EXTERNAL_STRUCT_SOCK
+struct sock;
+#else
 struct sock
 {
   int dummy;
 };
+#endif
 
 static inline struct net *sock_net(const struct sock *sk)
 {
@@ -2090,10 +2096,13 @@ struct workqueue_struct
   int dummy;
 };
 
+#define __WIRELESS_LINUX_COMPAT_WORKQUEUE_TYPES_DEFINED 1
+
 static struct workqueue_struct cfg80211_compat_system_wq;
 #define system_dfl_wq (&cfg80211_compat_system_wq)
 #define system_power_efficient_wq (&cfg80211_compat_system_wq)
 #define system_freezable_wq (&cfg80211_compat_system_wq)
+#define __WIRELESS_LINUX_COMPAT_WORKQUEUE_GLOBALS_DEFINED 1
 
 #define WQ_MEM_RECLAIM 0
 #define WQ_HIGHPRI 0
@@ -2196,6 +2205,8 @@ static inline void flush_workqueue(struct workqueue_struct *wq)
 {
   (void)wq;
 }
+
+#define __WIRELESS_LINUX_COMPAT_WORKQUEUE_CORE_HELPERS_DEFINED 1
 
 #define list_first_entry_or_null(ptr, type, member) \
   (list_empty(ptr) ? NULL : list_first_entry(ptr, type, member))
@@ -2387,6 +2398,11 @@ static inline void hlist_del(struct hlist_node *n)
   INIT_HLIST_NODE(n);
 }
 
+static inline void hlist_del_init(struct hlist_node *n)
+{
+  hlist_del(n);
+}
+
 #define hlist_add_head_rcu(n, h) hlist_add_head(n, h)
 #define hlist_del_rcu(n) hlist_del(n)
 #define hlist_entry(ptr, type, member) container_of(ptr, type, member)
@@ -2457,6 +2473,8 @@ static inline void list_splice_init(struct list_head *list,
        pos = n, n = list_entry(n->member.next, typeof(*n), member))
 #define list_for_each_entry_rcu(pos, head, member, args...) \
   list_for_each_entry(pos, head, member)
+
+#define __WIRELESS_LINUX_COMPAT_LIST_HELPERS_DEFINED 1
 
 #define rhl_for_each_entry_rcu(pos, tmp, list, member) \
   for (tmp = (list), pos = tmp ? container_of(tmp, typeof(*pos), member) : NULL; \
@@ -2904,6 +2922,7 @@ static inline void flush_work(struct work_struct *work)
 {
   (void)work;
 }
+#define __WIRELESS_LINUX_COMPAT_WORKQUEUE_FLUSH_WORK_DEFINED 1
 
 static inline bool cancel_delayed_work_sync(struct delayed_work *dwork)
 {
@@ -2916,6 +2935,7 @@ static inline bool cancel_delayed_work_sync(struct delayed_work *dwork)
                           &dwork->work.nuttx_work) == 0;
 }
 #define __WIRELESS_IEEE80211_WORKQUEUE_CANCEL_COMPAT 1
+#define __WIRELESS_LINUX_COMPAT_WORKQUEUE_CANCEL_DELAYED_WORK_SYNC_DEFINED 1
 
 #ifndef INIT_WORK
 #  define INIT_WORK(work, fn) do { \
@@ -2929,6 +2949,8 @@ static inline bool cancel_delayed_work_sync(struct delayed_work *dwork)
 #ifndef to_delayed_work
 #  define to_delayed_work(work) container_of(work, struct delayed_work, work)
 #endif
+
+#define __WIRELESS_LINUX_COMPAT_WORKQUEUE_INIT_HELPERS_DEFINED 1
 
 static inline long schedule_timeout_interruptible(long timeout)
 {

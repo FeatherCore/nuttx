@@ -252,6 +252,10 @@
 
 #define HCI_CHANNEL_RAW         0x0
 #define HCI_CHANNEL_USER        0x1
+#define HCI_CHANNEL_MONITOR     0x2
+#define HCI_CHANNEL_CONTROL     0x3
+#define HCI_CHANNEL_LOGGING     0x4
+#define HCI_DEV_NONE            0xffff
 
 /* Packets types send over the network layer for BTPROTO_HCI */
 

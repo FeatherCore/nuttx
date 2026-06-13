@@ -31,6 +31,7 @@ CSRCS = drivers_initialize.c
 include analog/Make.defs
 include audio/Make.defs
 include bch/Make.defs
+include bluetooth/Make.defs
 include can/Make.defs
 include clk/Make.defs
 include crypto/Make.defs

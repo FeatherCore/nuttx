@@ -53,6 +53,9 @@
 #include <nuttx/wireless/pktradio.h>
 #include <nuttx/wireless/bluetooth/bt_null.h>
 #include <nuttx/wireless/bluetooth/bt_uart_shim.h>
+#ifdef CONFIG_NET_LINUX_BLUETOOTH
+#  include <nuttx/wireless/linux_bluetooth.h>
+#endif
 #include <nuttx/wireless/ieee802154/ieee802154_loopback.h>
 #include <nuttx/usb/adb.h>
 #include <nuttx/usb/mtp.h>
@@ -400,6 +403,42 @@ int sim_bringup(void)
   if (ret < 0)
     {
       syslog(LOG_ERR, "ERROR: sim_bthcisock_register() failed: %d\n", ret);
+    }
+#endif
+
+#ifdef CONFIG_SIM_BTHWSIM
+  /* Register the Linux-semantics Bluetooth hwsim backend */
+
+  ret = sim_bthwsim_register(CONFIG_SIM_BTHWSIM_ROLE);
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "ERROR: sim_bthwsim_register() failed: %d\n", ret);
+    }
+#endif
+
+#ifdef CONFIG_NET_LINUX_BLUETOOTH_UPSTREAM_AF
+  /* Register Linux AF_BLUETOOTH before opening controller-side VHCI. */
+
+  ret = linux_bt_upstream_af_init();
+  if (ret < 0)
+    {
+      syslog(LOG_ERR,
+             "ERROR: linux_bt_upstream_af_init() failed: %d\n",
+             ret);
+    }
+#endif
+
+#ifdef CONFIG_NET_LINUX_BLUETOOTH_UPSTREAM_HCI_VHCI_AUTOSTART
+  /* Open the imported upstream Linux virtual HCI device after the hwsim
+   * public-file medium exists.
+   */
+
+  ret = linux_bt_upstream_vhci_open_default();
+  if (ret < 0)
+    {
+      syslog(LOG_ERR,
+             "ERROR: linux_bt_upstream_vhci_open_default() failed: %d\n",
+             ret);
     }
 #endif
 

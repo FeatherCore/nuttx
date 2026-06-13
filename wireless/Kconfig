@@ -11,6 +11,7 @@ config WIRELESS
 
 if WIRELESS
 
+source "wireless/linux_bluetooth/Kconfig"
 source "wireless/bluetooth/Kconfig"
 source "wireless/ieee80211/Kconfig"
 source "wireless/ieee802154/Kconfig"

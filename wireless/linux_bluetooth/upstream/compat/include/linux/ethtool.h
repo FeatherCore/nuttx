@@ -1,0 +1,14 @@
+#ifndef __WIRELESS_LINUX_BLUETOOTH_COMPAT_LINUX_ETHTOOL_H
+#define __WIRELESS_LINUX_BLUETOOTH_COMPAT_LINUX_ETHTOOL_H
+
+#include_next <linux/ethtool.h>
+
+#ifndef HWTSTAMP_TX_OFF
+#  define HWTSTAMP_TX_OFF 0
+#endif
+
+#ifndef HWTSTAMP_FILTER_NONE
+#  define HWTSTAMP_FILTER_NONE 0
+#endif
+
+#endif

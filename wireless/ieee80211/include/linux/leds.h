@@ -4,4 +4,10 @@ struct led_trigger
 {
   int dummy;
 };
+
+struct led_classdev
+{
+  int dummy;
+};
+
 #endif

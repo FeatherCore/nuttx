@@ -24,6 +24,7 @@ include $(TOPDIR)/Make.defs
 
 # Add IEEE 802.15.4 files to the build
 
+include linux_bluetooth/Make.defs
 include bluetooth/Make.defs
 include ieee80211/Make.defs
 include ieee802154/Make.defs

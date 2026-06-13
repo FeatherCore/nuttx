@@ -1,0 +1,78 @@
+############################################################################
+# wireless/linux_bluetooth/Make.defs
+#
+# SPDX-License-Identifier: Apache-2.0
+############################################################################
+
+ifeq ($(CONFIG_NET_LINUX_BLUETOOTH),y)
+CFLAGS += ${INCDIR_PREFIX}$(TOPDIR)$(DELIM)wireless$(DELIM)linux_bluetooth$(DELIM)upstream$(DELIM)compat$(DELIM)include
+CFLAGS += ${INCDIR_PREFIX}$(TOPDIR)$(DELIM)wireless$(DELIM)linux_compat$(DELIM)include
+CFLAGS += ${INCDIR_PREFIX}$(TOPDIR)$(DELIM)wireless$(DELIM)ieee80211$(DELIM)include
+CSRCS += linux_bluetooth/linux_bt_core.c
+CSRCS += linux_bluetooth/linux_bt_upstream_hci.c
+CSRCS += linux_bluetooth/linux_bt_upstream_net.c
+CSRCS += linux_bluetooth/linux_bt_bnep_netdev.c
+ifeq ($(CONFIG_NET_LINUX_BLUETOOTH_6LOWPAN_BRIDGE),y)
+CSRCS += linux_bluetooth/linux_bt_6lowpan_netdev.c
+endif
+CSRCS += linux_bluetooth/linux_bt_sockif.c
+endif
+
+ifeq ($(CONFIG_NET_LINUX_BLUETOOTH_UPSTREAM_SOURCES),y)
+ifeq ($(CONFIG_NET_LINUX_BLUETOOTH_UPSTREAM_LIB),y)
+CSRCS += linux_bluetooth/upstream/net_bluetooth/lib.c
+endif
+ifeq ($(CONFIG_NET_LINUX_BLUETOOTH_UPSTREAM_EIR),y)
+CSRCS += linux_bluetooth/upstream/net_bluetooth/eir.c
+endif
+ifeq ($(CONFIG_NET_LINUX_BLUETOOTH_UPSTREAM_HCI_CODEC),y)
+CSRCS += linux_bluetooth/upstream/net_bluetooth/hci_codec.c
+endif
+ifeq ($(CONFIG_NET_LINUX_BLUETOOTH_UPSTREAM_AF),y)
+CSRCS += linux_bluetooth/upstream/net_bluetooth/af_bluetooth.c
+endif
+ifeq ($(CONFIG_NET_LINUX_BLUETOOTH_UPSTREAM_HCI_CORE),y)
+CSRCS += linux_bluetooth/upstream/net_bluetooth/hci_core.c
+CSRCS += linux_bluetooth/upstream/net_bluetooth/hci_conn.c
+CSRCS += linux_bluetooth/upstream/net_bluetooth/hci_event.c
+CSRCS += linux_bluetooth/upstream/net_bluetooth/hci_sync.c
+endif
+ifeq ($(CONFIG_NET_LINUX_BLUETOOTH_UPSTREAM_HCI_SOCK),y)
+CSRCS += linux_bluetooth/upstream/net_bluetooth/hci_sock.c
+endif
+ifeq ($(CONFIG_NET_LINUX_BLUETOOTH_UPSTREAM_MGMT),y)
+CSRCS += linux_bluetooth/upstream/net_bluetooth/mgmt.c
+CSRCS += linux_bluetooth/upstream/net_bluetooth/mgmt_config.c
+CSRCS += linux_bluetooth/upstream/net_bluetooth/mgmt_util.c
+endif
+ifeq ($(CONFIG_NET_LINUX_BLUETOOTH_UPSTREAM_L2CAP),y)
+CSRCS += linux_bluetooth/upstream/net_bluetooth/l2cap_core.c
+CSRCS += linux_bluetooth/upstream/net_bluetooth/l2cap_sock.c
+endif
+ifeq ($(CONFIG_NET_LINUX_BLUETOOTH_UPSTREAM_SMP),y)
+CSRCS += linux_bluetooth/upstream/net_bluetooth/smp.c
+endif
+ifeq ($(CONFIG_NET_LINUX_BLUETOOTH_UPSTREAM_ISO),y)
+CSRCS += linux_bluetooth/upstream/net_bluetooth/iso.c
+endif
+ifeq ($(CONFIG_NET_LINUX_BLUETOOTH_UPSTREAM_BNEP),y)
+CSRCS += linux_bluetooth/upstream/net_bluetooth/bnep/core.c
+CSRCS += linux_bluetooth/upstream/net_bluetooth/bnep/sock.c
+CSRCS += linux_bluetooth/upstream/net_bluetooth/bnep/netdev.c
+endif
+ifeq ($(CONFIG_NET_LINUX_BLUETOOTH_UPSTREAM_6LOWPAN),y)
+CSRCS += linux_bluetooth/linux_bt_6lowpan_compat.c
+CSRCS += linux_bluetooth/upstream/net_bluetooth/6lowpan.c
+CSRCS += linux_bluetooth/upstream/net_6lowpan/core.c
+CSRCS += linux_bluetooth/upstream/net_6lowpan/iphc.c
+CSRCS += linux_bluetooth/upstream/net_6lowpan/nhc.c
+CSRCS += linux_bluetooth/upstream/net_6lowpan/ndisc.c
+CSRCS += linux_bluetooth/upstream/net_6lowpan/nhc_dest.c
+CSRCS += linux_bluetooth/upstream/net_6lowpan/nhc_fragment.c
+CSRCS += linux_bluetooth/upstream/net_6lowpan/nhc_hop.c
+CSRCS += linux_bluetooth/upstream/net_6lowpan/nhc_ipv6.c
+CSRCS += linux_bluetooth/upstream/net_6lowpan/nhc_mobility.c
+CSRCS += linux_bluetooth/upstream/net_6lowpan/nhc_routing.c
+CSRCS += linux_bluetooth/upstream/net_6lowpan/nhc_udp.c
+endif
+endif

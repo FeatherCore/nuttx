@@ -27,6 +27,7 @@ if(CONFIG_WIRELESS_IEEE80211_CFG80211_LINUX
   target_include_directories(
     wireless
     PRIVATE ${CMAKE_CURRENT_LIST_DIR}/include
+            ${CMAKE_CURRENT_LIST_DIR}/../linux_compat/include
             ${CMAKE_CURRENT_LIST_DIR}/include/uapi)
   target_compile_options(
     wireless
