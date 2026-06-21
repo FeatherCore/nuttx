@@ -13,7 +13,7 @@
 #define HCI_MAX_AD_LENGTH    31
 #define HCI_MAX_EXT_AD_LENGTH 251
 #define HCI_MAX_PER_AD_LENGTH 252
-#define HCI_MAX_ACL_SIZE     1024
+#define HCI_MAX_ACL_SIZE     2048
 #define HCI_MAX_FRAME_SIZE   (HCI_MAX_ACL_SIZE + 4)
 #define HCI_MAX_ISO_BIS      31
 #define HCI_MAX_PER_AD_TOT_LEN 1650
@@ -223,6 +223,12 @@ enum
 
 #define HCI_OP_NOP                  0x0000
 #define HCI_OP_RESET                0x0c03
+#define HCI_OP_CHANGE_CONN_PTYPE    0x040f
+struct hci_cp_change_conn_ptype {
+	__le16   handle;
+	__le16   pkt_type;
+} __packed;
+
 #define HCI_OP_AUTH_REQUESTED       0x0411
 #define HCI_OP_SET_CONN_ENCRYPT     0x0413
 #define HCI_OP_READ_CLOCK_OFFSET    0x041f
@@ -337,6 +343,14 @@ enum
 #define HCI_LE_SET_PHY_1M    0x01
 #define HCI_LE_SET_PHY_2M    0x02
 #define HCI_LE_SET_PHY_CODED 0x04
+#define HCI_OP_LE_SET_PHY    0x2032
+struct hci_cp_le_set_phy {
+	__le16  handle;
+	__u8    all_phys;
+	__u8    tx_phys;
+	__u8    rx_phys;
+	__le16  phy_opts;
+} __packed;
 
 #define HCI_REQ_PEND 1
 #define HCI_REQ_START 2

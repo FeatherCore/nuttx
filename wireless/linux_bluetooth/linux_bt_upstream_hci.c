@@ -54,7 +54,7 @@ static uint8_t g_hci_sim_le_role;
 static uint16_t g_hci_sim_le_peer;
 static uint16_t g_hci_sim_le_handle;
 
-static void linux_bt_upstream_hci_sim_br_snapshot_clear(uint16_t handle)
+static void linux_bt_upstream_hci_sim_br_status_clear(uint16_t handle)
 {
   if (g_hci_sim_br_handle == handle)
     {
@@ -340,7 +340,7 @@ static int linux_bt_upstream_hci_sim_br_disconnect(struct hci_dev *hdev,
   hci_conn_hash_del(hdev, conn);
   kfree(conn);
 
-  linux_bt_upstream_hci_sim_br_snapshot_clear(handle);
+  linux_bt_upstream_hci_sim_br_status_clear(handle);
 
   return 0;
 }
@@ -531,6 +531,7 @@ int linux_bt_upstream_hci_peer_le_disconnect(uint16_t handle,
 {
   struct hci_dev *hdev;
   struct hci_ev_disconn_complete ev;
+  int ret;
 
   hdev = linux_bt_upstream_vhci_default_hdev();
   if (hdev == NULL)
@@ -543,8 +544,21 @@ int linux_bt_upstream_hci_peer_le_disconnect(uint16_t handle,
   ev.handle = cpu_to_le16(handle);
   ev.reason = reason;
 
-  return linux_bt_upstream_hci_sim_event(hdev, HCI_EV_DISCONN_COMPLETE,
-                                         &ev, sizeof(ev));
+  ret = linux_bt_upstream_hci_sim_event(hdev, HCI_EV_DISCONN_COMPLETE,
+                                        &ev, sizeof(ev));
+  if (ret >= 0)
+    {
+      int cleanup;
+
+      cleanup = linux_bt_upstream_hci_sim_le_disconnect(hdev, handle,
+                                                        reason);
+      if (cleanup < 0 && cleanup != -ENOENT)
+        {
+          return cleanup;
+        }
+    }
+
+  return ret;
 }
 
 int linux_bt_upstream_hci_peer_br_complete(uint16_t peer,
@@ -584,6 +598,7 @@ int linux_bt_upstream_hci_peer_br_disconnect(uint16_t handle,
 {
   struct hci_dev *hdev;
   struct hci_ev_disconn_complete ev;
+  int ret;
 
   hdev = linux_bt_upstream_vhci_default_hdev();
   if (hdev == NULL)
@@ -596,8 +611,21 @@ int linux_bt_upstream_hci_peer_br_disconnect(uint16_t handle,
   ev.handle = cpu_to_le16(handle);
   ev.reason = reason;
 
-  return linux_bt_upstream_hci_sim_event(hdev, HCI_EV_DISCONN_COMPLETE,
-                                         &ev, sizeof(ev));
+  ret = linux_bt_upstream_hci_sim_event(hdev, HCI_EV_DISCONN_COMPLETE,
+                                        &ev, sizeof(ev));
+  if (ret >= 0)
+    {
+      int cleanup;
+
+      cleanup = linux_bt_upstream_hci_sim_br_disconnect(hdev, handle,
+                                                        reason);
+      if (cleanup < 0 && cleanup != -ENOENT)
+        {
+          return cleanup;
+        }
+    }
+
+  return ret;
 }
 #endif
 
@@ -989,6 +1017,31 @@ int linux_bt_upstream_hci_status(char *out, size_t out_len)
 
         used = linux_bt_upstream_hci_append(
           out, out_len, used,
+          "    conn-hash acl=%u sco=%u le=%u le-peripheral=%u "
+          "cis=%u bis=%u pa=%u\n",
+          hdev->conn_hash.acl_num, hdev->conn_hash.sco_num,
+          hdev->conn_hash.le_num, hdev->conn_hash.le_num_peripheral,
+          hdev->conn_hash.cis_num, hdev->conn_hash.bis_num,
+          hdev->conn_hash.pa_num);
+
+        {
+          struct hci_conn *conn;
+          unsigned int conn_index = 0;
+
+          list_for_each_entry(conn, &hdev->conn_hash.list, list)
+            {
+              used = linux_bt_upstream_hci_append(
+                out, out_len, used,
+                "    conn[%u] type=%u role=%u state=%u out=%u "
+                "handle=0x%04x\n",
+                conn_index, conn->type, conn->role, conn->state,
+                conn->out ? 1 : 0, conn->handle);
+              conn_index++;
+            }
+        }
+
+        used = linux_bt_upstream_hci_append(
+          out, out_len, used,
           "  slot=%u id=%u name=%s bus=%u quirks=%08lx:%08lx "
           "flags=%08lx dev-flags=%08lx:%08lx promisc=%d "
           "rx_bytes=%lu rx_acl=%lu rx_sco=%lu rx_iso=%lu "
@@ -1178,10 +1231,8 @@ int linux_bt_upstream_hci_connect_br_probe(uint16_t peer,
   uint8_t upstream_conn = 0;
   uint8_t command_conn = 0;
   uint8_t event_conn = 0;
-  uint8_t fallback_conn = 0;
   uint8_t cmd[3 + sizeof(struct hci_cp_create_conn)];
   struct hci_cp_create_conn cp;
-  struct hci_ev_conn_complete ev;
   struct hci_conn *sim_conn;
 #endif
 
@@ -1232,40 +1283,8 @@ int linux_bt_upstream_hci_connect_br_probe(uint16_t peer,
       upstream_conn = 1;
       event_conn = 1;
     }
-  else
-    {
-      memset(&ev, 0, sizeof(ev));
-      ev.status = 0;
-      ev.handle = cpu_to_le16(handle);
-      bacpy(&ev.bdaddr, &dst);
-      ev.link_type = ACL_LINK;
-      ev.encr_mode = 0;
-
-      (void)linux_bt_upstream_hci_sim_event(hdev, HCI_EV_CONN_COMPLETE,
-                                            &ev, sizeof(ev));
-      sim_conn = hci_conn_hash_lookup_ba(hdev, ACL_LINK, &dst);
-      if (sim_conn != NULL && sim_conn->handle == handle)
-        {
-          sim_conn->state = BT_CONNECTED;
-          sim_conn->role = HCI_ROLE_MASTER;
-          sim_conn->out = 1;
-          upstream_conn = 1;
-          event_conn = 1;
-        }
-    }
-
   if (!upstream_conn)
-    {
-      sim_conn = linux_bt_upstream_hci_sim_br_conn(hdev, &dst,
-                                                   HCI_ROLE_MASTER,
-                                                   handle);
-      if (!IS_ERR(sim_conn))
-        {
-          mgmt_device_connected(hdev, sim_conn, NULL, 0);
-          upstream_conn = 1;
-          fallback_conn = 1;
-        }
-    }
+    return -ENOTCONN;
 
   src = (uint8_t *)&hdev->bdaddr;
   ctrl_len = snprintf(ctrl, sizeof(ctrl),
@@ -1290,13 +1309,13 @@ int linux_bt_upstream_hci_connect_br_probe(uint16_t peer,
   used = linux_bt_upstream_hci_append(out, out_len, used,
                                       "upstream-hci-connect-br: peer=%u "
                                       "handle=0x%04x state=%u "
-                                      "sim-fastpath=1 snapshot=1 "
+                                      "hci-owner-path=1 "
+                                      "sim-status-mirror=diagnostic "
                                       "command-path=%u event-path=%u "
-                                      "fallback=%u "
+                                      "fallback=0 "
                                       "upstream-hci-conn=%u\n",
                                       peer, handle, BT_CONNECTED,
                                       command_conn, event_conn,
-                                      fallback_conn,
                                       upstream_conn);
   (void)used;
   return 0;
@@ -1317,11 +1336,9 @@ int linux_bt_upstream_hci_disconnect_br_probe(uint16_t peer,
   int ret;
   uint8_t cmd[3 + sizeof(struct hci_cp_disconnect)];
   struct hci_cp_disconnect cp;
-  struct hci_ev_disconn_complete ev;
   struct hci_conn *conn;
   uint8_t command_path = 0;
   uint8_t event_path = 0;
-  uint8_t fallback_path = 0;
   size_t used = 0;
   uint8_t *src;
 
@@ -1356,33 +1373,9 @@ int linux_bt_upstream_hci_disconnect_br_probe(uint16_t peer,
         }
     }
 
-  if (command_path && !event_path)
-    {
-      memset(&ev, 0, sizeof(ev));
-      ev.status = 0;
-      ev.handle = cpu_to_le16(handle);
-      ev.reason = 0x13;
-      ret = linux_bt_upstream_hci_sim_event(hdev, HCI_EV_DISCONN_COMPLETE,
-                                            &ev, sizeof(ev));
-      if (ret >= 0)
-        {
-          conn = hci_conn_hash_lookup_handle(hdev, handle);
-          if (conn == NULL)
-            {
-              event_path = 1;
-            }
-        }
-    }
-
   if (!event_path)
     {
-      ret = linux_bt_upstream_hci_sim_br_disconnect(hdev, handle, 0x13);
-      if (ret < 0 && ret != -ENOENT)
-        {
-          return ret;
-        }
-
-      fallback_path = 1;
+      return -ENOTCONN;
     }
 
   src = (uint8_t *)&hdev->bdaddr;
@@ -1398,16 +1391,16 @@ int linux_bt_upstream_hci_disconnect_br_probe(uint16_t peer,
 
   if (event_path)
     {
-      linux_bt_upstream_hci_sim_br_snapshot_clear(handle);
+      linux_bt_upstream_hci_sim_br_status_clear(handle);
     }
 
   used = linux_bt_upstream_hci_append(out, out_len, used,
                                       "upstream-hci-disconnect-br: peer=%u "
                                       "handle=0x%04x local-ret=%d "
                                       "command-path=%u event-path=%u "
-                                      "fallback=%u sim-fastpath=1\n",
+                                      "fallback=0 hci-owner-path=1\n",
                                       peer, handle, ret, command_path,
-                                      event_path, fallback_path);
+                                      event_path);
   (void)used;
   return 0;
 #else
@@ -1439,11 +1432,8 @@ int linux_bt_upstream_hci_connect_le_probe(uint16_t peer,
   uint8_t upstream_conn = 0;
   uint8_t command_conn = 0;
   uint8_t event_conn = 0;
-  uint8_t fallback_conn = 0;
   uint8_t cmd[3 + sizeof(struct hci_cp_le_create_conn)];
   struct hci_cp_le_create_conn cp;
-  uint8_t le[1 + sizeof(struct hci_ev_le_conn_complete)];
-  struct hci_ev_le_conn_complete *ev;
   struct hci_conn *sim_conn;
 #endif
 
@@ -1499,43 +1489,8 @@ int linux_bt_upstream_hci_connect_le_probe(uint16_t peer,
       upstream_conn = 1;
       event_conn = 1;
     }
-  else
-    {
-      memset(le, 0, sizeof(le));
-      le[0] = HCI_EV_LE_CONN_COMPLETE;
-      ev = (void *)&le[1];
-      ev->status = 0;
-      ev->handle = cpu_to_le16(handle);
-      ev->role = HCI_ROLE_MASTER;
-      ev->bdaddr_type = ADDR_LE_DEV_PUBLIC;
-      bacpy(&ev->bdaddr, &dst);
-      ev->interval = cpu_to_le16(0x0018);
-      ev->latency = cpu_to_le16(0x0000);
-      ev->supervision_timeout = cpu_to_le16(0x01f4);
-      ev->clk_accurancy = 0;
-
-      (void)linux_bt_upstream_hci_sim_event(hdev, HCI_EV_LE_META, le,
-                                            sizeof(le));
-      sim_conn = hci_conn_hash_lookup_le(hdev, &dst, ADDR_LE_DEV_PUBLIC);
-      if (sim_conn != NULL && sim_conn->handle == handle)
-        {
-          upstream_conn = 1;
-          event_conn = 1;
-        }
-    }
-
   if (!upstream_conn)
-    {
-      sim_conn = linux_bt_upstream_hci_sim_le_conn(hdev, &dst,
-                                                   ADDR_LE_DEV_PUBLIC,
-                                                   HCI_ROLE_MASTER,
-                                                   handle);
-      if (!IS_ERR(sim_conn))
-        {
-          upstream_conn = 1;
-          fallback_conn = 1;
-        }
-    }
+    return -ENOTCONN;
 
   src = (uint8_t *)&hdev->bdaddr;
   ctrl_len = snprintf(ctrl, sizeof(ctrl),
@@ -1560,13 +1515,13 @@ int linux_bt_upstream_hci_connect_le_probe(uint16_t peer,
   used = linux_bt_upstream_hci_append(out, out_len, used,
                                       "upstream-hci-connect-le: peer=%u "
                                       "handle=0x%04x state=%u "
-                                      "sim-fastpath=1 snapshot=1 "
+                                      "hci-owner-path=1 "
+                                      "sim-status-mirror=diagnostic "
                                       "command-path=%u event-path=%u "
-                                      "fallback=%u "
+                                      "fallback=0 "
                                       "upstream-hci-conn=%u\n",
                                       peer, handle, BT_CONNECTED,
                                       command_conn, event_conn,
-                                      fallback_conn,
                                       upstream_conn);
   (void)used;
   return 0;
@@ -1599,11 +1554,9 @@ int linux_bt_upstream_hci_disconnect_le_probe(uint16_t peer,
   int ret;
   uint8_t cmd[3 + sizeof(struct hci_cp_disconnect)];
   struct hci_cp_disconnect cp;
-  struct hci_ev_disconn_complete ev;
   struct hci_conn *conn;
   uint8_t command_path = 0;
   uint8_t event_path = 0;
-  uint8_t fallback_path = 0;
   size_t used = 0;
   uint8_t *src;
 
@@ -1638,33 +1591,9 @@ int linux_bt_upstream_hci_disconnect_le_probe(uint16_t peer,
         }
     }
 
-  if (command_path && !event_path)
-    {
-      memset(&ev, 0, sizeof(ev));
-      ev.status = 0;
-      ev.handle = cpu_to_le16(handle);
-      ev.reason = 0x13;
-      ret = linux_bt_upstream_hci_sim_event(hdev, HCI_EV_DISCONN_COMPLETE,
-                                            &ev, sizeof(ev));
-      if (ret >= 0)
-        {
-          conn = hci_conn_hash_lookup_handle(hdev, handle);
-          if (conn == NULL)
-            {
-              event_path = 1;
-            }
-        }
-    }
-
   if (!event_path)
     {
-      ret = linux_bt_upstream_hci_sim_le_disconnect(hdev, handle, 0x13);
-      if (ret < 0 && ret != -ENOENT)
-        {
-          return ret;
-        }
-
-      fallback_path = 1;
+      return -ENOTCONN;
     }
 
   src = (uint8_t *)&hdev->bdaddr;
@@ -1685,10 +1614,10 @@ int linux_bt_upstream_hci_disconnect_le_probe(uint16_t peer,
                                       "upstream-hci-disconnect-le: peer=%u "
                                       "handle=0x%04x local-ret=%d "
                                       "command-path=%u event-path=%u "
-                                      "fallback=%u "
-                                      "sim-fastpath=1\n",
+                                      "fallback=0 "
+                                      "hci-owner-path=1\n",
                                       peer, handle, ret, command_path,
-                                      event_path, fallback_path);
+                                      event_path);
   (void)used;
   return 0;
 #else

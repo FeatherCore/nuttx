@@ -31,6 +31,8 @@
 #include <net/bluetooth/hci_core.h>
 #include <net/bluetooth/l2cap.h>
 
+#include <nuttx/wireless/linux_bluetooth.h>
+
 #include "bnep.h"
 
 #define BNEP_TX_QUEUE_LEN 20
@@ -168,6 +170,7 @@ static netdev_tx_t bnep_net_xmit(struct sk_buff *skb,
 	struct sock *sk = s->sock->sk;
 
 	BT_DBG("skb %p, dev %p", skb, dev);
+	linux_bt_upstream_bnep_note_native_ndo_start_xmit();
 
 #ifdef CONFIG_BT_BNEP_MC_FILTER
 	if (bnep_net_mc_filter(skb, s)) {
@@ -191,14 +194,6 @@ static netdev_tx_t bnep_net_xmit(struct sk_buff *skb,
 	netif_trans_update(dev);
 	skb_queue_tail(&sk->sk_write_queue, skb);
 	wake_up_interruptible(sk_sleep(sk));
-
-#ifdef CONFIG_SIM_BTHWSIM
-	while ((skb = skb_dequeue(&sk->sk_write_queue)) != NULL) {
-		if (bnep_tx_frame(s, skb))
-			break;
-	}
-	netif_wake_queue(dev);
-#endif
 
 	if (skb_queue_len(&sk->sk_write_queue) >= BNEP_TX_QUEUE_LEN) {
 		BT_DBG("tx queue is full");
@@ -225,6 +220,7 @@ static const struct net_device_ops bnep_netdev_ops = {
 void bnep_net_setup(struct net_device *dev)
 {
 
+	linux_bt_upstream_bnep_note_native_netdev_setup();
 	eth_broadcast_addr(dev->broadcast);
 	dev->addr_len = ETH_ALEN;
 

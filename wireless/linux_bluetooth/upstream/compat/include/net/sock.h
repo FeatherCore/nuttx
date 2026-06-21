@@ -940,10 +940,37 @@ static inline int sock_gettstamp(struct socket *sock, void *userstamp,
                                  bool timeval, bool time32)
 {
   (void)sock;
-  (void)userstamp;
-  (void)timeval;
   (void)time32;
-  return -EOPNOTSUPP;
+
+  if (userstamp == NULL)
+    {
+      return -EFAULT;
+    }
+
+  if (timeval)
+    {
+      struct linux_bt_compat_timeval
+      {
+        long tv_sec;
+        long tv_usec;
+      } *tv = userstamp;
+
+      tv->tv_sec = (long)jiffies;
+      tv->tv_usec = 0;
+    }
+  else
+    {
+      struct linux_bt_compat_timespec
+      {
+        long tv_sec;
+        long tv_nsec;
+      } *ts = userstamp;
+
+      ts->tv_sec = (long)jiffies;
+      ts->tv_nsec = 0;
+    }
+
+  return 0;
 }
 
 static inline int sock_no_mmap(struct file *file, struct socket *sock,

@@ -35,6 +35,7 @@
 #define LINUX_BT_BNEP_HWSIM_BUFSIZE 1514
 #define LINUX_BT_BNEP_HWSIM_PERIOD  MSEC2TICK(20)
 #define LINUX_BT_BNEP_HWSIM_MTU     1500
+#define LINUX_BT_BNEP_NETPKT_QUOTA  8
 
 /****************************************************************************
  * Private Types
@@ -205,8 +206,8 @@ int linux_bt_bnep_hwsim_netdev_register(FAR const char *name,
 
   memset(&g_bnep_hwsim, 0, sizeof(g_bnep_hwsim));
   g_bnep_hwsim.lower.ops = &g_bnep_hwsim_ops;
-  g_bnep_hwsim.lower.quota[NETPKT_TX] = 1;
-  g_bnep_hwsim.lower.quota[NETPKT_RX] = 1;
+  g_bnep_hwsim.lower.quota[NETPKT_TX] = LINUX_BT_BNEP_NETPKT_QUOTA;
+  g_bnep_hwsim.lower.quota[NETPKT_RX] = LINUX_BT_BNEP_NETPKT_QUOTA;
   g_bnep_hwsim.lower.rxtype = NETDEV_RX_WORK;
   g_bnep_hwsim.lower.netdev.d_llhdrlen = ETH_HDRLEN;
   g_bnep_hwsim.lower.netdev.d_pktsize =
@@ -486,8 +487,8 @@ static int linux_bt_bnep_linux_lower_register(FAR struct net_device *dev)
 
   memset(&g_bnep_linux_netdev, 0, sizeof(g_bnep_linux_netdev));
   g_bnep_linux_netdev.lower.ops = &g_bnep_linux_ops;
-  g_bnep_linux_netdev.lower.quota[NETPKT_TX] = 1;
-  g_bnep_linux_netdev.lower.quota[NETPKT_RX] = 1;
+  g_bnep_linux_netdev.lower.quota[NETPKT_TX] = LINUX_BT_BNEP_NETPKT_QUOTA;
+  g_bnep_linux_netdev.lower.quota[NETPKT_RX] = LINUX_BT_BNEP_NETPKT_QUOTA;
   g_bnep_linux_netdev.lower.rxtype = NETDEV_RX_WORK;
   g_bnep_linux_netdev.lower.netdev.d_llhdrlen = ETH_HDRLEN;
   g_bnep_linux_netdev.lower.netdev.d_pktsize =

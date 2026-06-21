@@ -435,7 +435,7 @@ static size_t vhci_bthwsim_cmd_complete_status(__u16 opcode,
 	case HCI_OP_READ_BUFFER_SIZE:
 		if (rp_len < 8)
 			return 0;
-		put_unaligned_le16(1024, &rp[1]);
+		put_unaligned_le16(2048, &rp[1]);
 		rp[3] = 0;
 		put_unaligned_le16(10, &rp[4]);
 		put_unaligned_le16(0, &rp[6]);
@@ -615,14 +615,22 @@ static int vhci_send_frame(struct hci_dev *hdev, struct sk_buff *skb)
 #ifdef CONFIG_SIM_BTHWSIM
 	switch (hci_skb_pkt_type(skb)) {
 	case HCI_ACLDATA_PKT:
-		linux_bt_hwsim_send(LINUX_BT_HWSIM_TYPE_ACL,
-				    LINUX_BT_HWSIM_DST_BROADCAST,
-				    skb->data, skb->len);
+		err = linux_bt_hwsim_send(LINUX_BT_HWSIM_TYPE_ACL,
+					  LINUX_BT_HWSIM_DST_BROADCAST,
+					  skb->data, skb->len);
+		if (err < 0) {
+			kfree_skb(skb);
+			return err;
+		}
 		break;
 	case HCI_ISODATA_PKT:
-		linux_bt_hwsim_send(LINUX_BT_HWSIM_TYPE_ISO,
-				    LINUX_BT_HWSIM_DST_BROADCAST,
-				    skb->data, skb->len);
+		err = linux_bt_hwsim_send(LINUX_BT_HWSIM_TYPE_ISO,
+					  LINUX_BT_HWSIM_DST_BROADCAST,
+					  skb->data, skb->len);
+		if (err < 0) {
+			kfree_skb(skb);
+			return err;
+		}
 		break;
 	default:
 		break;

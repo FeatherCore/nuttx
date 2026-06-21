@@ -86,6 +86,10 @@ static int do_bnep_sock_ioctl(struct socket *sock, unsigned int cmd, void __user
 		if (!err) {
 			if (copy_to_user(argp, &ca, sizeof(ca)))
 				err = -EFAULT;
+			else
+				linux_bt_upstream_bnep_note_native_fd_handoff(ca.sock,
+									      ca.role,
+									      err);
 		} else
 			sockfd_put(nsock);
 
@@ -142,6 +146,25 @@ static int bnep_sock_ioctl(struct socket *sock, unsigned int cmd, unsigned long 
 
 	err = do_bnep_sock_ioctl(sock, cmd, (void __user *)arg);
 	linux_bt_upstream_bnep_note_native_ioctl(cmd, err);
+	switch (cmd) {
+	case BNEPCONNADD:
+		linux_bt_upstream_bnep_note_native_sock_ioctl_connadd(err);
+		break;
+	case BNEPCONNDEL:
+		linux_bt_upstream_bnep_note_native_sock_ioctl_conndel(err);
+		break;
+	case BNEPGETCONNLIST:
+		linux_bt_upstream_bnep_note_native_sock_ioctl_getconnlist(err);
+		break;
+	case BNEPGETCONNINFO:
+		linux_bt_upstream_bnep_note_native_sock_ioctl_getconninfo(err);
+		break;
+	case BNEPGETSUPPFEAT:
+		linux_bt_upstream_bnep_note_native_sock_ioctl_getsuppfeat(err);
+		break;
+	default:
+		break;
+	}
 	return err;
 }
 

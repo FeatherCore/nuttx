@@ -135,8 +135,13 @@ int psock_accept(FAR struct socket *psock, FAR struct sockaddr *addr,
   conn = psock->s_conn;
   if (!_SS_ISLISTENING(conn->s_flags))
     {
+#ifdef AF_BLUETOOTH
+      if (psock->s_domain != AF_BLUETOOTH)
+#endif
+        {
       nerr("ERROR: Socket is not listening for a connection.\n");
       return -EINVAL;
+        }
     }
 
   /* Let the address family's accept() method handle the operation */

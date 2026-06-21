@@ -41,8 +41,6 @@
 
 #include "bnep.h"
 
-#define BNEP_SIM_ACL_MAX_PAYLOAD 2048
-
 #ifdef CONFIG_NET_LINUX_BLUETOOTH_UPSTREAM_BNEP
 extern int linux_bt_bnep_netdev_register(struct net_device *dev);
 extern void linux_bt_bnep_netdev_unregister(struct net_device *dev);
@@ -74,11 +72,13 @@ static struct bnep_session *__bnep_get_session(u8 *dst)
 static void __bnep_link_session(struct bnep_session *s)
 {
 	list_add(&s->list, &bnep_session_list);
+	linux_bt_upstream_bnep_note_native_session_link();
 }
 
 static void __bnep_unlink_session(struct bnep_session *s)
 {
 	list_del(&s->list);
+	linux_bt_upstream_bnep_note_native_session_unlink();
 }
 
 static int bnep_send(struct bnep_session *s, void *data, size_t len)
@@ -526,34 +526,6 @@ send:
 	{
 		len = kernel_sendmsg(sock, &s->msg, iv, il, len);
 	}
-#ifdef CONFIG_SIM_BTHWSIM
-	if (len <= 0 && bnep_len > 0 &&
-	    bnep_len <= BNEP_SIM_ACL_MAX_PAYLOAD) {
-		u8 acl[4 + 4 + BNEP_SIM_ACL_MAX_PAYLOAD];
-		u16 acl_len = bnep_len + 4;
-		u16 handle_pb = 0x0040 | (0x02 << 12);
-		int off = 8;
-		int i;
-
-		acl[0] = handle_pb & 0xff;
-		acl[1] = handle_pb >> 8;
-		acl[2] = acl_len & 0xff;
-		acl[3] = acl_len >> 8;
-		acl[4] = bnep_len & 0xff;
-		acl[5] = bnep_len >> 8;
-		acl[6] = 0x41;
-		acl[7] = 0x00;
-
-		for (i = 0; i < il; i++) {
-			memcpy(&acl[off], iv[i].iov_base, iv[i].iov_len);
-			off += iv[i].iov_len;
-		}
-
-		if (linux_bt_upstream_hci_send(HCI_ACLDATA_PKT, acl,
-					       bnep_len + 8) >= 0)
-			len = bnep_len;
-	}
-#endif
 	kfree_skb(skb);
 
 	if (len > 0) {
@@ -564,6 +536,7 @@ send:
 	}
 
 	ret = len;
+	BT_ERR("BNEP TX failed len %d ret %d", bnep_len, ret);
 	linux_bt_upstream_bnep_note_native_tx_frame(bnep_len, ret);
 	return ret;
 }
@@ -579,6 +552,7 @@ static int bnep_session(void *arg)
 	BT_DBG("");
 
 	linux_bt_upstream_bnep_note_native_session_start();
+	linux_bt_upstream_bnep_note_native_session_thread();
 	dev = s->dev;
 	sk = s->sock->sk;
 	set_user_nice(current, -15);
@@ -592,6 +566,7 @@ static int bnep_session(void *arg)
 			size_t payload_len = skb->len;
 			unsigned int delivered = 0;
 
+			linux_bt_upstream_bnep_note_native_session_rx_dequeue();
 			skb_orphan(skb);
 			if (!skb_linearize(skb)) {
 				if (!bnep_rx_frame(s, skb))
@@ -607,9 +582,11 @@ static int bnep_session(void *arg)
 			break;
 
 		/* TX */
-		while ((skb = skb_dequeue(&sk->sk_write_queue)))
+		while ((skb = skb_dequeue(&sk->sk_write_queue))) {
+			linux_bt_upstream_bnep_note_native_session_tx_dequeue();
 			if (bnep_tx_frame(s, skb))
 				break;
+		}
 		netif_wake_queue(dev);
 
 		/*
@@ -729,6 +706,16 @@ int bnep_add_connection(struct bnep_connadd_req *req, struct socket *sock)
 		goto failed;
 
 	__bnep_link_session(s);
+	if (l2cap_pi(sock->sk)->chan) {
+		__u16 scid = l2cap_pi(sock->sk)->chan->scid;
+		__u16 dcid = l2cap_pi(sock->sk)->chan->dcid;
+
+		if (scid)
+			linux_bt_upstream_bnep_drain_pending_l2cap(scid, 64);
+		if (dcid && dcid != scid)
+			linux_bt_upstream_bnep_drain_pending_l2cap(dcid, 64);
+		linux_bt_upstream_bnep_drain_pending_l2cap(0x0041, 64);
+	}
 
 	__module_get(THIS_MODULE);
 	s->task = kthread_run(bnep_session, s, "kbnepd %s", dev->name);
@@ -740,6 +727,7 @@ int bnep_add_connection(struct bnep_connadd_req *req, struct socket *sock)
 		err = PTR_ERR(s->task);
 		goto failed;
 	}
+	linux_bt_upstream_bnep_note_native_kthread_run();
 	linux_bt_upstream_bnep_note_native_session_create();
 
 	up_write(&bnep_session_sem);

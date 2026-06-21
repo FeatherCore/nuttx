@@ -670,7 +670,18 @@ static int l2cap_sock_getsockopt(struct socket *sock, int level, int optname,
 			break;
 		}
 
-		phys = hci_conn_get_phy(chan->conn->hcon);
+		if (chan->conn && chan->conn->hcon)
+			phys = hci_conn_get_phy(chan->conn->hcon);
+		else if (bdaddr_type_is_le(chan->src_type))
+			phys = BT_PHY_LE_1M_TX | BT_PHY_LE_1M_RX;
+		else
+			phys = BT_PHY_BR_1M_1SLOT |
+			       BT_PHY_EDR_2M_1SLOT |
+			       BT_PHY_EDR_2M_3SLOT |
+			       BT_PHY_EDR_2M_5SLOT |
+			       BT_PHY_EDR_3M_1SLOT |
+			       BT_PHY_EDR_3M_3SLOT |
+			       BT_PHY_EDR_3M_5SLOT;
 
 		if (put_user(phys, (u32 __user *) optval))
 			err = -EFAULT;
@@ -885,6 +896,7 @@ static int l2cap_sock_setsockopt(struct socket *sock, int level, int optname,
 	struct bt_power pwr;
 	struct l2cap_conn *conn;
 	int err = 0;
+	u32 phys;
 	u32 opt;
 	u16 mtu;
 	u8 mode;
@@ -1057,6 +1069,27 @@ static int l2cap_sock_setsockopt(struct socket *sock, int level, int optname,
 		else
 			chan->imtu = mtu;
 
+		break;
+
+	case BT_PHY:
+		if (sk->sk_state != BT_CONNECTED) {
+			err = -ENOTCONN;
+			break;
+		}
+
+		err = copy_safe_from_sockptr(&phys, sizeof(phys), optval,
+					     optlen);
+		if (err)
+			break;
+
+		if (chan->conn && chan->conn->hcon) {
+			err = hci_conn_set_phy(chan->conn->hcon, phys);
+		} else if (bdaddr_type_is_le(chan->src_type)) {
+			if (phys & ~BT_PHY_LE_MASK)
+				err = -EINVAL;
+		} else if (phys & ~BT_PHY_BREDR_MASK) {
+			err = -EINVAL;
+		}
 		break;
 
 	case BT_MODE:

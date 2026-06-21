@@ -403,8 +403,10 @@ int iso_sim_attach_connected(struct socket *sock, uint16_t handle)
 
 int iso_sim_detach_connected(uint16_t handle)
 {
+	struct iso_conn *conn;
 	struct hci_dev *hdev;
 	struct hci_conn *hcon;
+	struct sock *sk = NULL;
 
 	hdev = hci_dev_get(0);
 	if (!hdev)
@@ -421,7 +423,28 @@ int iso_sim_detach_connected(uint16_t handle)
 		return -EINVAL;
 	}
 
-	hci_conn_del(hcon);
+	conn = hcon->iso_data;
+	if (conn) {
+		hcon->iso_data = NULL;
+		iso_conn_lock(conn);
+		sk = conn->sk;
+		conn->sk = NULL;
+		conn->hcon = NULL;
+		iso_conn_unlock(conn);
+
+		if (sk) {
+			lock_sock(sk);
+			if (iso_pi(sk)->conn == conn) {
+				iso_pi(sk)->conn = NULL;
+				sk->sk_state = BT_CLOSED;
+				sk->sk_err = ECONNRESET;
+				sock_set_flag(sk, SOCK_ZAPPED);
+			}
+			release_sock(sk);
+		}
+	}
+
+	hcon->state = BT_CLOSED;
 	hci_dev_put(hdev);
 	return 0;
 }

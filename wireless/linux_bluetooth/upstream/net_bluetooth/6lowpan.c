@@ -53,6 +53,260 @@ static bool enable_6lowpan;
 static struct l2cap_chan *listen_chan;
 static DEFINE_MUTEX(set_lock);
 
+static unsigned long bt_6lowpan_sim_netdev_registers;
+static unsigned long bt_6lowpan_sim_netdev_unregisters;
+static unsigned long bt_6lowpan_sim_tx_packets;
+static unsigned long bt_6lowpan_sim_rx_packets;
+static unsigned long bt_6lowpan_sim_peer_adds;
+static unsigned long bt_6lowpan_sim_peer_dels;
+static unsigned long bt_6lowpan_sim_coc_opens;
+static unsigned long bt_6lowpan_sim_coc_closes;
+static unsigned long bt_6lowpan_sim_xmit_packets;
+static unsigned long bt_6lowpan_sim_rx_delivers;
+static unsigned long bt_6lowpan_sim_setup_netdevs;
+static unsigned long bt_6lowpan_sim_delete_netdevs;
+static unsigned long bt_6lowpan_sim_chan_ready_cbs;
+static unsigned long bt_6lowpan_sim_chan_close_cbs;
+static unsigned long bt_6lowpan_sim_bt_xmits;
+static unsigned long bt_6lowpan_sim_recv_cbs;
+static bool bt_6lowpan_sim_owner_netdev_active;
+static bool bt_6lowpan_sim_owner_coc_active;
+static bool bt_6lowpan_sim_owner_peer_active;
+static unsigned long bt_6lowpan_sim_owner_netdev_refs;
+static unsigned long bt_6lowpan_sim_owner_chan_refs;
+static unsigned long bt_6lowpan_sim_owner_peer_refs;
+static unsigned long bt_6lowpan_sim_owner_tx_active;
+static unsigned long bt_6lowpan_sim_owner_rx_active;
+
+void bt_6lowpan_sim_note_netdev_register(void)
+{
+	enable_6lowpan = true;
+	bt_6lowpan_sim_netdev_registers++;
+}
+
+void bt_6lowpan_sim_note_netdev_unregister(void)
+{
+	bt_6lowpan_sim_netdev_unregisters++;
+}
+
+void bt_6lowpan_sim_note_tx(void)
+{
+	bt_6lowpan_sim_tx_packets++;
+}
+
+void bt_6lowpan_sim_note_rx(void)
+{
+	bt_6lowpan_sim_rx_packets++;
+}
+
+void bt_6lowpan_sim_note_peer_add(void)
+{
+	bt_6lowpan_sim_peer_adds++;
+}
+
+void bt_6lowpan_sim_note_peer_del(void)
+{
+	bt_6lowpan_sim_peer_dels++;
+}
+
+void bt_6lowpan_sim_note_coc_open(void)
+{
+	bt_6lowpan_sim_coc_opens++;
+}
+
+void bt_6lowpan_sim_note_coc_close(void)
+{
+	bt_6lowpan_sim_coc_closes++;
+}
+
+void bt_6lowpan_sim_note_xmit(void)
+{
+	bt_6lowpan_sim_xmit_packets++;
+}
+
+void bt_6lowpan_sim_note_rx_deliver(void)
+{
+	bt_6lowpan_sim_rx_delivers++;
+}
+
+void bt_6lowpan_sim_note_setup_netdev(void)
+{
+	bt_6lowpan_sim_setup_netdevs++;
+}
+
+void bt_6lowpan_sim_note_delete_netdev(void)
+{
+	bt_6lowpan_sim_delete_netdevs++;
+}
+
+void bt_6lowpan_sim_note_chan_ready_cb(void)
+{
+	bt_6lowpan_sim_chan_ready_cbs++;
+}
+
+void bt_6lowpan_sim_note_chan_close_cb(void)
+{
+	bt_6lowpan_sim_chan_close_cbs++;
+}
+
+void bt_6lowpan_sim_note_bt_xmit(void)
+{
+	bt_6lowpan_sim_bt_xmits++;
+}
+
+void bt_6lowpan_sim_note_recv_cb(void)
+{
+	bt_6lowpan_sim_recv_cbs++;
+}
+
+void bt_6lowpan_sim_attach_ipsp(void)
+{
+	bt_6lowpan_sim_note_netdev_register();
+	bt_6lowpan_sim_note_setup_netdev();
+	bt_6lowpan_sim_note_coc_open();
+	bt_6lowpan_sim_note_chan_ready_cb();
+	bt_6lowpan_sim_note_peer_add();
+	bt_6lowpan_sim_owner_netdev_active = true;
+	bt_6lowpan_sim_owner_coc_active = true;
+	bt_6lowpan_sim_owner_peer_active = true;
+	bt_6lowpan_sim_owner_netdev_refs = 1;
+	bt_6lowpan_sim_owner_chan_refs = 1;
+	bt_6lowpan_sim_owner_peer_refs = 1;
+}
+
+void bt_6lowpan_sim_detach_ipsp(bool had_chan)
+{
+	bt_6lowpan_sim_note_netdev_unregister();
+	if (had_chan) {
+		bt_6lowpan_sim_note_peer_del();
+		bt_6lowpan_sim_note_coc_close();
+		bt_6lowpan_sim_note_chan_close_cb();
+	}
+	bt_6lowpan_sim_note_delete_netdev();
+	bt_6lowpan_sim_owner_netdev_active = false;
+	bt_6lowpan_sim_owner_coc_active = false;
+	bt_6lowpan_sim_owner_peer_active = false;
+	bt_6lowpan_sim_owner_netdev_refs = 0;
+	bt_6lowpan_sim_owner_chan_refs = 0;
+	bt_6lowpan_sim_owner_peer_refs = 0;
+	bt_6lowpan_sim_owner_tx_active = 0;
+	bt_6lowpan_sim_owner_rx_active = 0;
+}
+
+void bt_6lowpan_sim_transmit_packet(void)
+{
+	bt_6lowpan_sim_note_tx();
+	bt_6lowpan_sim_note_xmit();
+	bt_6lowpan_sim_note_bt_xmit();
+	if (bt_6lowpan_sim_owner_netdev_active &&
+	    bt_6lowpan_sim_owner_coc_active)
+		bt_6lowpan_sim_owner_tx_active++;
+}
+
+void bt_6lowpan_sim_receive_packet(void)
+{
+	bt_6lowpan_sim_note_rx();
+	bt_6lowpan_sim_note_rx_deliver();
+	bt_6lowpan_sim_note_recv_cb();
+	if (bt_6lowpan_sim_owner_netdev_active &&
+	    bt_6lowpan_sim_owner_coc_active)
+		bt_6lowpan_sim_owner_rx_active++;
+}
+
+const char *bt_6lowpan_sim_owner(void)
+{
+	return "net_bluetooth/6lowpan+sim-ipsp-datapath-link";
+}
+
+const char *bt_6lowpan_sim_contract(void)
+{
+	return "upstream-helper-contract="
+	       "attach_ipsp,detach_ipsp,transmit_packet,receive_packet "
+	       "upstream-helper-link=net_bluetooth/6lowpan "
+	       "upstream-link=linux-6lowpan-ipsp-link-helper";
+}
+
+void bt_6lowpan_sim_get_stats(unsigned long *netdev_registers,
+			      unsigned long *netdev_unregisters,
+			      unsigned long *tx_packets,
+			      unsigned long *rx_packets)
+{
+	if (netdev_registers)
+		*netdev_registers = bt_6lowpan_sim_netdev_registers;
+	if (netdev_unregisters)
+		*netdev_unregisters = bt_6lowpan_sim_netdev_unregisters;
+	if (tx_packets)
+		*tx_packets = bt_6lowpan_sim_tx_packets;
+	if (rx_packets)
+		*rx_packets = bt_6lowpan_sim_rx_packets;
+}
+
+void bt_6lowpan_sim_get_lifecycle_stats(unsigned long *peer_adds,
+					unsigned long *peer_dels,
+					unsigned long *coc_opens,
+					unsigned long *coc_closes,
+					unsigned long *xmit_packets,
+					unsigned long *rx_delivers,
+					unsigned long *setup_netdevs,
+					unsigned long *delete_netdevs,
+					unsigned long *chan_ready_cbs,
+					unsigned long *chan_close_cbs,
+					unsigned long *bt_xmits,
+					unsigned long *recv_cbs)
+{
+	if (peer_adds)
+		*peer_adds = bt_6lowpan_sim_peer_adds;
+	if (peer_dels)
+		*peer_dels = bt_6lowpan_sim_peer_dels;
+	if (coc_opens)
+		*coc_opens = bt_6lowpan_sim_coc_opens;
+	if (coc_closes)
+		*coc_closes = bt_6lowpan_sim_coc_closes;
+	if (xmit_packets)
+		*xmit_packets = bt_6lowpan_sim_xmit_packets;
+	if (rx_delivers)
+		*rx_delivers = bt_6lowpan_sim_rx_delivers;
+	if (setup_netdevs)
+		*setup_netdevs = bt_6lowpan_sim_setup_netdevs;
+	if (delete_netdevs)
+		*delete_netdevs = bt_6lowpan_sim_delete_netdevs;
+	if (chan_ready_cbs)
+		*chan_ready_cbs = bt_6lowpan_sim_chan_ready_cbs;
+	if (chan_close_cbs)
+		*chan_close_cbs = bt_6lowpan_sim_chan_close_cbs;
+	if (bt_xmits)
+		*bt_xmits = bt_6lowpan_sim_bt_xmits;
+	if (recv_cbs)
+		*recv_cbs = bt_6lowpan_sim_recv_cbs;
+}
+
+void bt_6lowpan_sim_get_owner_state(bool *netdev_active,
+				    bool *coc_active,
+				    bool *peer_active,
+				    unsigned long *netdev_refs,
+				    unsigned long *chan_refs,
+				    unsigned long *peer_refs,
+				    unsigned long *tx_active,
+				    unsigned long *rx_active)
+{
+	if (netdev_active)
+		*netdev_active = bt_6lowpan_sim_owner_netdev_active;
+	if (coc_active)
+		*coc_active = bt_6lowpan_sim_owner_coc_active;
+	if (peer_active)
+		*peer_active = bt_6lowpan_sim_owner_peer_active;
+	if (netdev_refs)
+		*netdev_refs = bt_6lowpan_sim_owner_netdev_refs;
+	if (chan_refs)
+		*chan_refs = bt_6lowpan_sim_owner_chan_refs;
+	if (peer_refs)
+		*peer_refs = bt_6lowpan_sim_owner_peer_refs;
+	if (tx_active)
+		*tx_active = bt_6lowpan_sim_owner_tx_active;
+	if (rx_active)
+		*rx_active = bt_6lowpan_sim_owner_rx_active;
+}
+
 enum {
 	LOWPAN_PEER_CLOSING,
 	LOWPAN_PEER_MAXBITS

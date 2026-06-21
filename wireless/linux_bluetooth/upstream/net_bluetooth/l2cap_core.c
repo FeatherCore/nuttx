@@ -48,6 +48,7 @@ bool enable_ecred = IS_ENABLED(CONFIG_BT_LE_L2CAP_ECRED);
 #ifdef CONFIG_SIM_BTHWSIM
 int linux_bt_upstream_hci_send(__u8 pkt_type,
 			       const void *payload, size_t payload_len);
+#define L2CAP_SIM_BTHWSIM_MTU 4096
 #endif
 
 static u32 l2cap_feat_mask = L2CAP_FEAT_FIXED_CHAN | L2CAP_FEAT_UCD;
@@ -1021,9 +1022,11 @@ static void l2cap_do_send(struct l2cap_chan *chan, struct sk_buff *skb)
 	struct hci_conn *hcon = chan->conn->hcon;
 	u16 flags;
 #ifdef CONFIG_SIM_BTHWSIM
-	u8 acl[2048];
-	u16 handle;
-	u16 dlen;
+	struct sk_buff *frag;
+	unsigned int offset;
+	unsigned int len;
+	u8 *acl;
+	u16 pb;
 #endif
 
 	BT_DBG("chan %p, skb %p len %d priority %u", chan, skb, skb->len,
@@ -1042,19 +1045,63 @@ static void l2cap_do_send(struct l2cap_chan *chan, struct sk_buff *skb)
 
 	bt_cb(skb)->force_active = test_bit(FLAG_FORCE_ACTIVE, &chan->flags);
 #ifdef CONFIG_SIM_BTHWSIM
-	if (skb->len <= sizeof(acl) - HCI_ACL_HDR_SIZE) {
-		handle = hci_handle_pack(hcon->handle, flags);
-		dlen = skb->len;
-		acl[0] = handle & 0xff;
-		acl[1] = handle >> 8;
-		acl[2] = dlen & 0xff;
-		acl[3] = dlen >> 8;
-		memcpy(&acl[HCI_ACL_HDR_SIZE], skb->data, skb->len);
-		(void)linux_bt_upstream_hci_send(HCI_ACLDATA_PKT, acl,
-						  skb->len + HCI_ACL_HDR_SIZE);
-		kfree_skb(skb);
-		return;
+	offset = 0;
+	len = skb_headlen(skb);
+	pb = flags;
+
+	for (;;) {
+		u16 handle;
+
+		if (len > 0) {
+			acl = kmalloc(len + HCI_ACL_HDR_SIZE, GFP_KERNEL);
+			if (!acl)
+				break;
+
+			handle = hci_handle_pack(hcon->handle, pb);
+			acl[0] = handle & 0xff;
+			acl[1] = handle >> 8;
+			acl[2] = len & 0xff;
+			acl[3] = len >> 8;
+			memcpy(&acl[HCI_ACL_HDR_SIZE], skb->data + offset, len);
+
+			(void)linux_bt_upstream_hci_send(HCI_ACLDATA_PKT, acl,
+						  len + HCI_ACL_HDR_SIZE);
+			kfree(acl);
+			offset += len;
+			pb = ACL_CONT;
+		}
+
+		frag = skb_shinfo(skb)->frag_list;
+		if (!frag)
+			break;
+
+		for (; frag; frag = frag->next) {
+			len = frag->len;
+			if (!len)
+				continue;
+
+			acl = kmalloc(len + HCI_ACL_HDR_SIZE, GFP_KERNEL);
+			if (!acl)
+				goto sim_done;
+
+			handle = hci_handle_pack(hcon->handle, ACL_CONT);
+			acl[0] = handle & 0xff;
+			acl[1] = handle >> 8;
+			acl[2] = len & 0xff;
+			acl[3] = len >> 8;
+			memcpy(&acl[HCI_ACL_HDR_SIZE], frag->data, len);
+
+			(void)linux_bt_upstream_hci_send(HCI_ACLDATA_PKT, acl,
+						  len + HCI_ACL_HDR_SIZE);
+			kfree(acl);
+		}
+
+		break;
 	}
+
+sim_done:
+	kfree_skb(skb);
+	return;
 #endif
 	hci_send_acl(chan->conn->hchan, skb, flags);
 }
@@ -7010,9 +7057,12 @@ int l2cap_sim_attach_channel(struct hci_dev *hdev, u16 handle,
 	chan->chan_type = L2CAP_CHAN_CONN_ORIENTED;
 	chan->scid = cid;
 	chan->dcid = cid;
-	chan->omtu = L2CAP_DEFAULT_MTU;
-	if (!chan->imtu)
-		chan->imtu = L2CAP_DEFAULT_MTU;
+	if (conn->mtu < L2CAP_SIM_BTHWSIM_MTU)
+		conn->mtu = L2CAP_SIM_BTHWSIM_MTU;
+	if (chan->omtu < L2CAP_SIM_BTHWSIM_MTU)
+		chan->omtu = L2CAP_SIM_BTHWSIM_MTU;
+	if (chan->imtu < L2CAP_SIM_BTHWSIM_MTU)
+		chan->imtu = L2CAP_SIM_BTHWSIM_MTU;
 
 	if (!chan->conn) {
 		l2cap_chan_add(conn, chan);

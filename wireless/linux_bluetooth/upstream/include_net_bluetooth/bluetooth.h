@@ -70,6 +70,9 @@ struct bt_power
 #define BT_POWER_FORCE_ACTIVE_OFF 0
 #define BT_POWER_FORCE_ACTIVE_ON  1
 #define BT_CHANNEL_POLICY 10
+#define BT_CHANNEL_POLICY_BREDR_ONLY      0
+#define BT_CHANNEL_POLICY_BREDR_PREFERRED 1
+#define BT_CHANNEL_POLICY_AMP_PREFERRED   2
 
 #define BT_SCM_PKT_STATUS 1
 #define BT_SCM_PKT_SEQNUM 2
@@ -91,6 +94,18 @@ struct bt_power
 #define BT_PHY_LE_2M_RX        0x00001000
 #define BT_PHY_LE_CODED_TX     0x00002000
 #define BT_PHY_LE_CODED_RX     0x00004000
+#define BT_PHY_BREDR_MASK      (BT_PHY_BR_1M_1SLOT | \
+                                BT_PHY_BR_1M_3SLOT | \
+                                BT_PHY_BR_1M_5SLOT | \
+                                BT_PHY_EDR_2M_1SLOT | \
+                                BT_PHY_EDR_2M_3SLOT | \
+                                BT_PHY_EDR_2M_5SLOT | \
+                                BT_PHY_EDR_3M_1SLOT | \
+                                BT_PHY_EDR_3M_3SLOT | \
+                                BT_PHY_EDR_3M_5SLOT)
+#define BT_PHY_LE_MASK         (BT_PHY_LE_1M_TX | BT_PHY_LE_1M_RX | \
+                                BT_PHY_LE_2M_TX | BT_PHY_LE_2M_RX | \
+                                BT_PHY_LE_CODED_TX | BT_PHY_LE_CODED_RX)
 
 #define BT_MODE                15
 #define BT_MODE_BASIC          0x00
@@ -102,6 +117,7 @@ struct bt_power
 #define BT_PKT_STATUS          16
 #define BT_ISO_QOS             17
 #define BT_ISO_SYNC_TIMEOUT    0x07d0
+#define BT_CODEC               19
 #define BT_ISO_BASE            20
 #define BT_PKT_SEQNUM          22
 

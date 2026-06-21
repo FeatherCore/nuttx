@@ -38,7 +38,49 @@
 #define LINUX_BT_BTPROTO_L2CAP 0
 #define LINUX_BT_BTPROTO_HCI   1
 #define LINUX_BT_BTPROTO_BNEP  4
+#define LINUX_BT_BTPROTO_CMTP  5
+#define LINUX_BT_BTPROTO_HIDP  6
 #define LINUX_BT_BTPROTO_ISO   8
+
+#define LINUX_BT_IOCTL_NRBITS    8
+#define LINUX_BT_IOCTL_TYPEBITS  8
+#define LINUX_BT_IOCTL_SIZEBITS  14
+#define LINUX_BT_IOCTL_DIRBITS   2
+#define LINUX_BT_IOCTL_NRSHIFT   0
+#define LINUX_BT_IOCTL_TYPESHIFT \
+  (LINUX_BT_IOCTL_NRSHIFT + LINUX_BT_IOCTL_NRBITS)
+#define LINUX_BT_IOCTL_SIZESHIFT \
+  (LINUX_BT_IOCTL_TYPESHIFT + LINUX_BT_IOCTL_TYPEBITS)
+#define LINUX_BT_IOCTL_DIRSHIFT \
+  (LINUX_BT_IOCTL_SIZESHIFT + LINUX_BT_IOCTL_SIZEBITS)
+#define LINUX_BT_IOCTL_WRITE     1U
+#define LINUX_BT_IOCTL_READ      2U
+#define LINUX_BT_IOCTL(dir, type, nr, size) \
+  (((dir) << LINUX_BT_IOCTL_DIRSHIFT) | \
+   ((type) << LINUX_BT_IOCTL_TYPESHIFT) | \
+   ((nr) << LINUX_BT_IOCTL_NRSHIFT) | \
+   ((size) << LINUX_BT_IOCTL_SIZESHIFT))
+#define LINUX_BT_IOW(type, nr, size) \
+  LINUX_BT_IOCTL(LINUX_BT_IOCTL_WRITE, (type), (nr), sizeof(size))
+#define LINUX_BT_IOR(type, nr, size) \
+  LINUX_BT_IOCTL(LINUX_BT_IOCTL_READ, (type), (nr), sizeof(size))
+
+#define LINUX_BT_NATIVE_CMTPCONNADD \
+  LINUX_BT_IOW('C', 200, int)
+#define LINUX_BT_NATIVE_CMTPCONNDEL \
+  LINUX_BT_IOW('C', 201, int)
+#define LINUX_BT_NATIVE_CMTPGETCONNLIST \
+  LINUX_BT_IOR('C', 210, int)
+#define LINUX_BT_NATIVE_CMTPGETCONNINFO \
+  LINUX_BT_IOR('C', 211, int)
+#define LINUX_BT_NATIVE_HIDPCONNADD \
+  LINUX_BT_IOW('H', 200, int)
+#define LINUX_BT_NATIVE_HIDPCONNDEL \
+  LINUX_BT_IOW('H', 201, int)
+#define LINUX_BT_NATIVE_HIDPGETCONNLIST \
+  LINUX_BT_IOR('H', 210, int)
+#define LINUX_BT_NATIVE_HIDPGETCONNINFO \
+  LINUX_BT_IOR('H', 211, int)
 
 #define LINUX_BT_BNEP_IOCTL_GETSUPPFEAT 1
 #define LINUX_BT_BNEP_IOCTL_GETCONNLIST 2
@@ -54,6 +96,7 @@
 #define LINUX_BT_HCI_DEV_NONE        0xffff
 
 struct hci_dev;
+struct file;
 struct socket;
 
 struct linux_bt_sockif_l2cap_fd_state
@@ -186,6 +229,23 @@ void linux_bt_upstream_bnep_note_native_session_create(void);
 void linux_bt_upstream_bnep_note_native_session_start(void);
 void linux_bt_upstream_bnep_note_native_session_stop(void);
 void linux_bt_upstream_bnep_note_native_session_terminate(void);
+void linux_bt_upstream_bnep_note_native_netdev_setup(void);
+void linux_bt_upstream_bnep_note_native_ndo_start_xmit(void);
+void linux_bt_upstream_bnep_note_native_session_link(void);
+void linux_bt_upstream_bnep_note_native_session_unlink(void);
+void linux_bt_upstream_bnep_note_native_session_thread(void);
+void linux_bt_upstream_bnep_note_native_kthread_run(void);
+void linux_bt_upstream_bnep_note_native_session_rx_dequeue(void);
+void linux_bt_upstream_bnep_note_native_session_tx_dequeue(void);
+void linux_bt_upstream_bnep_note_native_fd_handoff(int fd, uint16_t role,
+                                                   int err);
+int linux_bt_upstream_bnep_drain_pending_l2cap(uint16_t cid,
+                                                unsigned int max_packets);
+void linux_bt_upstream_bnep_note_native_sock_ioctl_connadd(int err);
+void linux_bt_upstream_bnep_note_native_sock_ioctl_conndel(int err);
+void linux_bt_upstream_bnep_note_native_sock_ioctl_getconnlist(int err);
+void linux_bt_upstream_bnep_note_native_sock_ioctl_getconninfo(int err);
+void linux_bt_upstream_bnep_note_native_sock_ioctl_getsuppfeat(int err);
 int linux_bt_upstream_hci_filter_probe(int dev, uint32_t type_mask,
                                        uint32_t event_mask0,
                                        uint32_t event_mask1,
@@ -217,6 +277,26 @@ int linux_bt_upstream_l2cap_socket_open(uint16_t psm, uint16_t cid,
 int linux_bt_upstream_l2cap_socket_connect_handle(void *handle,
                                                   uint16_t psm,
                                                   uint16_t cid);
+int linux_bt_upstream_l2cap_socket_listen_handle(void *handle,
+                                                 int backlog);
+int linux_bt_upstream_l2cap_socket_accept_handle(void *handle,
+                                                 void **out_handle);
+int linux_bt_upstream_l2cap_socket_getsockopt_handle(void *handle,
+                                                     int level,
+                                                     int optname,
+                                                     void *optval,
+                                                     int *optlen);
+int linux_bt_upstream_l2cap_socket_setsockopt_handle(void *handle,
+                                                     int level,
+                                                     int optname,
+                                                     const void *optval,
+                                                     unsigned int optlen);
+int linux_bt_upstream_l2cap_socket_option_probe(void *handle,
+                                                char *out,
+                                                size_t out_len);
+int linux_bt_upstream_l2cap_socket_connected_option_probe(void *handle,
+                                                          char *out,
+                                                          size_t out_len);
 int linux_bt_upstream_l2cap_socket_write_handle(void *handle,
                                                 const void *payload,
                                                 size_t payload_len,
@@ -224,8 +304,136 @@ int linux_bt_upstream_l2cap_socket_write_handle(void *handle,
                                                 size_t out_len);
 int linux_bt_upstream_l2cap_socket_recv_handle(void *handle, size_t max_len,
                                                char *out, size_t out_len);
+int linux_bt_upstream_l2cap_socket_poll_handle(void *handle, short events,
+                                               short *revents);
+int linux_bt_upstream_l2cap_socket_shutdown_handle(void *handle, int how);
+int linux_bt_upstream_l2cap_socket_ioctl_handle(void *handle,
+                                                unsigned int cmd,
+                                                unsigned long arg);
+int linux_bt_upstream_l2cap_socket_ioctl_probe(void *handle,
+                                               char *out,
+                                               size_t out_len);
+int linux_bt_upstream_l2cap_socket_poll_probe(void *handle,
+                                              int want_write,
+                                              char *out,
+                                              size_t out_len);
+int linux_bt_upstream_l2cap_socket_timestamp_probe(void *handle,
+                                                   char *out,
+                                                   size_t out_len);
 int linux_bt_upstream_l2cap_socket_close_handle(void *handle);
+int linux_bt_upstream_rfcomm_socket_open(uint8_t channel, uint16_t handle,
+                                         void **out_handle);
+int linux_bt_upstream_rfcomm_socket_connect_handle(void *handle,
+                                                   uint8_t channel);
+int linux_bt_upstream_rfcomm_socket_listen_handle(void *handle,
+                                                  int backlog);
+int linux_bt_upstream_rfcomm_socket_accept_handle(void *handle,
+                                                  void **out_handle);
+int linux_bt_upstream_rfcomm_socket_getsockopt_handle(void *handle,
+                                                      int level,
+                                                      int optname,
+                                                      void *optval,
+                                                      int *optlen);
+int linux_bt_upstream_rfcomm_socket_setsockopt_handle(void *handle,
+                                                      int level,
+                                                      int optname,
+                                                      const void *optval,
+                                                      unsigned int optlen);
+int linux_bt_upstream_rfcomm_socket_listen_accept_probe(uint8_t channel,
+                                                        uint16_t handle,
+                                                        char *out,
+                                                        size_t out_len);
+int linux_bt_upstream_rfcomm_socket_write_handle(void *handle,
+                                                const void *payload,
+                                                size_t payload_len,
+                                                char *out,
+                                                size_t out_len);
+int linux_bt_upstream_rfcomm_socket_recv_handle(void *handle, void *payload,
+                                               size_t max_len,
+                                               int *msg_flags,
+                                               char *out, size_t out_len);
+int linux_bt_upstream_rfcomm_socket_poll_handle(void *handle, short events,
+                                                short *revents);
+int linux_bt_upstream_rfcomm_socket_shutdown_handle(void *handle, int how);
+int linux_bt_upstream_rfcomm_socket_ioctl_handle(void *handle,
+                                                 unsigned int cmd,
+                                                 unsigned long arg);
+int linux_bt_upstream_rfcomm_socket_ioctl_probe(void *handle,
+                                                char *out,
+                                                size_t out_len);
+int linux_bt_upstream_rfcomm_socket_poll_probe(void *handle,
+                                               int want_write,
+                                               char *out,
+                                               size_t out_len);
+int linux_bt_upstream_rfcomm_socket_timestamp_probe(void *handle,
+                                                    char *out,
+                                                    size_t out_len);
+int linux_bt_upstream_rfcomm_socket_close_handle(void *handle);
+int linux_bt_upstream_sco_socket_open(uint16_t handle, void **out_handle);
+int linux_bt_upstream_sco_socket_connect_handle(void *handle,
+                                                uint16_t handle_id);
+int linux_bt_upstream_sco_socket_listen_handle(void *handle, int backlog);
+int linux_bt_upstream_sco_socket_accept_handle(void *handle,
+                                               void **out_handle);
+int linux_bt_upstream_sco_socket_getsockopt_handle(void *handle,
+                                                   int level,
+                                                   int optname,
+                                                   void *optval,
+                                                   int *optlen);
+int linux_bt_upstream_sco_socket_setsockopt_handle(void *handle,
+                                                   int level,
+                                                   int optname,
+                                                   const void *optval,
+                                                   unsigned int optlen);
+int linux_bt_upstream_sco_socket_listen_accept_probe(uint16_t handle,
+                                                     char *out,
+                                                     size_t out_len);
+int linux_bt_upstream_sco_socket_write_handle(void *handle,
+                                              const void *payload,
+                                              size_t payload_len,
+                                              char *out,
+                                              size_t out_len);
+int linux_bt_upstream_sco_socket_recv_handle(void *handle, void *payload,
+                                             size_t max_len,
+                                             int *msg_flags,
+                                             char *out, size_t out_len);
+int linux_bt_upstream_sco_socket_poll_handle(void *handle, short events,
+                                             short *revents);
+int linux_bt_upstream_sco_socket_shutdown_handle(void *handle, int how);
+int linux_bt_upstream_sco_socket_ioctl_handle(void *handle,
+                                              unsigned int cmd,
+                                              unsigned long arg);
+int linux_bt_upstream_sco_socket_ioctl_probe(void *handle,
+                                             char *out,
+                                             size_t out_len);
+int linux_bt_upstream_sco_socket_poll_probe(void *handle,
+                                            int want_write,
+                                            char *out,
+                                            size_t out_len);
+int linux_bt_upstream_sco_socket_timestamp_probe(void *handle,
+                                                 char *out,
+                                                 size_t out_len);
+int linux_bt_upstream_sco_socket_close_handle(void *handle);
+int linux_bt_upstream_cmtp_socket_open(void **out_handle);
+int linux_bt_upstream_cmtp_socket_ioctl_handle(void *handle,
+                                               unsigned int cmd,
+                                               unsigned long arg);
+int linux_bt_upstream_cmtp_socket_close_handle(void *handle);
+int linux_bt_upstream_hidp_socket_open(void **out_handle);
+int linux_bt_upstream_hidp_socket_ioctl_handle(void *handle,
+                                               unsigned int cmd,
+                                               unsigned long arg);
+int linux_bt_upstream_hidp_socket_close_handle(void *handle);
+int linux_bt_upstream_cmtp_socket_session_probe(uint16_t handle,
+                                                char *out,
+                                                size_t out_len);
+int linux_bt_upstream_hidp_socket_session_probe(const char *role,
+                                                uint16_t handle,
+                                                char *out,
+                                                size_t out_len);
 struct socket *linux_bt_upstream_l2cap_socket_kernel_socket(void *handle);
+int linux_bt_upstream_l2cap_socket_mark_bnep_owner(void *handle);
+int linux_bt_upstream_l2cap_socket_close_bnep_file(struct file *file);
 int linux_bt_upstream_l2cap_socket_send_probe(uint16_t psm, uint16_t cid,
                                               uint16_t handle,
                                               const void *payload,
@@ -258,16 +466,59 @@ int linux_bt_upstream_iso_socket_send_probe(uint8_t addr_type,
                                             const void *payload,
                                             size_t payload_len,
                                             char *out, size_t out_len);
+int linux_bt_upstream_iso_socket_open(uint8_t addr_type, uint16_t handle,
+                                      void **out_handle);
+int linux_bt_upstream_iso_socket_connect_handle(void *handle,
+                                                uint8_t addr_type);
+int linux_bt_upstream_iso_socket_listen_handle(void *handle, int backlog);
+int linux_bt_upstream_iso_socket_accept_handle(void *handle,
+                                               void **out_handle);
+int linux_bt_upstream_iso_socket_getsockopt_handle(void *handle,
+                                                   int level,
+                                                   int optname,
+                                                   void *optval,
+                                                   int *optlen);
+int linux_bt_upstream_iso_socket_setsockopt_handle(void *handle,
+                                                   int level,
+                                                   int optname,
+                                                   const void *optval,
+                                                   unsigned int optlen);
+int linux_bt_upstream_iso_socket_write_handle(void *handle,
+                                              const void *payload,
+                                              size_t payload_len,
+                                              char *out,
+                                              size_t out_len);
+int linux_bt_upstream_iso_socket_recv_handle(void *handle, void *payload,
+                                             size_t max_len, int *flags);
+int linux_bt_upstream_iso_socket_poll_handle(void *handle, short events,
+                                             short *revents);
+int linux_bt_upstream_iso_socket_shutdown_handle(void *handle, int how);
+int linux_bt_upstream_iso_socket_ioctl_handle(void *handle,
+                                              unsigned int cmd,
+                                              unsigned long arg);
+int linux_bt_upstream_iso_socket_close_handle(void *handle);
 int linux_bt_upstream_iso_socket_bind_probe(uint8_t addr_type,
                                             uint16_t handle,
                                             char *out, size_t out_len);
+int linux_bt_upstream_iso_socket_option_probe(uint8_t cig, uint8_t cis,
+                                              uint16_t sdu,
+                                              char *out, size_t out_len);
 int linux_bt_upstream_iso_socket_connect_probe(uint8_t addr_type,
                                                char *out, size_t out_len);
+int linux_bt_upstream_iso_socket_listen_probe(int backlog,
+                                              char *out, size_t out_len);
+int linux_bt_upstream_iso_socket_accept_probe(char *out, size_t out_len);
+int linux_bt_upstream_iso_socket_active_probe(void);
+int linux_bt_upstream_iso_socket_poll_probe(int want_write,
+                                            char *out, size_t out_len);
 int linux_bt_upstream_iso_socket_recv_probe(size_t max_len,
                                             char *out, size_t out_len);
 int linux_bt_upstream_iso_socket_write_probe(const void *payload,
                                              size_t payload_len,
                                              char *out, size_t out_len);
+int linux_bt_upstream_iso_socket_shutdown_probe(int how,
+                                                char *out, size_t out_len);
+int linux_bt_upstream_iso_socket_ioctl_probe(char *out, size_t out_len);
 int linux_bt_upstream_iso_socket_close_probe(char *out, size_t out_len);
 int linux_bt_upstream_mgmt_socket_probe(uint16_t opcode, uint16_t index,
                                         uint8_t param, char *out,
@@ -324,6 +575,7 @@ int linux_bt_mgmt_dispatch(uint16_t opcode, uint8_t param,
 uint32_t linux_bt_mgmt_settings(void);
 int linux_bt_scan_bredr(char *out, size_t out_len);
 int linux_bt_scan_le(char *out, size_t out_len);
+int linux_bt_ctrl_poll(char *out, size_t out_len);
 int linux_bt_advertise_start(void);
 int linux_bt_advertise_stop(void);
 int linux_bt_connect(uint16_t peer);

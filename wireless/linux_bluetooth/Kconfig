@@ -85,6 +85,18 @@ config NET_LINUX_BLUETOOTH_UPSTREAM_HCI_SOCK
 		sk_buff ownership, poll/wakeup and socket filter compatibility are
 		available.
 
+config NET_LINUX_BLUETOOTH_HCI_SOCK_LEGACY_DIAGNOSTIC
+	bool "Compile legacy HCI socket diagnostic fallback"
+	default n
+	depends on NET_LINUX_BLUETOOTH_UPSTREAM_AF
+	depends on !NET_LINUX_BLUETOOTH_UPSTREAM_HCI_SOCK
+	---help---
+		Compile the old BTPROTO_HCI legacy socket fallback for explicit
+		diagnostic comparison only.  Production hwsim closeout must use
+		the imported Linux HCI socket path through
+		CONFIG_NET_LINUX_BLUETOOTH_UPSTREAM_HCI_SOCK and must leave this
+		option disabled.
+
 config NET_LINUX_BLUETOOTH_UPSTREAM_MGMT
 	bool "Compile upstream Linux Bluetooth mgmt files"
 	default n
@@ -101,6 +113,18 @@ config NET_LINUX_BLUETOOTH_UPSTREAM_L2CAP
 	---help---
 		Compile l2cap_core.c and l2cap_sock.c after Linux socket,
 		channel, timer, security and sk_buff queue compatibility are ready.
+
+config NET_LINUX_BLUETOOTH_L2CAP_LEGACY_DIAGNOSTIC
+	bool "Compile legacy L2CAP socket diagnostic fallback"
+	default n
+	depends on NET_LINUX_BLUETOOTH_UPSTREAM_AF
+	depends on !NET_LINUX_BLUETOOTH_UPSTREAM_L2CAP
+	---help---
+		Compile the old BTPROTO_L2CAP legacy socket fallback for
+		explicit diagnostic comparison only.  Production hwsim closeout
+		must use the imported Linux L2CAP core/socket path through
+		CONFIG_NET_LINUX_BLUETOOTH_UPSTREAM_L2CAP and must leave this
+		option disabled.
 
 config NET_LINUX_BLUETOOTH_UPSTREAM_SMP
 	bool "Compile upstream Linux SMP"
@@ -120,6 +144,18 @@ config NET_LINUX_BLUETOOTH_UPSTREAM_ISO
 		eventually replace the temporary BIG/BIS synthetic table used by
 		the current hwsim LE Audio bring-up.
 
+config NET_LINUX_BLUETOOTH_ISO_LEGACY_DIAGNOSTIC
+	bool "Compile legacy ISO socket diagnostic fallback"
+	default n
+	depends on NET_LINUX_BLUETOOTH_UPSTREAM_AF
+	depends on !NET_LINUX_BLUETOOTH_UPSTREAM_ISO
+	---help---
+		Compile the old BTPROTO_ISO legacy socket fallback for explicit
+		diagnostic comparison only.  Production hwsim closeout must use
+		the imported Linux ISO socket path through
+		CONFIG_NET_LINUX_BLUETOOTH_UPSTREAM_ISO and must leave this
+		option disabled.
+
 config NET_LINUX_BLUETOOTH_UPSTREAM_BNEP
 	bool "Compile upstream Linux BNEP PAN networking path"
 	default n
@@ -130,6 +166,66 @@ config NET_LINUX_BLUETOOTH_UPSTREAM_BNEP
 		needed for future hwsim BT1/BT2 ping and iperf validation.
 		Enable only after Linux netdevice, skb, socket/ioctl and namespace
 		compatibility are mapped onto NuttX networking semantics.
+
+config NET_LINUX_BLUETOOTH_BNEP_LEGACY_DIAGNOSTIC
+	bool "Compile legacy BNEP socket diagnostic fallback"
+	default n
+	depends on NET_LINUX_BLUETOOTH_UPSTREAM_AF
+	depends on !NET_LINUX_BLUETOOTH_UPSTREAM_BNEP
+	---help---
+		Compile the old BTPROTO_BNEP core socket fallback for explicit
+		diagnostic comparison only.  Production hwsim closeout must use
+		the imported Linux BNEP core/socket/netdev path through
+		CONFIG_NET_LINUX_BLUETOOTH_UPSTREAM_BNEP and must leave this
+		option disabled.
+
+config NET_LINUX_BLUETOOTH_RFCOMM_SOCKET_PARITY
+	bool "Compile Linux-like RFCOMM socket parity layer"
+	default y
+	depends on NET_LINUX_BLUETOOTH_UPSTREAM_AF
+	---help---
+		Register BTPROTO_RFCOMM in the imported Linux AF_BLUETOOTH
+		registry and expose a Linux-shaped socket API for bind, connect,
+		listen, getname, sendmsg, recvmsg, and RFCOMM socket options.
+
+		This is the hwsim RFCOMM socket parity path used by BlueZ profile
+		closeout.  The data bearer is mapped through the existing
+		Linux-like L2CAP hwsim path while the remaining imported Linux
+		rfcomm/core.c and rfcomm/sock.c internals continue to converge.
+
+config NET_LINUX_BLUETOOTH_RFCOMM_SOCKET_TRANSITIONAL
+	bool "Legacy alias for Linux-like RFCOMM socket parity"
+	default n
+	depends on NET_LINUX_BLUETOOTH_UPSTREAM_AF
+	select NET_LINUX_BLUETOOTH_RFCOMM_SOCKET_PARITY
+	---help---
+		Deprecated compatibility symbol.  Existing local configurations
+		that still set this option select
+		NET_LINUX_BLUETOOTH_RFCOMM_SOCKET_PARITY.
+
+config NET_LINUX_BLUETOOTH_SCO_SOCKET_PARITY
+	bool "Compile Linux-like SCO/eSCO socket parity layer"
+	default y
+	depends on NET_LINUX_BLUETOOTH_UPSTREAM_AF
+	---help---
+		Register BTPROTO_SCO in the imported Linux AF_BLUETOOTH registry
+		and expose a Linux-shaped SOCK_SEQPACKET socket API for bind,
+		connect, getname, sendmsg, recvmsg, and SCO socket options.
+
+		This lets BlueZ HFP/HSP audio closeout observe the same
+		AF_BLUETOOTH/BTPROTO_SCO socket boundary shape used by Linux.  The
+		remaining full Linux sco.c connection, accept/defer-setup, codec,
+		and error state-machine convergence is tracked separately.
+
+config NET_LINUX_BLUETOOTH_SCO_SOCKET_TRANSITIONAL
+	bool "Legacy alias for Linux-like SCO/eSCO socket parity"
+	default n
+	depends on NET_LINUX_BLUETOOTH_UPSTREAM_AF
+	select NET_LINUX_BLUETOOTH_SCO_SOCKET_PARITY
+	---help---
+		Deprecated compatibility symbol.  Existing local configurations
+		that still set this option select
+		NET_LINUX_BLUETOOTH_SCO_SOCKET_PARITY.
 
 config NET_LINUX_BLUETOOTH_UPSTREAM_6LOWPAN
 	bool "Compile upstream Linux Bluetooth 6LoWPAN networking path"

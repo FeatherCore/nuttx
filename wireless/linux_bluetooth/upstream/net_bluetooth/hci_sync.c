@@ -7186,3 +7186,83 @@ int hci_connect_big_sync(struct hci_dev *hdev, struct hci_conn *conn)
 	return hci_cmd_sync_queue_once(hdev, hci_le_big_create_sync, conn,
 				       create_big_complete);
 }
+
+static void hci_phy_cmd_complete(struct hci_dev *hdev, void *data, int err)
+{
+	bt_dev_dbg(hdev, "err %d", err);
+	kfree(data);
+}
+
+static int hci_change_conn_ptype_sync(struct hci_dev *hdev, void *data)
+{
+	struct hci_cp_change_conn_ptype *cp = data;
+
+	return __hci_cmd_sync_status_sk(hdev, HCI_OP_CHANGE_CONN_PTYPE,
+					sizeof(*cp), cp,
+					HCI_EV_PKT_TYPE_CHANGE,
+					HCI_CMD_TIMEOUT, NULL);
+}
+
+int hci_acl_change_pkt_type(struct hci_conn *conn, u16 pkt_type)
+{
+	struct hci_cp_change_conn_ptype *cp;
+	int err;
+
+	if (!conn || !conn->hdev)
+		return -EINVAL;
+
+	cp = kzalloc(sizeof(*cp), GFP_KERNEL);
+	if (!cp)
+		return -ENOMEM;
+
+	cp->handle = cpu_to_le16(conn->handle);
+	cp->pkt_type = cpu_to_le16(pkt_type);
+
+	err = hci_cmd_sync_queue_once(conn->hdev, hci_change_conn_ptype_sync,
+				      cp, hci_phy_cmd_complete);
+	if (err) {
+		kfree(cp);
+		return err;
+	}
+
+	conn->pkt_type = pkt_type;
+	return 0;
+}
+
+static int hci_le_set_phy_sync(struct hci_dev *hdev, void *data)
+{
+	struct hci_cp_le_set_phy *cp = data;
+
+	return __hci_cmd_sync_status_sk(hdev, HCI_OP_LE_SET_PHY,
+					sizeof(*cp), cp,
+					HCI_EV_LE_PHY_UPDATE_COMPLETE,
+					HCI_CMD_TIMEOUT, NULL);
+}
+
+int hci_le_set_phy(struct hci_conn *conn, u8 tx_phys, u8 rx_phys)
+{
+	struct hci_cp_le_set_phy *cp;
+	int err;
+
+	if (!conn || !conn->hdev)
+		return -EINVAL;
+
+	cp = kzalloc(sizeof(*cp), GFP_KERNEL);
+	if (!cp)
+		return -ENOMEM;
+
+	cp->handle = cpu_to_le16(conn->handle);
+	cp->tx_phys = tx_phys;
+	cp->rx_phys = rx_phys;
+
+	err = hci_cmd_sync_queue_once(conn->hdev, hci_le_set_phy_sync, cp,
+				      hci_phy_cmd_complete);
+	if (err) {
+		kfree(cp);
+		return err;
+	}
+
+	conn->le_tx_phy = tx_phys;
+	conn->le_rx_phy = rx_phys;
+	return 0;
+}

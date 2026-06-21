@@ -1935,6 +1935,46 @@ int linux_bt_scan_bredr(char *out, size_t out_len)
   return ret;
 }
 
+int linux_bt_ctrl_poll(char *out, size_t out_len)
+{
+  char payload[256];
+  uint16_t src;
+  uint16_t dst;
+  uint32_t payload_len;
+  size_t used = 0;
+  int count = 0;
+  int ret;
+
+  if (out != NULL && out_len > 0)
+    {
+      out[0] = '\0';
+    }
+
+  for (; ; )
+    {
+      payload_len = 0;
+      ret = linux_bt_hwsim_read_raw_named(LINUX_BT_HWSIM_TYPE_CTRL,
+                                          "btctl-ctrl", &src, &dst,
+                                          payload, sizeof(payload) - 1,
+                                          &payload_len);
+      if (ret <= 0)
+        {
+          return count > 0 ? count : ret;
+        }
+
+      payload[payload_len] = '\0';
+      if (out != NULL && used < out_len)
+        {
+          linux_bt_append(out, out_len, &used,
+                          "src=%u dst=%u len=%lu payload=%s\n",
+                          src, dst, (unsigned long)payload_len, payload);
+        }
+
+      linux_bt_ctrl_process_records(payload);
+      count++;
+    }
+}
+
 int linux_bt_scan_le(char *out, size_t out_len)
 {
   char ctrl[256];

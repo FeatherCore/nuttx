@@ -101,6 +101,31 @@ include/net/bluetooth/mgmt.h
 include/net/bluetooth/sco.h
 ```
 
+Current native-facing socket parity surfaces:
+
+- `BTPROTO_RFCOMM`: registered from `linux_bt_upstream_af_init()` and used by
+  HFP/HSP closeout as an RFCOMM socket boundary.
+- `BTPROTO_SCO`: registered from `linux_bt_upstream_af_init()` and used by
+  HFP/HSP closeout as a SCO audio socket boundary.
+- `BTPROTO_CMTP`: registered from `linux_bt_upstream_af_init()` and used by
+  the HCI/mgmt/socket closeout for `CMTPCONNADD`, `CMTPGETCONNLIST`,
+  `CMTPGETCONNINFO`, and `CMTPCONNDEL` lifecycle evidence.
+- `BTPROTO_HIDP`: registered from `linux_bt_upstream_af_init()` and used by
+  Classic HID closeout for `HIDPCONNADD`, `HIDPGETCONNLIST`,
+  `HIDPGETCONNINFO`, and `HIDPCONNDEL` lifecycle evidence.
+
+These surfaces are intentionally native-facing socket parity layers.  They
+close the Linux socket/API observation gaps required by current hwsim gates, but
+they do not yet replace the full upstream Linux `rfcomm/core.c`, `sco.c`, or
+`cmtp/core.c` / `hidp/core.c` session implementations.
+
+Configuration note:
+
+- `CONFIG_NET_LINUX_BLUETOOTH_RFCOMM_SOCKET_PARITY` and
+  `CONFIG_NET_LINUX_BLUETOOTH_SCO_SOCKET_PARITY` are the active build gates.
+- The old `*_SOCKET_TRANSITIONAL` Kconfig symbols are deprecated aliases kept
+  only to select the new parity symbols for existing local configurations.
+
 Porting rule:
 
 - Prefer adapting these upstream files over reimplementing behavior in
@@ -285,6 +310,47 @@ Current `af_bluetooth.c` stage:
   moves from "family is missing" to a per-protocol socket boundary.  HCI,
   L2CAP and ISO now have guarded staging registrations until their upstream
   socket files can take over completely.
+- L2CAP staging socket ops now include framework-level `getname`,
+  `setsockopt`, `getsockopt` and `accept` hooks.  These hooks use the existing
+  `linux_bt_l2cap_bind_state` and expose the Linux/BlueZ-facing
+  `SOL_L2CAP` option ABI (`L2CAP_OPTIONS`, `L2CAP_LM`, `L2CAP_CONNINFO`) plus
+  the currently represented `SOL_BLUETOOTH` socket options (`BT_SECURITY`,
+  `BT_DEFER_SETUP`, `BT_MODE`, `BT_SNDMTU`, `BT_RCVMTU`).
+- BlueZ daemon-owned A2DP closeout now calls the L2CAP option probe on real
+  opened L2CAP socket handles before connect.  The hwsim validator requires
+  `L2CAP_OPTIONS` and `L2CAP_LM` set/get evidence in
+  `bluez-a2dp-current-complete-closeout`, so L2CAP option parity is no longer
+  only an unvalidated helper path.
+- ISO staging socket ops now include framework-level `getname`, `listen`,
+  `accept`, `setsockopt` and `getsockopt` hooks for the LE Audio hwsim
+  observation path.  `BT_ISO_QOS` and `BT_ISO_BASE` are stateful on the bound
+  ISO socket and are verified through the BlueZ-shaped `bind-cis` ->
+  `apply-qos` lifecycle; unsupported or unbound ISO option probes are not
+  accepted as parity evidence.
+- `rfcomm_sock_init()` now registers a native-facing transitional
+  `BTPROTO_RFCOMM` socket family.  This gives BlueZ/profile tests a real
+  `AF_BLUETOOTH/BTPROTO_RFCOMM` create/bind/connect/listen/sendmsg/recvmsg
+  observation point instead of only bounded RFCOMM-over-L2CAP profile markers.
+  The bearer is still a minimal RFCOMM UIH-shaped frame over the existing
+  hwsim L2CAP path.
+- `linux_bt_upstream_rfcomm_socket_*_handle()` now exposes that RFCOMM socket
+  family to profile closeout helpers.  `bluezhfp closeout` uses it for HFP/HSP
+  HF/AG roles, and the hwsim validator requires `proto=BTPROTO_RFCOMM` evidence
+  before accepting the HFP/HSP RFCOMM path.
+- Full DLC/session, credit flow, PN/MSC/RPN, tty and accept queue parity must
+  still come from importing/adapting Linux `rfcomm/core.c` and
+  `rfcomm/sock.c`.
+- `sco_init()` now registers a native-facing transitional `BTPROTO_SCO` socket
+  family.  This gives HFP/HSP audio closeout a real
+  `AF_BLUETOOTH/BTPROTO_SCO` create/bind/connect/sendmsg/recvmsg observation
+  point instead of direct HCI SCO packet injection.
+- `linux_bt_upstream_sco_socket_*_handle()` exposes that SCO socket family to
+  profile closeout helpers.  `bluezhfp closeout` uses it for HFP/HSP HF/AG
+  roles, and the hwsim validator requires `proto=BTPROTO_SCO` evidence before
+  accepting the HFP/HSP audio bearer path.
+- Full SCO/eSCO connection manager, incoming accept/defer setup, codec/offload
+  policy and disconnect/error lifecycle parity must still come from
+  importing/adapting Linux `sco.c`.
 - `hci_sock_init()` now has a guarded staging registration when full upstream
   `hci_sock.c` is not enabled.  It registers `BTPROTO_HCI` through upstream
   `proto_register()` and `bt_sock_register()`, then allocates sockets through
@@ -851,3 +917,59 @@ CONFIG_NET_LINUX_BLUETOOTH_UPSTREAM_BNEP
 The switch is wired into `wireless/linux_bluetooth/Make.defs` but remains off by
 default until Linux netdevice, namespace, socket/ioctl and skb dependencies are
 mapped onto NuttX networking semantics.
+
+## 2026-06-20 L2CAP connected-state option boundary
+
+The current L2CAP socket option convergence gate now checks connected-state
+behavior without inventing fake owner state.  A2DP daemon-owned L2CAP handles run
+`linux_bt_upstream_l2cap_socket_connected_option_probe()` after connect.
+
+Observed Linux-aligned behavior in hwsim:
+
+- `SOL_L2CAP` / `L2CAP_OPTIONS` on a connected socket returns `-EINVAL`.
+- `SOL_BLUETOOTH` / `BT_MODE` follows the upstream ECRED feature gate.  In the
+  current hwsim configuration ECRED is disabled, so the observed result is
+  `-ENOPROTOOPT` and the evidence is tagged `bt-mode-gate=ecred-disabled`.
+- `L2CAP_CONNINFO` is deliberately not asserted yet because full real
+  `l2cap_conn` ownership is still a remaining convergence item.  The hwsim log
+  records `conninfo-skip=needs-real-l2cap-conn` instead of treating a synthetic
+  handle as native parity.
+
+Validation artifacts:
+
+- `build/logs/build-bt1-l2cap-connected-options.log`: PASS.
+- `build/logs/build-bt2-l2cap-connected-options.log`: PASS.
+- `build/logs/build-ble1-l2cap-connected-options.log`: PASS.
+- `build/logs/build-ble2-l2cap-connected-options.log`: PASS.
+- `build/logs/run-l2cap-connected-options.log`: PASS for A2DP closeout and LE
+  Audio BAP/PACS/ASCS.
+- `build/logs/validate-l2cap-connected-options.log`: PASS targeted replay.
+
+## 2026-06-20 L2CAP_CONNINFO convergence audit
+
+`L2CAP_CONNINFO` remains a real upstream convergence item.  The current hwsim
+validator deliberately keeps the connected-state L2CAP option gate at
+`conninfo-skip=needs-real-l2cap-conn`.
+
+Negative audit results:
+
+- Adding per-socket staging `l2cap_chan` objects and attaching them to hwsim
+  `l2cap_conn` during connect built successfully, but caused A2DP hwsim to exit
+  before the connected-option probe completed.
+- Reading `L2CAP_CONNINFO` from the HCI connection hash also built, but failed
+  the same A2DP hwsim gate.
+
+Retained passing evidence:
+
+- `build/logs/run-l2cap-connected-options.log`: PASS for A2DP closeout and LE
+  Audio BAP/PACS/ASCS.
+- `build/logs/validate-l2cap-connected-options.log`: PASS.
+
+Required upstream-shaped completion path:
+
+- Move staging L2CAP sockets closer to upstream `l2cap_sock_alloc()` and
+  `l2cap_sock_init()` semantics.
+- Establish safe `l2cap_chan` callback ops, `l2cap_conn_add()` /
+  `l2cap_chan_add()` lock ordering, hci_conn lifetime, and release/teardown.
+- Only then promote `L2CAP_CONNINFO` from a documented skip boundary to required
+  hwsim evidence backed by `chan->conn->hcon`.

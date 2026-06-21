@@ -1910,7 +1910,7 @@ int psock_vioctl(FAR struct socket *psock, int cmd, va_list ap)
 
   arg = va_arg(ap, unsigned long);
 
-  if (psock->s_domain == PF_BLUETOOTH && psock->s_proto == BTPROTO_HCI &&
+  if (psock->s_domain == PF_BLUETOOTH &&
       psock->s_sockif != NULL && psock->s_sockif->si_ioctl != NULL)
     {
       ret = psock->s_sockif->si_ioctl(psock, cmd, arg);

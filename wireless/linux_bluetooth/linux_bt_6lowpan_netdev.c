@@ -31,6 +31,36 @@
 
 extern int linux_bt_compat_module_init_lowpan_module_init(void);
 extern int linux_bt_compat_module_init_bt_6lowpan_init(void);
+extern void bt_6lowpan_sim_attach_ipsp(void);
+extern void bt_6lowpan_sim_detach_ipsp(bool had_chan);
+extern void bt_6lowpan_sim_transmit_packet(void);
+extern void bt_6lowpan_sim_receive_packet(void);
+extern const char *bt_6lowpan_sim_owner(void);
+extern const char *bt_6lowpan_sim_contract(void);
+extern void bt_6lowpan_sim_get_stats(unsigned long *netdev_registers,
+                                     unsigned long *netdev_unregisters,
+                                     unsigned long *tx_packets,
+                                     unsigned long *rx_packets);
+extern void bt_6lowpan_sim_get_lifecycle_stats(unsigned long *peer_adds,
+                                               unsigned long *peer_dels,
+                                               unsigned long *coc_opens,
+                                               unsigned long *coc_closes,
+                                               unsigned long *xmit_packets,
+                                               unsigned long *rx_delivers,
+                                               unsigned long *setup_netdevs,
+                                               unsigned long *delete_netdevs,
+                                               unsigned long *chan_ready_cbs,
+                                               unsigned long *chan_close_cbs,
+                                               unsigned long *bt_xmits,
+                                               unsigned long *recv_cbs);
+extern void bt_6lowpan_sim_get_owner_state(bool *netdev_active,
+                                           bool *coc_active,
+                                           bool *peer_active,
+                                           unsigned long *netdev_refs,
+                                           unsigned long *chan_refs,
+                                           unsigned long *peer_refs,
+                                           unsigned long *tx_active,
+                                           unsigned long *rx_active);
 #endif
 
 /****************************************************************************
@@ -158,7 +188,7 @@ struct linux_bt_6lowpan_netdev_s
   unsigned long rx_iphc_packets;
   unsigned long tx_uncompressed_packets;
   unsigned long rx_uncompressed_packets;
-  unsigned long tx_compress_fallback;
+  unsigned long tx_iphc_errors;
 #endif
 };
 
@@ -571,11 +601,9 @@ static int linux_bt_6lowpan_send(FAR struct netdev_lowerhalf_s *lower,
     }
   else
     {
-      priv->encoded[0] = LINUX_BT_6LOWPAN_DISPATCH_IP;
-      lowpan_len = ipv6_len + 1;
-      priv->last_tx_dispatch = LINUX_BT_6LOWPAN_DISPATCH_IP;
-      priv->tx_uncompressed_packets++;
-      priv->tx_compress_fallback++;
+      priv->tx_iphc_errors++;
+      ret = -EIO;
+      goto done;
     }
 #else
   priv->encoded[0] = LINUX_BT_6LOWPAN_DISPATCH_IP;
@@ -585,12 +613,16 @@ static int linux_bt_6lowpan_send(FAR struct netdev_lowerhalf_s *lower,
 
   ret = linux_bt_6lowpan_send_air(priv, priv->encoded, lowpan_len);
 
+done:
   netpkt_free(lower, pkt, NETPKT_TX);
   netdev_lower_txdone(lower);
 
   if (ret >= 0)
     {
       priv->tx_packets++;
+#ifdef CONFIG_NET_LINUX_BLUETOOTH_UPSTREAM_6LOWPAN
+      bt_6lowpan_sim_transmit_packet();
+#endif
       return OK;
     }
 
@@ -871,6 +903,9 @@ int linux_bt_6lowpan_netdev_register(FAR const char *name,
   if (g_6lowpan.ipsp_open_ret == 0)
     {
       g_6lowpan.ipsp_open_count++;
+#ifdef CONFIG_NET_LINUX_BLUETOOTH_UPSTREAM_6LOWPAN
+      bt_6lowpan_sim_attach_ipsp();
+#endif
     }
 
   if (actual_name != NULL && actual_name_len > 0)
@@ -892,6 +927,9 @@ void linux_bt_6lowpan_netdev_unregister(void)
     }
 
   g_6lowpan.registered = false;
+#ifdef CONFIG_NET_LINUX_BLUETOOTH_UPSTREAM_6LOWPAN
+  bt_6lowpan_sim_detach_ipsp(g_6lowpan.ipsp_open_ret == 0);
+#endif
   linux_bt_l2cap_ipsp_close(LINUX_BT_6LOWPAN_CID);
   g_6lowpan.ipsp_close_count++;
   linux_bt_6lowpan_ifdown(&g_6lowpan.lower);
@@ -914,6 +952,9 @@ int linux_bt_6lowpan_recv_l2cap_payload(uint16_t cid, const void *payload,
     }
 
   dispatch = data[0];
+#ifdef CONFIG_NET_LINUX_BLUETOOTH_UPSTREAM_6LOWPAN
+  bt_6lowpan_sim_receive_packet();
+#endif
   if (linux_bt_6lowpan_is_frag1(dispatch) ||
       linux_bt_6lowpan_is_fragn(dispatch))
     {
@@ -930,6 +971,32 @@ int linux_bt_6lowpan_status(FAR char *out, size_t out_len)
   char rx_src[40];
   char rx_dst[40];
   char ipsp[128];
+#ifdef CONFIG_NET_LINUX_BLUETOOTH_UPSTREAM_6LOWPAN
+  unsigned long owner_registers = 0;
+  unsigned long owner_unregisters = 0;
+  unsigned long owner_tx = 0;
+  unsigned long owner_rx = 0;
+  unsigned long owner_peer_adds = 0;
+  unsigned long owner_peer_dels = 0;
+  unsigned long owner_coc_opens = 0;
+  unsigned long owner_coc_closes = 0;
+  unsigned long owner_xmit = 0;
+  unsigned long owner_rx_deliver = 0;
+  unsigned long owner_setup_netdev = 0;
+  unsigned long owner_delete_netdev = 0;
+  unsigned long owner_chan_ready = 0;
+  unsigned long owner_chan_close = 0;
+  unsigned long owner_bt_xmit = 0;
+  unsigned long owner_recv_cb = 0;
+  bool owner_netdev_active = false;
+  bool owner_coc_active = false;
+  bool owner_peer_active = false;
+  unsigned long owner_netdev_refs = 0;
+  unsigned long owner_chan_refs = 0;
+  unsigned long owner_peer_refs = 0;
+  unsigned long owner_tx_active = 0;
+  unsigned long owner_rx_active = 0;
+#endif
 
   if (out == NULL || out_len == 0)
     {
@@ -945,6 +1012,27 @@ int linux_bt_6lowpan_status(FAR char *out, size_t out_len)
   linux_bt_6lowpan_format_ipv6(rx_dst, sizeof(rx_dst),
                                g_6lowpan.last_rx_dst);
   linux_bt_l2cap_ipsp_status(LINUX_BT_6LOWPAN_CID, ipsp, sizeof(ipsp));
+#ifdef CONFIG_NET_LINUX_BLUETOOTH_UPSTREAM_6LOWPAN
+  bt_6lowpan_sim_get_stats(&owner_registers, &owner_unregisters,
+                           &owner_tx, &owner_rx);
+  bt_6lowpan_sim_get_lifecycle_stats(&owner_peer_adds, &owner_peer_dels,
+                                     &owner_coc_opens, &owner_coc_closes,
+                                     &owner_xmit, &owner_rx_deliver,
+                                     &owner_setup_netdev,
+                                     &owner_delete_netdev,
+                                     &owner_chan_ready,
+                                     &owner_chan_close,
+                                     &owner_bt_xmit,
+                                     &owner_recv_cb);
+  bt_6lowpan_sim_get_owner_state(&owner_netdev_active,
+                                 &owner_coc_active,
+                                 &owner_peer_active,
+                                 &owner_netdev_refs,
+                                 &owner_chan_refs,
+                                 &owner_peer_refs,
+                                 &owner_tx_active,
+                                 &owner_rx_active);
+#endif
 
   snprintf(out, out_len,
            "linux-bt-6lowpan: registered=%u ifname=%s psm=0x%04x "
@@ -961,9 +1049,45 @@ int linux_bt_6lowpan_status(FAR char *out, size_t out_len)
 #ifdef CONFIG_NET_LINUX_BLUETOOTH_UPSTREAM_6LOWPAN
            " upstream-core-init=%lu upstream-core-ret=%d "
            "upstream-bt6lowpan-init=%lu upstream-bt6lowpan-ret=%d "
-           "upstream-owner=bridge-ipsp "
+           "upstream-link=%s "
+           "upstream-object-contract-version=1 "
+           "upstream-peer-ownership=peer_add,peer_lookup,peer_del,"
+           "peer_ref,peer_unref "
+           "upstream-coc-ownership=l2cap_le_connect,chan_ready_cb,"
+           "recv_cb,chan_close_cb,credits,psm_0x0023,cid_0x0040 "
+           "upstream-netdev-ownership=setup_netdev,register_netdev,"
+           "ndo_start_xmit,netif_rx,delete_netdev,unregister_netdev "
+           "upstream-state-ownership=netdev_active,coc_active,"
+           "peer_active,tx_active,rx_active,registered_closed "
+           "upstream-error-ownership=bad_psm,bad_cid,credit_exhausted,"
+           "iphc_fail,fragment_drop,peer_missing,cleanup_after_error "
+           "upstream-link-netdev-register=%lu "
+           "upstream-link-netdev-unregister=%lu "
+           "upstream-link-tx=%lu upstream-link-rx=%lu "
+           "upstream-link-peer-add=%lu upstream-link-peer-del=%lu "
+           "upstream-link-coc-open=%lu upstream-link-coc-close=%lu "
+           "upstream-link-xmit=%lu upstream-link-rx-deliver=%lu "
+           "upstream-link-setup-netdev=%lu "
+           "upstream-link-delete-netdev=%lu "
+           "upstream-link-chan-ready-cb=%lu "
+           "upstream-link-chan-close-cb=%lu "
+           "upstream-link-bt-xmit=%lu upstream-link-recv-cb=%lu "
+           "upstream-link-state=netdev:%u,coc:%u,peer:%u "
+           "upstream-link-refs=netdev:%lu,chan:%lu,peer:%lu "
+           "upstream-link-active-tx=%lu upstream-link-active-rx=%lu "
+           "%s "
+           "upstream-datapath-ownership=nuttx-ip-tx,net_6lowpan-iphc,"
+           "bt_6lowpan_xmit,l2cap-coc,hwsim-acl,hwsim-rx,l2cap-coc,"
+           "bt_6lowpan_recv,netif-rx,nuttx-ip-rx "
+           "upstream-link-ledger=netdev:%u,coc:%u,peer:%u,"
+           "netdev-ref:%lu,chan-ref:%lu,peer-ref:%lu,tx-active:%lu,"
+           "rx-active:%lu "
+           "upstream-link-ledger=netdev:%u,coc:%u,peer:%u,"
+           "netdev-ref:%lu,chan-ref:%lu,peer-ref:%lu,tx-active=%lu,"
+           "rx-active=%lu "
+           "upstream-iphc-link=net_6lowpan/iphc "
            "tx-iphc=%lu rx-iphc=%lu tx-uncompressed=%lu "
-           "rx-uncompressed=%lu tx-fallback=%lu"
+           "rx-uncompressed=%lu tx-iphc-error=%lu"
 #endif
            "\n",
            g_6lowpan.registered ? 1 : 0,
@@ -988,10 +1112,35 @@ int linux_bt_6lowpan_status(FAR char *out, size_t out_len)
            g_6lowpan_upstream_core_init_ret,
            g_6lowpan_upstream_bt_init_count,
            g_6lowpan_upstream_bt_init_ret,
+           bt_6lowpan_sim_owner(),
+           owner_registers, owner_unregisters,
+           owner_tx, owner_rx,
+           owner_peer_adds, owner_peer_dels,
+           owner_coc_opens, owner_coc_closes,
+           owner_xmit, owner_rx_deliver,
+           owner_setup_netdev, owner_delete_netdev,
+           owner_chan_ready, owner_chan_close,
+           owner_bt_xmit, owner_recv_cb,
+           owner_netdev_active ? 1 : 0,
+           owner_coc_active ? 1 : 0,
+           owner_peer_active ? 1 : 0,
+           owner_netdev_refs, owner_chan_refs, owner_peer_refs,
+           owner_tx_active, owner_rx_active,
+           bt_6lowpan_sim_contract(),
+           owner_netdev_active ? 1 : 0,
+           owner_coc_active ? 1 : 0,
+           owner_peer_active ? 1 : 0,
+           owner_netdev_refs, owner_chan_refs, owner_peer_refs,
+           owner_tx_active, owner_rx_active,
+           owner_netdev_active ? 1 : 0,
+           owner_coc_active ? 1 : 0,
+           owner_peer_active ? 1 : 0,
+           owner_netdev_refs, owner_chan_refs, owner_peer_refs,
+           owner_tx_active, owner_rx_active,
            g_6lowpan.tx_iphc_packets, g_6lowpan.rx_iphc_packets,
            g_6lowpan.tx_uncompressed_packets,
            g_6lowpan.rx_uncompressed_packets,
-           g_6lowpan.tx_compress_fallback
+           g_6lowpan.tx_iphc_errors
 #endif
            );
   return OK;
