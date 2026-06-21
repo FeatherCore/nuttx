@@ -28,6 +28,7 @@ if(CONFIG_DRIVERS_VIDEO)
 
   if(CONFIG_VIDEO_FB)
     list(APPEND SRCS fb.c)
+    list(APPEND SRCS video_fillrectangle_blend.c)
   endif()
 
   if(CONFIG_VIDEO_STREAM)

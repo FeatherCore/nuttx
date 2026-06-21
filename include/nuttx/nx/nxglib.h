@@ -507,6 +507,209 @@ void nxgl_circletraps(FAR const struct nxgl_point_s *center,
 uint32_t nxglib_rgb24_blend(uint32_t color1, uint32_t color2, ub16_t frac1);
 uint16_t nxglib_rgb565_blend(uint16_t color1, uint16_t color2, ub16_t frac1);
 
+/****************************************************************************
+ * Rasterizer Functions — Public API
+ *
+ * These functions write directly to graphics device memory through
+ * NX_PLANEINFOTYPE (fb_planeinfo_s or lcd_planeinfo_s).  All drawing is
+ * opaque — no alpha blending.  Caller must provide color in the device's
+ * native pixel format.
+ ****************************************************************************/
+
+/* Set a single pixel */
+
+void nxgl_setpixel_1bpp(FAR NX_PLANEINFOTYPE *pinfo,
+                        FAR const struct nxgl_point_s *pos, uint8_t color);
+void nxgl_setpixel_2bpp(FAR NX_PLANEINFOTYPE *pinfo,
+                        FAR const struct nxgl_point_s *pos, uint8_t color);
+void nxgl_setpixel_4bpp(FAR NX_PLANEINFOTYPE *pinfo,
+                        FAR const struct nxgl_point_s *pos, uint8_t color);
+void nxgl_setpixel_8bpp(FAR NX_PLANEINFOTYPE *pinfo,
+                        FAR const struct nxgl_point_s *pos, uint8_t color);
+void nxgl_setpixel_16bpp(FAR NX_PLANEINFOTYPE *pinfo,
+                         FAR const struct nxgl_point_s *pos, uint16_t color);
+void nxgl_setpixel_24bpp(FAR NX_PLANEINFOTYPE *pinfo,
+                         FAR const struct nxgl_point_s *pos, uint32_t color);
+void nxgl_setpixel_32bpp(FAR NX_PLANEINFOTYPE *pinfo,
+                         FAR const struct nxgl_point_s *pos, uint32_t color);
+
+/* Fill a rectangle with a solid color */
+
+void nxgl_fillrectangle_1bpp(FAR NX_PLANEINFOTYPE *pinfo,
+                             FAR const struct nxgl_rect_s *rect,
+                             uint8_t color);
+void nxgl_fillrectangle_2bpp(FAR NX_PLANEINFOTYPE *pinfo,
+                             FAR const struct nxgl_rect_s *rect,
+                             uint8_t color);
+void nxgl_fillrectangle_4bpp(FAR NX_PLANEINFOTYPE *pinfo,
+                             FAR const struct nxgl_rect_s *rect,
+                             uint8_t color);
+void nxgl_fillrectangle_8bpp(FAR NX_PLANEINFOTYPE *pinfo,
+                             FAR const struct nxgl_rect_s *rect,
+                             uint8_t color);
+void nxgl_fillrectangle_16bpp(FAR NX_PLANEINFOTYPE *pinfo,
+                              FAR const struct nxgl_rect_s *rect,
+                              uint16_t color);
+void nxgl_fillrectangle_24bpp(FAR NX_PLANEINFOTYPE *pinfo,
+                              FAR const struct nxgl_rect_s *rect,
+                              uint32_t color);
+void nxgl_fillrectangle_32bpp(FAR NX_PLANEINFOTYPE *pinfo,
+                              FAR const struct nxgl_rect_s *rect,
+                              uint32_t color);
+
+/* Read back a rectangular region from graphics memory */
+
+void nxgl_getrectangle_1bpp(FAR NX_PLANEINFOTYPE *pinfo,
+                            FAR const struct nxgl_rect_s *rect,
+                            FAR void *dest, unsigned int deststride);
+void nxgl_getrectangle_2bpp(FAR NX_PLANEINFOTYPE *pinfo,
+                            FAR const struct nxgl_rect_s *rect,
+                            FAR void *dest, unsigned int deststride);
+void nxgl_getrectangle_4bpp(FAR NX_PLANEINFOTYPE *pinfo,
+                            FAR const struct nxgl_rect_s *rect,
+                            FAR void *dest, unsigned int deststride);
+void nxgl_getrectangle_8bpp(FAR NX_PLANEINFOTYPE *pinfo,
+                            FAR const struct nxgl_rect_s *rect,
+                            FAR void *dest, unsigned int deststride);
+void nxgl_getrectangle_16bpp(FAR NX_PLANEINFOTYPE *pinfo,
+                             FAR const struct nxgl_rect_s *rect,
+                             FAR void *dest, unsigned int deststride);
+void nxgl_getrectangle_24bpp(FAR NX_PLANEINFOTYPE *pinfo,
+                             FAR const struct nxgl_rect_s *rect,
+                             FAR void *dest, unsigned int deststride);
+void nxgl_getrectangle_32bpp(FAR NX_PLANEINFOTYPE *pinfo,
+                             FAR const struct nxgl_rect_s *rect,
+                             FAR void *dest, unsigned int deststride);
+
+/* Fill a trapezoidal region clipped to a bounding box */
+
+void nxgl_filltrapezoid_1bpp(FAR NX_PLANEINFOTYPE *pinfo,
+                             FAR const struct nxgl_trapezoid_s *trap,
+                             FAR const struct nxgl_rect_s *bounds,
+                             uint8_t color);
+void nxgl_filltrapezoid_2bpp(FAR NX_PLANEINFOTYPE *pinfo,
+                             FAR const struct nxgl_trapezoid_s *trap,
+                             FAR const struct nxgl_rect_s *bounds,
+                             uint8_t color);
+void nxgl_filltrapezoid_4bpp(FAR NX_PLANEINFOTYPE *pinfo,
+                             FAR const struct nxgl_trapezoid_s *trap,
+                             FAR const struct nxgl_rect_s *bounds,
+                             uint8_t color);
+void nxgl_filltrapezoid_8bpp(FAR NX_PLANEINFOTYPE *pinfo,
+                             FAR const struct nxgl_trapezoid_s *trap,
+                             FAR const struct nxgl_rect_s *bounds,
+                             uint8_t color);
+void nxgl_filltrapezoid_16bpp(FAR NX_PLANEINFOTYPE *pinfo,
+                              FAR const struct nxgl_trapezoid_s *trap,
+                              FAR const struct nxgl_rect_s *bounds,
+                              uint16_t color);
+void nxgl_filltrapezoid_24bpp(FAR NX_PLANEINFOTYPE *pinfo,
+                              FAR const struct nxgl_trapezoid_s *trap,
+                              FAR const struct nxgl_rect_s *bounds,
+                              uint32_t color);
+void nxgl_filltrapezoid_32bpp(FAR NX_PLANEINFOTYPE *pinfo,
+                              FAR const struct nxgl_trapezoid_s *trap,
+                              FAR const struct nxgl_rect_s *bounds,
+                              uint32_t color);
+
+/* Move a rectangular region within graphics memory */
+
+void nxgl_moverectangle_1bpp(FAR NX_PLANEINFOTYPE *pinfo,
+                             FAR const struct nxgl_rect_s *rect,
+                             FAR struct nxgl_point_s *offset);
+void nxgl_moverectangle_2bpp(FAR NX_PLANEINFOTYPE *pinfo,
+                             FAR const struct nxgl_rect_s *rect,
+                             FAR struct nxgl_point_s *offset);
+void nxgl_moverectangle_4bpp(FAR NX_PLANEINFOTYPE *pinfo,
+                             FAR const struct nxgl_rect_s *rect,
+                             FAR struct nxgl_point_s *offset);
+void nxgl_moverectangle_8bpp(FAR NX_PLANEINFOTYPE *pinfo,
+                             FAR const struct nxgl_rect_s *rect,
+                             FAR struct nxgl_point_s *offset);
+void nxgl_moverectangle_16bpp(FAR NX_PLANEINFOTYPE *pinfo,
+                              FAR const struct nxgl_rect_s *rect,
+                              FAR struct nxgl_point_s *offset);
+void nxgl_moverectangle_24bpp(FAR NX_PLANEINFOTYPE *pinfo,
+                              FAR const struct nxgl_rect_s *rect,
+                              FAR struct nxgl_point_s *offset);
+void nxgl_moverectangle_32bpp(FAR NX_PLANEINFOTYPE *pinfo,
+                              FAR const struct nxgl_rect_s *rect,
+                              FAR struct nxgl_point_s *offset);
+
+/* Copy a rectangular bitmap image into graphics memory */
+
+void nxgl_copyrectangle_1bpp(FAR NX_PLANEINFOTYPE *pinfo,
+                             FAR const struct nxgl_rect_s *dest,
+                             FAR const void *src,
+                             FAR const struct nxgl_point_s *origin,
+                             unsigned int srcstride);
+void nxgl_copyrectangle_2bpp(FAR NX_PLANEINFOTYPE *pinfo,
+                             FAR const struct nxgl_rect_s *dest,
+                             FAR const void *src,
+                             FAR const struct nxgl_point_s *origin,
+                             unsigned int srcstride);
+void nxgl_copyrectangle_4bpp(FAR NX_PLANEINFOTYPE *pinfo,
+                             FAR const struct nxgl_rect_s *dest,
+                             FAR const void *src,
+                             FAR const struct nxgl_point_s *origin,
+                             unsigned int srcstride);
+void nxgl_copyrectangle_8bpp(FAR NX_PLANEINFOTYPE *pinfo,
+                             FAR const struct nxgl_rect_s *dest,
+                             FAR const void *src,
+                             FAR const struct nxgl_point_s *origin,
+                             unsigned int srcstride);
+void nxgl_copyrectangle_16bpp(FAR NX_PLANEINFOTYPE *pinfo,
+                              FAR const struct nxgl_rect_s *dest,
+                              FAR const void *src,
+                              FAR const struct nxgl_point_s *origin,
+                              unsigned int srcstride);
+void nxgl_copyrectangle_24bpp(FAR NX_PLANEINFOTYPE *pinfo,
+                              FAR const struct nxgl_rect_s *dest,
+                              FAR const void *src,
+                              FAR const struct nxgl_point_s *origin,
+                              unsigned int srcstride);
+void nxgl_copyrectangle_32bpp(FAR NX_PLANEINFOTYPE *pinfo,
+                              FAR const struct nxgl_rect_s *dest,
+                              FAR const void *src,
+                              FAR const struct nxgl_point_s *origin,
+                              unsigned int srcstride);
+
+/****************************************************************************
+ * Alpha-Blended Rasterizer Functions
+ *
+ * Like the basic rasterizers above, but with RGBA8888 alpha blending.
+ * rgba_color is packed 0xRRGGBBAA. bpp: 16, 24, or 32.
+ ****************************************************************************/
+
+void nxgl_fillrectangle_blend(FAR struct fb_planeinfo_s *pinfo,
+                               FAR const struct nxgl_rect_s *rect,
+                               uint32_t rgba, int bpp);
+
+void nxgl_filltrapezoid_blend(FAR struct fb_planeinfo_s *pinfo,
+                               FAR const struct nxgl_trapezoid_s *trap,
+                               FAR const struct nxgl_rect_s *bounds,
+                               uint32_t rgba, int bpp);
+
+void nxgl_fillpolygon_blend(FAR struct fb_planeinfo_s *pinfo,
+                             FAR const struct nxgl_point_s *verts,
+                             int nverts, uint32_t rgba, int bpp);
+
+void nxgl_drawline_blend(FAR struct fb_planeinfo_s *pinfo,
+                          FAR const struct nxgl_vector_s *vec,
+                          nxgl_coord_t width, uint32_t rgba, int bpp);
+
+void nxgl_blit_scale(FAR struct fb_planeinfo_s *pinfo,
+                      FAR const struct nxgl_rect_s *dest,
+                      FAR const void *src_rgba,
+                      int src_w, int src_h, int src_stride,
+                      int bpp, uint8_t global_alpha);
+
+void nxgl_blit_quad(FAR struct fb_planeinfo_s *pinfo,
+                     FAR const void *src_rgba,
+                     int src_w, int src_h, int src_stride,
+                     FAR const struct nxgl_point_s quad[4],
+                     int bpp, uint8_t global_alpha);
+
 #undef EXTERN
 #if defined(__cplusplus)
 }

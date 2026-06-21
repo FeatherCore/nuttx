@@ -31,6 +31,7 @@
 #include <errno.h>
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
+#include <X11/keysym.h>
 #include <sys/ipc.h>
 #include <sys/shm.h>
 #include <X11/extensions/XShm.h>
@@ -75,10 +76,10 @@ Display *g_display;
 static int g_screen;
 static Window g_window;
 static GC g_gc;
-#ifndef CONFIG_SIM_X11NOSHM
+static Atom g_wm_delete_window;
+static volatile bool g_window_closed;
 static XShmSegmentInfo g_xshminfo;
 static int g_xerror;
-#endif
 static XImage *g_image;
 static char *g_framebuffer;
 static unsigned short g_fbpixelwidth;
@@ -139,6 +140,9 @@ static inline Display *sim_x11createframe(void)
   XFree(winprop.value);
   XFree(iconprop.value);
 
+  g_wm_delete_window = XInternAtom(display, "WM_DELETE_WINDOW", False);
+  XSetWMProtocols(display, g_window, &g_wm_delete_window, 1);
+
   /* Select window input events */
 
 #if defined(CONFIG_SIM_AJOYSTICK)
@@ -147,69 +151,107 @@ static inline Display *sim_x11createframe(void)
 #else
   XSelectInput(display, g_window,
                ButtonPressMask | ButtonReleaseMask | PointerMotionMask |
-               KeyPressMask | KeyReleaseMask);
+               KeyPressMask | KeyReleaseMask | StructureNotifyMask);
 #endif
 
   /* Release queued events on the display */
 
-#if defined(CONFIG_SIM_TOUCHSCREEN) || defined(CONFIG_SIM_AJOYSTICK) || \
-    defined(CONFIG_SIM_BUTTONS)
   XAllowEvents(display, AsyncBoth, CurrentTime);
 
-  /* Grab mouse button 1, enabling mouse-related events */
+  /* Grab mouse button 1, enabling mouse-related events.
+   *
+   * Historically this was only enabled when one of the legacy simulated
+   * input devices was configured.  The framebuffer presenter now polls
+   * sim_x11pollinput() directly, so the X11 framebuffer window itself must
+   * always accept pointer button events.
+   */
 
   XGrabButton(display, Button1, AnyModifier, g_window, 1,
-              ButtonPressMask | ButtonReleaseMask | ButtonMotionMask,
+              ButtonPressMask | ButtonReleaseMask | ButtonMotionMask |
+              PointerMotionMask,
               GrabModeAsync, GrabModeAsync, None, None);
-#endif
 
   gcval.graphics_exposures = 0;
   g_gc = XCreateGC(display, g_window, GCGraphicsExposures, &gcval);
 
-  /* Map the window to make it visible on the display after it has been
-   * created and configured
-   */
-
-  XMapWindow(display, g_window);
   return display;
+}
+
+/****************************************************************************
+ * Name: sim_x11key
+ ****************************************************************************/
+
+static uint16_t sim_x11key(KeySym keysym)
+{
+  switch (keysym)
+    {
+      case XK_BackSpace:
+        return SIM_X11_KEY_BACKSPACE;
+      case XK_Tab:
+        return SIM_X11_KEY_TAB;
+      case XK_Return:
+      case XK_KP_Enter:
+        return SIM_X11_KEY_ENTER;
+      case XK_Delete:
+        return SIM_X11_KEY_DELETE;
+      case XK_space:
+        return SIM_X11_KEY_SPACE;
+      case XK_Left:
+        return SIM_X11_KEY_LEFT;
+      case XK_Right:
+        return SIM_X11_KEY_RIGHT;
+      case XK_Up:
+        return SIM_X11_KEY_UP;
+      case XK_Down:
+        return SIM_X11_KEY_DOWN;
+      default:
+        break;
+    }
+
+  if (keysym >= XK_space && keysym <= XK_asciitilde)
+    {
+      return (uint16_t)keysym;
+    }
+
+  return SIM_X11_KEY_UNKNOWN;
 }
 
 /****************************************************************************
  * Name: sim_x11errorhandler
  ****************************************************************************/
 
-#ifndef CONFIG_SIM_X11NOSHM
 static int sim_x11errorhandler(Display *display, XErrorEvent *event)
 {
   g_xerror = 1;
+  if (event != NULL &&
+      (event->error_code == BadDrawable || event->error_code == BadWindow))
+    {
+      g_window_closed = true;
+    }
+
   return 0;
 }
-#endif
 
 /****************************************************************************
  * Name: sim_x11traperrors
  ****************************************************************************/
 
-#ifndef CONFIG_SIM_X11NOSHM
 static void sim_x11traperrors(void)
 {
   g_xerror = 0;
   XSetErrorHandler(sim_x11errorhandler);
 }
-#endif
 
 /****************************************************************************
  * Name: sim_x11untraperrors
  ****************************************************************************/
 
-#ifndef CONFIG_SIM_X11NOSHM
 static int sim_x11untraperrors(Display *display)
 {
   XSync(display, 0);
   XSetErrorHandler(NULL);
   return g_xerror;
 }
-#endif
 
 /****************************************************************************
  * Name: sim_x11uninit
@@ -522,6 +564,7 @@ int sim_x11openwindow(void)
       return -ENODEV;
     }
 
+  g_window_closed = false;
   XMapWindow(g_display, g_window);
   XSync(g_display, 0);
 
@@ -543,6 +586,162 @@ int sim_x11closewindow(void)
   XSync(g_display, 0);
 
   return 0;
+}
+
+/****************************************************************************
+ * Name: sim_x11windowclosed
+ ****************************************************************************/
+
+bool sim_x11windowclosed(void)
+{
+  return g_window_closed;
+}
+
+/****************************************************************************
+ * Name: sim_x11pollwindowclosed
+ ****************************************************************************/
+
+bool sim_x11pollwindowclosed(void)
+{
+  XEvent event;
+
+  if (g_display == NULL)
+    {
+      return true;
+    }
+
+  while (XCheckTypedWindowEvent(g_display, g_window, ClientMessage,
+                               &event))
+    {
+      if ((Atom)event.xclient.data.l[0] == g_wm_delete_window ||
+          g_wm_delete_window == None)
+        {
+          g_window_closed = true;
+          sim_x11closewindow();
+        }
+    }
+
+  while (XCheckTypedWindowEvent(g_display, g_window, DestroyNotify,
+                               &event))
+    {
+      g_window_closed = true;
+      sim_x11closewindow();
+    }
+
+  return g_window_closed;
+}
+
+/****************************************************************************
+ * Name: sim_x11pollinput
+ ****************************************************************************/
+
+int sim_x11pollinput(int *type, int16_t *x, int16_t *y,
+                     uint16_t *key, int16_t *encoder_delta,
+                     uint8_t *button)
+{
+  XEvent event;
+  KeySym keysym;
+  char text[8];
+  int textlen;
+
+  if (type == NULL || x == NULL || y == NULL || key == NULL ||
+      encoder_delta == NULL || button == NULL)
+    {
+      return -EINVAL;
+    }
+
+  *type = SIM_X11_INPUT_NONE;
+  *x = 0;
+  *y = 0;
+  *key = SIM_X11_KEY_UNKNOWN;
+  *encoder_delta = 0;
+  *button = 0;
+
+  if (g_display == NULL || g_window_closed)
+    {
+      return 0;
+    }
+
+  /* Pull any input events that may have been posted by another X11 client
+   * into this Display connection before checking the local event queue.
+   */
+
+  XSync(g_display, False);
+
+  while (XCheckWindowEvent(g_display, g_window,
+                           ButtonPressMask | ButtonReleaseMask |
+                           PointerMotionMask | KeyPressMask |
+                           KeyReleaseMask, &event))
+    {
+      switch (event.type)
+        {
+          case MotionNotify:
+            *type = SIM_X11_INPUT_POINTER_MOVE;
+            *x = (int16_t)event.xmotion.x;
+            *y = (int16_t)event.xmotion.y;
+            *button = (event.xmotion.state & Button1Mask) != 0 ? 1 : 0;
+            return 1;
+
+          case ButtonPress:
+            *x = (int16_t)event.xbutton.x;
+            *y = (int16_t)event.xbutton.y;
+            if (event.xbutton.button == Button4 ||
+                event.xbutton.button == Button5)
+              {
+                *type = SIM_X11_INPUT_ENCODER_ROTATE;
+                *encoder_delta = event.xbutton.button == Button4 ? 1 : -1;
+                return 1;
+              }
+
+            *type = SIM_X11_INPUT_POINTER_DOWN;
+            *button = (uint8_t)event.xbutton.button;
+            return 1;
+
+          case ButtonRelease:
+            if (event.xbutton.button == Button4 ||
+                event.xbutton.button == Button5)
+              {
+                break;
+              }
+
+            *type = SIM_X11_INPUT_POINTER_UP;
+            *x = (int16_t)event.xbutton.x;
+            *y = (int16_t)event.xbutton.y;
+            *button = (uint8_t)event.xbutton.button;
+            return 1;
+
+          case KeyPress:
+          case KeyRelease:
+            textlen = XLookupString(&event.xkey, text, sizeof(text),
+                                    &keysym, NULL);
+            *type = event.type == KeyPress ? SIM_X11_INPUT_KEY_DOWN :
+                                             SIM_X11_INPUT_KEY_UP;
+            if (textlen == 1 && text[0] >= 32 && text[0] <= 126)
+              {
+                *key = (uint16_t)text[0];
+              }
+            else
+              {
+                *key = sim_x11key(keysym);
+              }
+
+            return 1;
+
+          default:
+            break;
+        }
+    }
+
+  return 0;
+}
+
+/****************************************************************************
+ * Name: sim_x11markwindowclosed
+ ****************************************************************************/
+
+void sim_x11markwindowclosed(void)
+{
+  g_window_closed = true;
 }
 
 /****************************************************************************
@@ -624,6 +823,13 @@ int sim_x11update(void)
       return -ENODEV;
     }
 
+  if (sim_x11pollwindowclosed())
+    {
+      return -ESHUTDOWN;
+    }
+
+  sim_x11traperrors();
+
 #ifndef CONFIG_SIM_X11NOSHM
   if (b_useshm)
     {
@@ -644,7 +850,11 @@ int sim_x11update(void)
                          g_trans_framebuffer + g_offset);
     }
 
-  XSync(g_display, 0);
+  if (sim_x11untraperrors(g_display) != 0)
+    {
+      g_window_closed = true;
+      return -ESHUTDOWN;
+    }
 
   return 0;
 }

@@ -148,6 +148,12 @@ void sim_x11events(void)
             break;
           #endif
 
+          case ClientMessage:
+          case DestroyNotify:
+            sim_x11markwindowclosed();
+            sim_x11closewindow();
+            break;
+
           default:
             break;
         }
