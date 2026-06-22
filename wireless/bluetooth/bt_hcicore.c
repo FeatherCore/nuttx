@@ -50,6 +50,7 @@
 #include <sched.h>
 #include <assert.h>
 #include <errno.h>
+#include <syslog.h>
 #include <nuttx/debug.h>
 
 #include <sys/param.h>
@@ -210,6 +211,12 @@ static void bt_connected(FAR struct bt_conn_s *conn)
 {
   FAR struct bt_conn_cb_s *cb;
 
+  syslog(LOG_INFO,
+         "bt_hci: connected handle=%u role=%u peer=%s local=%s "
+         "sec=%u encrypt=0x%02x\n",
+         conn->handle, conn->role, bt_addr_le_str(&conn->dst),
+         bt_addr_le_str(&conn->src), conn->sec_level, conn->encrypt);
+
   for (cb = g_callback_list; cb; cb = cb->flink)
     {
       if (cb->connected)
@@ -222,6 +229,11 @@ static void bt_connected(FAR struct bt_conn_s *conn)
 static void bt_disconnected(FAR struct bt_conn_s *conn)
 {
   FAR struct bt_conn_cb_s *cb;
+
+  syslog(LOG_INFO,
+         "bt_hci: disconnected handle=%u peer=%s sec=%u encrypt=0x%02x\n",
+         conn->handle, bt_addr_le_str(&conn->dst), conn->sec_level,
+         conn->encrypt);
 
   for (cb = g_callback_list; cb; cb = cb->flink)
     {
@@ -249,6 +261,8 @@ static void hci_acl(FAR struct bt_buf_s *buf)
   bt_buf_consume(buf, sizeof(*hdr));
 
   wlinfo("handle %u len %u flags %u\n", buf->u.acl.handle, len, flags);
+  syslog(LOG_INFO, "bt_hci: acl-rx handle=%u len=%u flags=0x%02x\n",
+         buf->u.acl.handle, len, flags);
 
   if (buf->len != len)
     {
@@ -278,6 +292,9 @@ static void hci_encrypt_change(FAR struct bt_buf_s *buf)
 
   wlinfo("status %u handle %u encrypt 0x%02x\n",
         evt->status, handle, evt->encrypt);
+  syslog(LOG_INFO,
+         "bt_hci: encrypt-change status=%u handle=%u encrypt=0x%02x\n",
+         evt->status, handle, evt->encrypt);
 
   if (evt->status)
     {
@@ -641,6 +658,9 @@ static void hci_disconn_complete(FAR struct bt_buf_s *buf)
 
   wlinfo("status %u handle %u reason %u\n",
          evt->status, handle, evt->reason);
+  syslog(LOG_INFO,
+         "bt_hci: disconn-complete status=%u handle=%u reason=0x%02x\n",
+         evt->status, handle, evt->reason);
 
   if (evt->status)
     {
@@ -688,6 +708,12 @@ static void le_conn_complete(FAR struct bt_buf_s *buf)
 
   wlinfo("status %u handle %u role %u %s\n", evt->status, handle,
          evt->role, bt_addr_le_str(&evt->peer_addr));
+  syslog(LOG_INFO,
+         "bt_hci: le-conn-complete status=%u handle=%u role=%u "
+         "peer=%s interval=%u latency=%u timeout=%u\n",
+         evt->status, handle, evt->role, bt_addr_le_str(&evt->peer_addr),
+         BT_LE162HOST(evt->interval), BT_LE162HOST(evt->latency),
+         BT_LE162HOST(evt->supv_timeout));
 
   /* Make lookup to check if there's a connection object in CONNECT state
    * associated with passed peer LE address.
@@ -849,6 +875,7 @@ static void le_ltk_request(FAR struct bt_buf_s *buf)
   handle = BT_LE162HOST(evt->handle);
 
   wlinfo("handle %u\n", handle);
+  syslog(LOG_INFO, "bt_hci: le-ltk-request handle=%u\n", handle);
 
   conn = bt_conn_lookup_handle(handle);
   if (!conn)
@@ -916,6 +943,14 @@ static int le_param_request(FAR struct bt_buf_s *buf)
     }
 
   params_request = (FAR void *)buf->data;
+  syslog(LOG_INFO,
+         "bt_hci: le-conn-param-request handle=%u min=%u max=%u "
+         "latency=%u timeout=%u\n",
+         BT_LE162HOST(params_request->handle),
+         BT_LE162HOST(params_request->min_interval),
+         BT_LE162HOST(params_request->max_interval),
+         BT_LE162HOST(params_request->latency),
+         BT_LE162HOST(params_request->timeout));
 
   params_reply = bt_buf_extend(reply_buf, sizeof(*params_reply));
   memset(params_reply, 0, sizeof(*params_reply));
@@ -935,6 +970,8 @@ static void hci_le_meta_event(FAR struct bt_buf_s *buf)
   FAR struct bt_hci_evt_le_meta_event_s *evt = (FAR void *)buf->data;
 
   bt_buf_consume(buf, sizeof(*evt));
+  syslog(LOG_INFO, "bt_hci: le-meta-event subevent=0x%02x len=%u\n",
+         evt->subevent, buf->len);
 
   switch (evt->subevent)
     {
@@ -968,6 +1005,7 @@ static void hci_event(FAR struct bt_buf_s *buf)
   FAR struct bt_hci_evt_hdr_s *hdr = (FAR void *)buf->data;
 
   wlinfo("event %u\n", hdr->evt);
+  syslog(LOG_INFO, "bt_hci: event=0x%02x len=%u\n", hdr->evt, buf->len);
 
   bt_buf_consume(buf, sizeof(struct bt_hci_evt_hdr_s));
 
@@ -2381,4 +2419,3 @@ void bt_hci_cb_register(FAR struct bt_hci_cb_s *cb)
 }
 
 #endif
-

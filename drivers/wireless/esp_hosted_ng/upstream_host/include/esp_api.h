@@ -23,6 +23,8 @@ int esp_add_card(struct esp_adapter *adapter);
 int esp_remove_card(struct esp_adapter *adapter);
 void esp_process_new_packet_intr(struct esp_adapter *adapter);
 void esp_process_pending_rx(struct esp_adapter *adapter);
+int esp_hosted_ng_poll_rx(struct esp_adapter *adapter, int attempts,
+		unsigned int delay_us);
 struct esp_adapter *esp_get_adapter(void);
 struct esp_wifi_device *get_priv_from_payload_header(struct esp_payload_header *header);
 int esp_send_packet(struct esp_adapter *adapter, struct sk_buff *skb);

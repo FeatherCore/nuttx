@@ -831,7 +831,6 @@ static void process_rx_packet(struct esp_adapter *adapter, struct sk_buff *skb)
 	struct esp_payload_header *payload_header = NULL;
 	u16 len = 0, offset = 0;
 	u16 rx_checksum = 0, checksum = 0;
-	struct hci_dev *hdev = adapter->hcidev;
 	u8 *type = NULL;
 
 	if (!skb)
@@ -899,22 +898,10 @@ static void process_rx_packet(struct esp_adapter *adapter, struct sk_buff *skb)
 		}
 
 	} else if (payload_header->if_type == ESP_HCI_IF) {
-		if (hdev) {
-
-			type = skb->data;
-			hci_skb_pkt_type(skb) = *type;
-			skb_pull(skb, 1);
-
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 13, 0))
-			if (hci_recv_frame(hdev, skb)) {
-#else
-			if (hci_recv_frame(skb)) {
-#endif
-				hdev->stat.err_rx++;
-			} else {
-				esp_hci_update_rx_counter(hdev, *type, skb->len);
-			}
-		}
+		type = skb->data;
+		skb_pull(skb, 1);
+		esp_hosted_ng_bt_rx(adapter, *type, skb->data, skb->len);
+		dev_kfree_skb_any(skb);
 	} else if (payload_header->if_type == ESP_INTERNAL_IF) {
 
 		/* Queue event skb for processing in events workqueue */

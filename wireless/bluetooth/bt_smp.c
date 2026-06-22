@@ -45,6 +45,7 @@
 #include <nuttx/debug.h>
 #include <errno.h>
 #include <string.h>
+#include <syslog.h>
 
 #include <sys/param.h>
 
@@ -153,9 +154,9 @@ struct bt_smphandlers_s
  ****************************************************************************/
 
 static FAR const char *h(FAR const void *buf, size_t len);
-static void     xor_128(FAR const struct uint128_s *p,
-                        FAR const struct uint128_s *q,
-                        FAR struct uint128_s *r);
+static void     xor_128(FAR const uint8_t p[16],
+                        FAR const uint8_t q[16],
+                        FAR uint8_t r[16]);
 static int     le_encrypt(FAR const uint8_t key[16],
                           FAR const uint8_t plaintext[16],
                           FAR uint8_t enc_data[16]);
@@ -381,12 +382,16 @@ static FAR const char *h(FAR const void *buf, size_t len)
   return str;
 }
 
-static void xor_128(FAR const struct uint128_s *p,
-                    FAR const struct uint128_s *q,
-                    FAR struct uint128_s *r)
+static void xor_128(FAR const uint8_t p[16],
+                    FAR const uint8_t q[16],
+                    FAR uint8_t r[16])
 {
-  r->a = p->a ^ q->a;
-  r->b = p->b ^ q->b;
+  int i;
+
+  for (i = 0; i < 16; i++)
+    {
+      r[i] = p[i] ^ q[i];
+    }
 }
 
 static int le_encrypt(FAR const uint8_t key[16],
@@ -516,8 +521,7 @@ static int smp_c1(FAR const uint8_t k[16], FAR const uint8_t r[16],
 
   /* Using enc_data as temporary output buffer */
 
-  xor_128((FAR struct uint128_s *)r, (FAR struct uint128_s *)p1,
-          (FAR struct uint128_s *)enc_data);
+  xor_128(r, p1, enc_data);
 
   err = le_encrypt(k, enc_data, enc_data);
   if (err)
@@ -533,9 +537,7 @@ static int smp_c1(FAR const uint8_t k[16], FAR const uint8_t r[16],
 
   wlinfo("p2 %s\n", h(p2, 16));
 
-  xor_128((FAR struct uint128_s *)enc_data,
-          (FAR struct uint128_s *)p2,
-          (FAR struct uint128_s *)enc_data);
+  xor_128(enc_data, p2, enc_data);
   return le_encrypt(k, enc_data, enc_data);
 }
 
@@ -710,6 +712,12 @@ static uint8_t smp_pairing_req(FAR struct bt_conn_s *conn,
     }
 
   wlinfo("Pairing Request Received\n");
+  syslog(LOG_INFO,
+         "bt_smp: pairing-req handle=%u peer=%s io=0x%02x auth=0x%02x "
+         "max_key=%u init_dist=0x%02x resp_dist=0x%02x\n",
+         conn->handle, bt_addr_le_str(&conn->dst), req->io_capability,
+         req->auth_req, req->max_key_size, req->init_key_dist,
+         req->resp_key_dist);
 
   if ((req->max_key_size > BT_SMP_MAX_ENC_KEY_SIZE) ||
       (req->max_key_size < BT_SMP_MIN_ENC_KEY_SIZE))
@@ -730,6 +738,8 @@ static uint8_t smp_pairing_req(FAR struct bt_conn_s *conn,
                                                 local_auth_req,
                                                 req->auth_req);
   wlinfo("Selected pairing method: %d\n", smp->selected_method);
+  syslog(LOG_INFO, "bt_smp: pairing-method handle=%u method=%d\n",
+         conn->handle, smp->selected_method);
   if (conn->sec_level >= BT_SECURITY_HIGH &&
       !smp_mitm_supported(smp->selected_method))
     {
@@ -799,6 +809,12 @@ static uint8_t smp_pairing_req(FAR struct bt_conn_s *conn,
   memcpy(smp->prsp + 1, rsp, sizeof(*rsp));
 
   bt_l2cap_send(conn, BT_L2CAP_CID_SMP, rsp_buf);
+  syslog(LOG_INFO,
+         "bt_smp: pairing-rsp-tx handle=%u local_io=0x%02x "
+         "local_auth=0x%02x max_key=%u local_dist=0x%02x "
+         "remote_dist=0x%02x\n",
+         conn->handle, rsp->io_capability, rsp->auth_req,
+         rsp->max_key_size, smp->local_dist, smp->remote_dist);
 
   bt_atomic_setbit(&smp->allowed_cmds, BT_SMP_CMD_PAIRING_CONFIRM);
   return 0;
@@ -842,6 +858,8 @@ static uint8_t smp_send_pairing_confirm(FAR struct bt_conn_s *conn)
     }
 
   bt_l2cap_send(conn, BT_L2CAP_CID_SMP, rsp_buf);
+  syslog(LOG_INFO, "bt_smp: pairing-confirm-tx handle=%u role=%u\n",
+         conn->handle, conn->role);
 
   return 0;
 }
@@ -855,6 +873,12 @@ static uint8_t smp_pairing_rsp(FAR struct bt_conn_s *conn,
   uint8_t local_auth_req = smp->preq[3];
 
   wlinfo("Pairing Response Received\n");
+  syslog(LOG_INFO,
+         "bt_smp: pairing-rsp-rx handle=%u peer=%s io=0x%02x auth=0x%02x "
+         "max_key=%u init_dist=0x%02x resp_dist=0x%02x\n",
+         conn->handle, bt_addr_le_str(&conn->dst), rsp->io_capability,
+         rsp->auth_req, rsp->max_key_size, rsp->init_key_dist,
+         rsp->resp_key_dist);
 
   if ((rsp->max_key_size > BT_SMP_MAX_ENC_KEY_SIZE) ||
       (rsp->max_key_size < BT_SMP_MIN_ENC_KEY_SIZE))
@@ -868,6 +892,8 @@ static uint8_t smp_pairing_rsp(FAR struct bt_conn_s *conn,
                                                 rsp->auth_req);
 
   wlinfo("Selected pairing method: %d\n", smp->selected_method);
+  syslog(LOG_INFO, "bt_smp: pairing-method handle=%u method=%d\n",
+         conn->handle, smp->selected_method);
 
   if (conn->sec_level >= BT_SECURITY_HIGH &&
       !smp_mitm_supported(smp->selected_method))
@@ -935,6 +961,8 @@ static uint8_t smp_send_pairing_random(FAR struct bt_conn_s *conn)
   memcpy(req->val, smp->prnd, sizeof(req->val));
 
   bt_l2cap_send(conn, BT_L2CAP_CID_SMP, rsp_buf);
+  syslog(LOG_INFO, "bt_smp: pairing-random-tx handle=%u role=%u\n",
+         conn->handle, conn->role);
 
   return 0;
 }
@@ -946,6 +974,8 @@ static uint8_t smp_pairing_confirm(FAR struct bt_conn_s *conn,
   struct bt_smp_s *smp = conn->smp;
 
   wlinfo("\n");
+  syslog(LOG_INFO, "bt_smp: pairing-confirm-rx handle=%u role=%u\n",
+         conn->handle, conn->role);
 
   memcpy(smp->pcnf, req->val, sizeof(smp->pcnf));
 
@@ -972,6 +1002,8 @@ static uint8_t smp_pairing_random(FAR struct bt_conn_s *conn,
   int err;
 
   wlinfo("Received Pairing Random\n");
+  syslog(LOG_INFO, "bt_smp: pairing-random-rx handle=%u role=%u\n",
+         conn->handle, conn->role);
 
   memcpy(smp->rrnd, req->val, sizeof(smp->rrnd));
 
@@ -1018,6 +1050,9 @@ static uint8_t smp_pairing_random(FAR struct bt_conn_s *conn,
 
   wlinfo("Pairing method %d achieved security level %d\n",
       smp->selected_method, pairing_sec_level);
+  syslog(LOG_INFO,
+         "bt_smp: pairing-confirmed handle=%u method=%d sec=%u\n",
+         conn->handle, smp->selected_method, pairing_sec_level);
   conn->sec_level = pairing_sec_level;
 
   /* Get/Create the keys structure for the peer */
@@ -1097,6 +1132,8 @@ static uint8_t smp_pairing_failed(FAR struct bt_conn_s *conn,
   FAR struct bt_smp_s *smp = conn->smp;
 
   wlerr("ERROR: reason 0x%x\n", req->reason);
+  syslog(LOG_INFO, "bt_smp: pairing-failed handle=%u reason=0x%02x\n",
+         conn->handle, req->reason);
   UNUSED(req);
 
   if (g_smp_auth_cb && g_smp_auth_cb->pairing_failed)
@@ -1147,6 +1184,11 @@ static bool smp_check_pairing_complete(FAR struct bt_conn_s *conn)
         }
 
       wlinfo("Pairing complete. Bonded: %d\n", bonded);
+      syslog(LOG_INFO,
+             "bt_smp: pairing-complete handle=%u bonded=%d sec=%u "
+             "local_dist=0x%02x remote_dist=0x%02x\n",
+             conn->handle, bonded, conn->sec_level, smp->local_dist,
+             smp->remote_dist);
 
       if (g_smp_auth_cb && g_smp_auth_cb->pairing_complete)
         {
@@ -1211,6 +1253,8 @@ static void bt_smp_distribute_keys(FAR struct bt_conn_s *conn)
       memcpy(info->ltk, keys->slave_ltk.val, sizeof(info->ltk));
 
       bt_l2cap_send(conn, BT_L2CAP_CID_SMP, buf);
+      syslog(LOG_INFO, "bt_smp: encrypt-info-tx handle=%u\n",
+             conn->handle);
 
       buf = bt_smp_create_pdu(conn, BT_SMP_CMD_MASTER_IDENT,
                               sizeof(struct bt_smp_master_ident_s));
@@ -1225,6 +1269,8 @@ static void bt_smp_distribute_keys(FAR struct bt_conn_s *conn)
       ident->ediv = keys->slave_ltk.ediv;
 
       bt_l2cap_send(conn, BT_L2CAP_CID_SMP, buf);
+      syslog(LOG_INFO, "bt_smp: master-ident-tx handle=%u\n",
+             conn->handle);
       smp->local_dist &= ~BT_SMP_DIST_ENC_KEY;
     }
 
@@ -1243,6 +1289,7 @@ static uint8_t smp_encrypt_info(FAR struct bt_conn_s *conn,
   FAR struct bt_keys_s *keys;
 
   wlinfo("Received Encrypt Info (LTK from Master)\n");
+  syslog(LOG_INFO, "bt_smp: encrypt-info-rx handle=%u\n", conn->handle);
 
   keys = bt_keys_get_type(BT_KEYS_LTK, &conn->dst);
   if (!keys)
@@ -1268,6 +1315,7 @@ static uint8_t smp_master_ident(FAR struct bt_conn_s *conn,
   FAR struct bt_keys_s *keys;
 
   wlinfo("Received Master Identification (EDIV/Rand)\n");
+  syslog(LOG_INFO, "bt_smp: master-ident-rx handle=%u\n", conn->handle);
 
   keys = bt_keys_get_type(BT_KEYS_LTK, &conn->dst);
   if (!keys)
@@ -1324,6 +1372,7 @@ static uint8_t smp_ident_info(FAR struct bt_conn_s *conn,
   FAR struct bt_keys_s *keys;
 
   wlinfo("\n");
+  syslog(LOG_INFO, "bt_smp: ident-info-rx handle=%u\n", conn->handle);
 
   keys = bt_keys_get_type(BT_KEYS_IRK, &conn->dst);
   if (!keys)
@@ -1348,6 +1397,8 @@ static uint8_t smp_ident_addr_info(FAR struct bt_conn_s *conn,
   FAR struct bt_keys_s *keys;
 
   wlinfo("identity %s\n", bt_addr_le_str(&req->addr));
+  syslog(LOG_INFO, "bt_smp: ident-addr-info-rx handle=%u identity=%s\n",
+         conn->handle, bt_addr_le_str(&req->addr));
 
   if (!bt_addr_le_is_identity(&req->addr))
     {
@@ -1404,6 +1455,9 @@ static uint8_t smp_security_request(FAR struct bt_conn_s *conn,
   uint8_t slave_auth_req = req->auth_req & BT_SMP_AUTH_MASK;
 
   wlinfo("Security Request received (req=0x%02x)\n", slave_auth_req);
+  syslog(LOG_INFO,
+         "bt_smp: security-request-rx handle=%u peer=%s auth=0x%02x\n",
+         conn->handle, bt_addr_le_str(&conn->dst), slave_auth_req);
 
   keys = bt_keys_find(BT_KEYS_LTK, &conn->dst);
   if (keys)
@@ -1468,6 +1522,8 @@ static void bt_smp_receive(FAR struct bt_conn_s *conn,
     }
 
   wlinfo("Received SMP code 0x%02x len %u\n", hdr->code, buf->len);
+  syslog(LOG_INFO, "bt_smp: rx handle=%u code=0x%02x len=%u\n",
+         conn->handle, hdr->code, buf->len);
 
   bt_buf_consume(buf, sizeof(*hdr));
 
@@ -1522,6 +1578,8 @@ static void bt_smp_connected(FAR struct bt_conn_s *conn, FAR void *context,
   int i;
 
   wlinfo("conn %p handle %u\n", conn, conn->handle);
+  syslog(LOG_INFO, "bt_smp: connected handle=%u peer=%s role=%u\n",
+         conn->handle, bt_addr_le_str(&conn->dst), conn->role);
 
   for (i = 0; i < CONFIG_BLUETOOTH_MAX_CONN; i++)
     {
@@ -1565,6 +1623,8 @@ static void bt_smp_disconnected(FAR struct bt_conn_s *conn,
     }
 
   wlinfo("conn %p handle %u\n", conn, conn->handle);
+  syslog(LOG_INFO, "bt_smp: disconnected handle=%u peer=%s\n",
+         conn->handle, bt_addr_le_str(&conn->dst));
 
   conn->smp = NULL;
   memset(smp, 0, sizeof(*smp));
@@ -1582,6 +1642,12 @@ static void bt_smp_encrypt_change(FAR struct bt_conn_s *conn,
 
   wlinfo("conn %p handle %u encrypt 0x%02x\n", conn, conn->handle,
          conn->encrypt);
+  syslog(LOG_INFO,
+         "bt_smp: encrypt-change handle=%u peer=%s encrypt=0x%02x "
+         "pending=%d local_dist=0x%02x remote_dist=0x%02x\n",
+         conn->handle, bt_addr_le_str(&conn->dst), conn->encrypt,
+         smp ? smp->pending_encrypt : 0, smp ? smp->local_dist : 0,
+         smp ? smp->remote_dist : 0);
 
   if (!smp || !conn->encrypt)
     {
@@ -1973,6 +2039,8 @@ int bt_smp_send_security_req(FAR struct bt_conn_s *conn)
   FAR struct bt_buf_s *req_buf;
 
   wlinfo("security req\n");
+  syslog(LOG_INFO, "bt_smp: security-request-tx handle=%u sec=%u\n",
+         conn->handle, conn->sec_level);
 
   req_buf = bt_smp_create_pdu(conn, BT_SMP_CMD_SECURITY_REQUEST,
                               sizeof(struct bt_smp_security_request_s));

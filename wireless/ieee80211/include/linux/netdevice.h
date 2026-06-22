@@ -147,24 +147,13 @@ static inline void netif_trans_update(struct net_device *dev)
   (void)dev;
 }
 
+#ifndef __WIRELESS_LINUX_COMPAT_NETIF_RX_DEFINED
 static inline int netif_rx(struct sk_buff *skb)
 {
-#ifdef CONFIG_NET_LINUX_BLUETOOTH_UPSTREAM_BNEP
-  extern int linux_bt_bnep_netif_rx(struct sk_buff *skb);
-
-  if (skb != NULL && skb->dev != NULL &&
-      ((skb->dev->name[0] == 'b' && skb->dev->name[1] == 'n' &&
-        skb->dev->name[2] == 'e' && skb->dev->name[3] == 'p') ||
-       (skb->dev->name[0] == 'b' && skb->dev->name[1] == 't' &&
-        skb->dev->name[2] == 'n')))
-    {
-      return linux_bt_bnep_netif_rx(skb);
-    }
-#endif
-
   (void)skb;
   return 0;
 }
+#endif
 
 static inline void netif_device_detach(struct net_device *dev)
 {

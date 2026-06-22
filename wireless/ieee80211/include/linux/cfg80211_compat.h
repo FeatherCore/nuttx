@@ -2208,6 +2208,88 @@ static inline void flush_workqueue(struct workqueue_struct *wq)
 
 #define __WIRELESS_LINUX_COMPAT_WORKQUEUE_CORE_HELPERS_DEFINED 1
 
+#ifndef __WIRELESS_LINUX_COMPAT_WORKQUEUE_SCHEDULE_WORK_DEFINED
+#define __WIRELESS_LINUX_COMPAT_WORKQUEUE_SCHEDULE_WORK_DEFINED 1
+static inline bool schedule_work(struct work_struct *work)
+{
+  return queue_work(system_dfl_wq, work);
+}
+#endif
+
+#ifndef __WIRELESS_LINUX_COMPAT_WORKQUEUE_SCHEDULE_DELAYED_WORK_DEFINED
+#define __WIRELESS_LINUX_COMPAT_WORKQUEUE_SCHEDULE_DELAYED_WORK_DEFINED 1
+static inline bool schedule_delayed_work(struct delayed_work *dwork,
+                                         unsigned long delay)
+{
+  return queue_delayed_work(system_dfl_wq, dwork, delay);
+}
+#endif
+
+#ifndef __WIRELESS_LINUX_COMPAT_WORKQUEUE_CANCEL_WORK_SYNC_DEFINED
+#define __WIRELESS_LINUX_COMPAT_WORKQUEUE_CANCEL_WORK_SYNC_DEFINED 1
+static inline bool cancel_work_sync(struct work_struct *work)
+{
+  if (work == NULL)
+    {
+      return false;
+    }
+
+  return work_cancel_sync(CFG80211_COMPAT_WORKQ, &work->nuttx_work) == 0;
+}
+#endif
+
+#ifndef __WIRELESS_LINUX_COMPAT_WORKQUEUE_CANCEL_DELAYED_WORK_SYNC_DEFINED
+#define __WIRELESS_LINUX_COMPAT_WORKQUEUE_CANCEL_DELAYED_WORK_SYNC_DEFINED 1
+static inline bool cancel_delayed_work_sync(struct delayed_work *dwork)
+{
+  if (dwork == NULL)
+    {
+      return false;
+    }
+
+  dwork->pending = false;
+  return work_cancel_sync(CFG80211_COMPAT_WORKQ,
+                          &dwork->work.nuttx_work) == 0;
+}
+#endif
+
+#ifndef __WIRELESS_LINUX_COMPAT_WORKQUEUE_CANCEL_DELAYED_WORK_DEFINED
+#define __WIRELESS_LINUX_COMPAT_WORKQUEUE_CANCEL_DELAYED_WORK_DEFINED 1
+static inline bool cancel_delayed_work(struct delayed_work *dwork)
+{
+  if (dwork == NULL)
+    {
+      return false;
+    }
+
+  dwork->pending = false;
+  return work_cancel(CFG80211_COMPAT_WORKQ, &dwork->work.nuttx_work) == 0;
+}
+#endif
+
+#ifndef __WIRELESS_LINUX_COMPAT_WORKQUEUE_DELAYED_WORK_PENDING_DEFINED
+#define __WIRELESS_LINUX_COMPAT_WORKQUEUE_DELAYED_WORK_PENDING_DEFINED 1
+static inline bool delayed_work_pending(struct delayed_work *dwork)
+{
+  return dwork != NULL && !work_available(&dwork->work.nuttx_work);
+}
+#endif
+
+#ifndef __WIRELESS_LINUX_COMPAT_WORKQUEUE_FLUSH_DELAYED_WORK_DEFINED
+#define __WIRELESS_LINUX_COMPAT_WORKQUEUE_FLUSH_DELAYED_WORK_DEFINED 1
+static inline bool flush_delayed_work(struct delayed_work *dwork)
+{
+  if (delayed_work_pending(dwork))
+    {
+      dwork->pending = false;
+      cfg80211_compat_work_trampoline(&dwork->work);
+      return true;
+    }
+
+  return false;
+}
+#endif
+
 #define list_first_entry_or_null(ptr, type, member) \
   (list_empty(ptr) ? NULL : list_first_entry(ptr, type, member))
 #define list_first_or_null_rcu(ptr, type, member) \
@@ -2924,6 +3006,7 @@ static inline void flush_work(struct work_struct *work)
 }
 #define __WIRELESS_LINUX_COMPAT_WORKQUEUE_FLUSH_WORK_DEFINED 1
 
+#ifndef __WIRELESS_LINUX_COMPAT_WORKQUEUE_CANCEL_DELAYED_WORK_SYNC_DEFINED
 static inline bool cancel_delayed_work_sync(struct delayed_work *dwork)
 {
   if (!dwork)
@@ -2934,8 +3017,9 @@ static inline bool cancel_delayed_work_sync(struct delayed_work *dwork)
   return work_cancel_sync(CFG80211_COMPAT_WORKQ,
                           &dwork->work.nuttx_work) == 0;
 }
-#define __WIRELESS_IEEE80211_WORKQUEUE_CANCEL_COMPAT 1
-#define __WIRELESS_LINUX_COMPAT_WORKQUEUE_CANCEL_DELAYED_WORK_SYNC_DEFINED 1
+#  define __WIRELESS_IEEE80211_WORKQUEUE_CANCEL_COMPAT 1
+#  define __WIRELESS_LINUX_COMPAT_WORKQUEUE_CANCEL_DELAYED_WORK_SYNC_DEFINED 1
+#endif
 
 #ifndef INIT_WORK
 #  define INIT_WORK(work, fn) do { \
@@ -2959,10 +3043,25 @@ static inline long schedule_timeout_interruptible(long timeout)
 
 static inline int netif_rx(struct sk_buff *skb)
 {
+#ifdef CONFIG_NET_LINUX_BLUETOOTH_UPSTREAM_BNEP
+  extern int linux_bt_bnep_netif_rx(struct sk_buff *skb);
+
+  if (skb != NULL && skb->dev != NULL &&
+      ((skb->dev->name[0] == 'b' && skb->dev->name[1] == 'n' &&
+        skb->dev->name[2] == 'e' && skb->dev->name[3] == 'p') ||
+       (skb->dev->name[0] == 'b' && skb->dev->name[1] == 't' &&
+        skb->dev->name[2] == 'n')))
+    {
+      return linux_bt_bnep_netif_rx(skb);
+    }
+#endif
+
   extern int ieee80211_linux_netif_rx(struct sk_buff *skb);
 
   return ieee80211_linux_netif_rx(skb);
 }
+
+#define __WIRELESS_LINUX_COMPAT_NETIF_RX_DEFINED 1
 
 static inline void skb_orphan(struct sk_buff *skb)
 {

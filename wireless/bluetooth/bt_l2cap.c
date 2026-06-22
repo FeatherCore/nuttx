@@ -43,6 +43,7 @@
 
 #include <string.h>
 #include <errno.h>
+#include <syslog.h>
 #include <nuttx/debug.h>
 
 #include <nuttx/wireless/bluetooth/bt_hci.h>
@@ -108,6 +109,12 @@ void bt_l2cap_connected(FAR struct bt_conn_s *conn)
 {
   FAR struct bt_l2cap_chan_s *chan;
 
+  syslog(LOG_INFO,
+         "bt_l2cap: connected handle=%u role=%u peer=%s sec=%u "
+         "encrypt=0x%02x\n",
+         conn->handle, conn->role, bt_addr_le_str(&conn->dst),
+         conn->sec_level, conn->encrypt);
+
   /* Notify all registered channels of the connection event */
 
   for (chan = g_channels; chan; chan = chan->flink)
@@ -131,6 +138,11 @@ void bt_l2cap_disconnected(FAR struct bt_conn_s *conn)
 {
   FAR struct bt_l2cap_chan_s *chan;
 
+  syslog(LOG_INFO,
+         "bt_l2cap: disconnected handle=%u peer=%s sec=%u encrypt=0x%02x\n",
+         conn->handle, bt_addr_le_str(&conn->dst), conn->sec_level,
+         conn->encrypt);
+
   /* Notify all registered channels of the disconnection event */
 
   for (chan = g_channels; chan; chan = chan->flink)
@@ -153,6 +165,11 @@ void bt_l2cap_disconnected(FAR struct bt_conn_s *conn)
 void bt_l2cap_encrypt_change(FAR struct bt_conn_s *conn)
 {
   FAR struct bt_l2cap_chan_s *chan;
+
+  syslog(LOG_INFO,
+         "bt_l2cap: encrypt-change handle=%u peer=%s sec=%u encrypt=0x%02x\n",
+         conn->handle, bt_addr_le_str(&conn->dst), conn->sec_level,
+         conn->encrypt);
 
   /* Notify all registered channels of the encryption change event */
 
@@ -189,6 +206,9 @@ void bt_l2cap_send(FAR struct bt_conn_s *conn, uint16_t cid,
   hdr      = bt_buf_provide(buf, sizeof(*hdr));
   hdr->len = BT_HOST2LE16(buf->len - sizeof(*hdr));
   hdr->cid = BT_HOST2LE16(cid);
+
+  syslog(LOG_INFO, "bt_l2cap: tx handle=%u cid=0x%04x len=%u\n",
+         conn->handle, cid, BT_LE162HOST(hdr->len));
 
   bt_conn_send(conn, buf);
 }
@@ -332,6 +352,8 @@ static void le_sig(FAR struct bt_conn_s *conn, FAR struct bt_buf_s *buf,
 
   wlinfo("LE signaling code 0x%02x ident %u len %u\n", hdr->code,
          hdr->ident, len);
+  syslog(LOG_INFO, "bt_l2cap: le-sig-rx handle=%u code=0x%02x "
+         "ident=%u len=%u\n", conn->handle, hdr->code, hdr->ident, len);
 
   if (buf->len != len)
     {
@@ -382,6 +404,8 @@ void bt_l2cap_receive(FAR struct bt_conn_s *conn, FAR struct bt_buf_s *buf)
   bt_buf_consume(buf, sizeof(*hdr));
 
   wlinfo("Packet for CID %u len %u\n", cid, buf->len);
+  syslog(LOG_INFO, "bt_l2cap: rx handle=%u cid=0x%04x len=%u\n",
+         conn->handle, cid, buf->len);
 
   /* Search for a subscriber to this channel */
 

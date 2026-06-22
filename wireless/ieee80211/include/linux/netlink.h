@@ -1,7 +1,7 @@
 #ifndef __WIRELESS_IEEE80211_INCLUDE_LINUX_NETLINK_H
 #define __WIRELESS_IEEE80211_INCLUDE_LINUX_NETLINK_H
-#include_next <linux/netlink.h>
 #include <linux/cfg80211_compat.h>
+#include "../uapi/linux/netlink.h"
 #define NETLINK_CTX_SIZE 48
 struct netlink_skb_parms
 {

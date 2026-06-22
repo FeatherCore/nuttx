@@ -30,6 +30,8 @@
 
 int esp_init_bt(struct esp_adapter *adapter);
 int esp_deinit_bt(struct esp_adapter *adapter);
+int esp_hosted_ng_bt_rx(struct esp_adapter *adapter, u8 pkt_type,
+			u8 *data, size_t len);
 void esp_hci_update_tx_counter(struct hci_dev *hdev, u8 pkt_type, size_t len);
 void esp_hci_update_rx_counter(struct hci_dev *hdev, u8 pkt_type, size_t len);
 
